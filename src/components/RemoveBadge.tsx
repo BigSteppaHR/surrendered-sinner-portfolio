@@ -3,18 +3,32 @@ import { useEffect } from 'react';
 
 const RemoveBadge = () => {
   useEffect(() => {
-    // Function to remove the badge
+    // Function to remove the badge by different selectors
     const removeBadge = () => {
-      const badge = document.getElementById('lovable-badge');
-      if (badge) {
-        badge.remove();
-      }
+      // Try multiple selectors to ensure we catch all variants of the badge
+      const selectors = [
+        '#lovable-badge',
+        'a[href*="lovable.dev"]',
+        'a[href*="codecove.dev"]',
+        '[id*="lovable"]',
+        '[class*="lovable"]'
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length) {
+          elements.forEach(el => el.remove());
+        }
+      });
     };
 
     // Initial removal attempt
     removeBadge();
 
-    // Set up a MutationObserver to watch for the badge being added to the DOM
+    // Try again after a short delay to catch badges that might be added after initial load
+    const timeoutId = setTimeout(removeBadge, 1000);
+    
+    // Set up a more aggressive MutationObserver to watch for the badge being added to the DOM
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.addedNodes.length) {
@@ -23,15 +37,18 @@ const RemoveBadge = () => {
       }
     });
 
-    // Start observing the document body for changes
-    observer.observe(document.body, { 
+    // Start observing the entire document for changes
+    observer.observe(document.documentElement, { 
       childList: true,
-      subtree: true 
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'id', 'style']
     });
 
-    // Clean up the observer when the component unmounts
+    // Clean up
     return () => {
       observer.disconnect();
+      clearTimeout(timeoutId);
     };
   }, []);
 
