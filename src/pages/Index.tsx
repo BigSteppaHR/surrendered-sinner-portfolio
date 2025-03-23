@@ -7,6 +7,8 @@ import Services from '@/components/Services';
 import Testimonials from '@/components/Testimonials';
 import Contact from '@/components/Contact';
 import Footer from '@/components/Footer';
+import { Separator } from '@/components/ui/separator';
+import FloatingCTA from '@/components/FloatingCTA';
 
 const Index = () => {
   useEffect(() => {
@@ -17,16 +19,35 @@ const Index = () => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <Hero />
-      {/* Add section dividers between each section */}
-      <div className="w-full h-8 bg-sinner-red/10"></div>
+      
+      {/* Enhanced section dividers */}
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
       <About />
-      <div className="w-full h-8 bg-sinner-red/10"></div>
+      
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
       <Services />
-      <div className="w-full h-8 bg-sinner-red/10"></div>
+      
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
       <Testimonials />
-      <div className="w-full h-8 bg-sinner-red/10"></div>
+      
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
       <Contact />
       <Footer />
+      
+      {/* Floating CTA */}
+      <FloatingCTA />
     </div>
   );
 };

@@ -22,18 +22,19 @@ const Hero: React.FC = () => {
         ></div>
       </div>
       
-      {/* Animated background elements */}
+      {/* Enhanced animated background elements */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full">
           <div className="absolute top-[10%] left-[5%] w-32 h-32 bg-sinner-red/20 rounded-full blur-3xl animate-pulse-slow"></div>
           <div className="absolute top-[40%] right-[10%] w-40 h-40 bg-sinner-red/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
           <div className="absolute bottom-[20%] left-[15%] w-36 h-36 bg-sinner-red/15 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-[60%] right-[20%] w-28 h-28 bg-sinner-red/15 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1.5s' }}></div>
         </div>
       </div>
 
       <div className="container-custom relative z-10 mt-20 flex flex-col items-center text-center">
         <div className={`transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'} mb-6 relative`}>
-          {/* TV static effect only on the outside of the logo */}
+          {/* Improved TV static effect only on the outside of the logo */}
           <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none" style={{ padding: '10px' }}>
             <div className="absolute inset-0 ring-4 ring-offset-4 ring-offset-transparent ring-sinner-red/40 rounded-full"></div>
             <div className="absolute inset-[-10px] opacity-20 mix-blend-overlay tv-static rounded-full"></div>

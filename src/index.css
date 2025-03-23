@@ -170,4 +170,19 @@
     @apply relative flex items-center justify-center px-6 py-3 overflow-hidden font-bold text-white border-2 rounded-md border-white/20
     hover:border-white/40 transition-all duration-300 focus:outline-none transform hover:scale-[1.02] active:scale-[0.98];
   }
+  
+  /* New section divider styles */
+  .section-divider {
+    @apply relative w-full h-16 overflow-hidden;
+  }
+  
+  .section-divider::before {
+    content: "";
+    @apply absolute inset-0 bg-gradient-to-r from-sinner-red/5 via-sinner-red/20 to-sinner-red/5 transform skew-y-1;
+  }
+  
+  .section-divider::after {
+    content: "";
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 w-40 h-[1px] bg-sinner-red/40;
+  }
 }
