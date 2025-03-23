@@ -42,7 +42,15 @@ const FloatingCTA: React.FC = () => {
           <X className="h-4 w-4" />
         </button>
         
-        <h4 className="font-bold text-lg mb-2">Ready to Transform?</h4>
+        <div className="flex items-center mb-3">
+          <img 
+            src="/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png" 
+            alt="Surrendered Sinner Fitness Logo" 
+            className="w-8 h-8 mr-2"
+          />
+          <h4 className="font-bold text-lg">Ready to Transform?</h4>
+        </div>
+        
         <p className="text-white/80 text-sm mb-3">
           Take the first step today with a free consultation. Discover how we can help you achieve your fitness goals.
         </p>
