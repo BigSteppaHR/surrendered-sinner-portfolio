@@ -6,31 +6,31 @@ import GlassCard from './GlassCard';
 const Testimonials: React.FC = () => {
   const testimonials = [
     {
-      name: "Alex M.",
-      role: "Powerlifter",
+      name: "Mike T.",
+      role: "IFBB Pro Bodybuilder",
       image: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-      quote: "Surrendered Sinner Fitness completely transformed my approach to strength training. In just 6 months, I added 100lbs to my deadlift and 70lbs to my squat. The programming is intense but incredibly effective.",
+      quote: "Surrendered Sinner Fitness helped me break through my plateau before my last competition. Their nutrition protocol and training splits were exactly what I needed to dial in my physique. Added 15 pounds of stage weight while staying lean. Worth every penny.",
       rating: 5
     },
     {
-      name: "Sarah K.",
-      role: "CrossFit Athlete",
+      name: "Emily R.",
+      role: "Fitness Influencer & Coach",
       image: "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80",
-      quote: "The online coaching program gave me the structure and accountability I needed to take my performance to the next level. The coaches are responsive, knowledgeable, and truly care about your progress.",
+      quote: "As someone who coaches others, I needed expert guidance to take my own training to the next level. Their programming is brutal but absolutely effective. My deadlift went from 285 to 365 in just 16 weeks, and my content has blown up showing the transformation.",
       rating: 5
     },
     {
-      name: "Mark D.",
-      role: "Former Athlete",
+      name: "Chris L.",
+      role: "CrossFit Box Owner",
       image: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80",
-      quote: "After years of struggling with inconsistent training and plateaus, Surrendered Sinner provided the guidance I needed. Their no-nonsense approach and attention to detail helped me reclaim the strength I had in my 20s.",
+      quote: "I've worked with a lot of program designers in the fitness industry, and Surrendered Sinner stands apart. Their approach to progressive overload and recovery protocols has completely changed how I program for myself and my athletes. Functional strength through the roof.",
       rating: 5
     },
     {
       name: "Jessica T.",
-      role: "Fitness Competitor",
+      role: "Mother of 3, Office Manager",
       image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=776&q=80",
-      quote: "The personalized attention and expert guidance from my coach has been invaluable in my competition prep. They've helped me achieve a physique I never thought possible while maintaining my strength.",
+      quote: "After having my third child, I thought I'd never get back in shape. The customized nutrition plan and at-home workout program fit perfectly into my busy schedule. I've lost 35 pounds in 6 months and have more energy than I've had in years. My only regret is not starting sooner.",
       rating: 5
     },
   ];
@@ -46,7 +46,7 @@ const Testimonials: React.FC = () => {
   };
 
   return (
-    <section id="testimonials" className="section-padding noise-bg">
+    <section id="testimonials" className="section-padding bg-gradient-to-b from-black to-sinner-dark-gray noise-bg">
       <div className="container-custom">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-6"><span className="text-sinner-red">SUCCESS</span> STORIES</h2>
@@ -135,7 +135,7 @@ const Testimonials: React.FC = () => {
           <p className="text-white/80 mb-6 max-w-2xl mx-auto">
             Join the ranks of those who've transformed their bodies and mindsets through our proven programs.
           </p>
-          <a href="#contact" className="btn-secondary inline-flex">
+          <a href="#contact" className="btn-primary pulse-glow inline-flex">
             Start Your Journey
           </a>
         </div>

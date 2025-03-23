@@ -1,7 +1,7 @@
 
 import React from 'react';
 import GlassCard from './GlassCard';
-import { ChevronRight, Dumbbell, HeartHandshake, Activity, CalendarClock } from 'lucide-react';
+import { ChevronRight, Dumbbell, HeartHandshake, Activity, CalendarClock, Utensils } from 'lucide-react';
 import AnimatedText from './AnimatedText';
 
 const Services: React.FC = () => {
@@ -12,47 +12,54 @@ const Services: React.FC = () => {
       description: "Personalized training sessions tailored to your specific goals, fitness level, and preferences.",
       features: ["Customized workout plans", "Form correction & technique", "Progress tracking", "Flexible scheduling"],
       highlighted: true,
-      price: "$120",
+      price: "$30",
       duration: "per session"
     },
     {
-      title: "Online Coaching",
+      title: "Nutrition Plan",
+      icon: Utensils,
+      description: "Comprehensive meal planning designed around your fitness goals and dietary preferences.",
+      features: ["Calorie & macro calculations", "Custom meal suggestions", "Grocery shopping lists", "Supplement guidance"],
+      highlighted: false,
+      price: "$150",
+      duration: "one-time"
+    },
+    {
+      title: "Lifting Programs",
       icon: Activity,
-      description: "Remote coaching with regular check-ins and adjustments based on your progress and feedback.",
-      features: ["Weekly program updates", "Nutrition guidance", "24/7 messaging support", "Video form checks"],
+      description: "Structured training programs tailored to your goals, whether building muscle, strength, or athletic performance.",
+      features: ["Periodized training cycles", "Exercise progressions", "Video technique guides", "Weekly adjustments"],
       highlighted: false,
-      price: "$299",
-      duration: "per month"
+      price: "$125",
+      duration: "one-time"
     },
     {
-      title: "Group Training",
-      icon: HeartHandshake,
-      description: "High-energy group sessions combining strength, conditioning, and team motivation.",
-      features: ["Small groups (max 6)", "Varied workouts", "Community support", "Competitive environment"],
-      highlighted: false,
-      price: "$199",
-      duration: "per month"
-    },
-    {
-      title: "Custom Programs",
+      title: "Complete Package",
       icon: CalendarClock,
-      description: "Fully periodized training programs designed for specific goals without ongoing coaching.",
-      features: ["8-12 week timeline", "Exercise library access", "Progression model", "One-time consultation"],
+      description: "The ultimate transformation package combining personalized lifting program and nutrition guidance.",
+      features: ["Custom lifting program", "Detailed nutrition plan", "Email support", "Bi-weekly check-ins"],
       highlighted: false,
-      price: "$199",
+      price: "$225",
       duration: "one-time"
     }
   ];
 
   return (
-    <section id="services" className="section-padding bg-sinner-dark-gray noise-bg">
+    <section id="services" className="section-padding bg-gradient-to-b from-sinner-dark-gray to-black noise-bg">
       <div className="container-custom">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">OUR <span className="text-sinner-blue">PROGRAMS</span></h2>
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">OUR <span className="text-sinner-red">PROGRAMS</span></h2>
           <AnimatedText 
             text="Transformative fitness solutions designed to push you beyond your limits." 
             className="text-lg text-white/80"
           />
+          
+          {/* Top consultation CTA */}
+          <div className="mt-8">
+            <a href="#contact" className="btn-primary pulse-glow inline-flex">
+              Book Free Consultation
+            </a>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -64,10 +71,10 @@ const Services: React.FC = () => {
             >
               <div className="mb-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  service.highlighted ? 'bg-sinner-red' : 'bg-sinner-blue/20'
+                  service.highlighted ? 'bg-sinner-red' : 'bg-sinner-red/20'
                 }`}>
                   <service.icon className={`h-6 w-6 ${
-                    service.highlighted ? 'text-white' : 'text-sinner-blue'
+                    service.highlighted ? 'text-white' : 'text-white'
                   }`} />
                 </div>
               </div>
@@ -93,8 +100,8 @@ const Services: React.FC = () => {
                     href="#contact" 
                     className={`text-sm font-semibold py-2 px-4 rounded ${
                       service.highlighted 
-                        ? 'bg-sinner-red hover:bg-sinner-red/90' 
-                        : 'bg-white/10 hover:bg-white/20'
+                        ? 'bg-sinner-red hover:bg-sinner-red/90 pulse-glow' 
+                        : 'bg-sinner-red/80 hover:bg-sinner-red/90'
                     } transition-colors`}
                   >
                     Get Started
@@ -105,12 +112,12 @@ const Services: React.FC = () => {
           ))}
         </div>
 
-        <div className="mt-16 bg-gradient-to-r from-sinner-red/20 via-sinner-red/10 to-sinner-red/5 rounded-xl p-8 text-center">
+        <div className="mt-16 bg-gradient-to-r from-sinner-red/30 via-sinner-red/20 to-sinner-red/10 rounded-xl p-8 text-center transform hover:scale-[1.01] transition-transform">
           <h3 className="text-2xl font-bold mb-3">Not sure which program is right for you?</h3>
           <p className="text-white/80 mb-6 max-w-2xl mx-auto">
             Schedule a free 15-minute consultation call to discuss your goals and find the perfect fit for your fitness journey.
           </p>
-          <a href="#contact" className="btn-primary inline-flex">
+          <a href="#contact" className="btn-primary pulse-glow inline-flex">
             Book Free Consultation
           </a>
         </div>

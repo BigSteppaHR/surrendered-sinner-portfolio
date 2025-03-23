@@ -29,7 +29,7 @@ const About: React.FC = () => {
   ];
 
   return (
-    <section id="about" className="section-padding noise-bg">
+    <section id="about" className="section-padding bg-gradient-to-b from-black to-sinner-dark-gray noise-bg">
       <div className="container-custom">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">ABOUT <span className="text-sinner-red">SURRENDERED SINNER</span></h2>
@@ -41,13 +41,14 @@ const About: React.FC = () => {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="relative">
             <div className="absolute -top-4 -left-4 w-24 h-24 bg-sinner-red/20 rounded-lg"></div>
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-sinner-blue/20 rounded-lg"></div>
+            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-sinner-red/20 rounded-lg"></div>
             <div className="relative overflow-hidden rounded-lg">
               <img 
                 src="https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80" 
                 alt="Coach training" 
                 className="w-full h-full object-cover"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-sinner-red/30 to-transparent opacity-60"></div>
             </div>
           </div>
 
@@ -71,8 +72,8 @@ const About: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-start">
-                <div className="flex-shrink-0 bg-sinner-blue/20 p-2 rounded-lg mr-3">
-                  <Target className="h-5 w-5 text-sinner-blue" />
+                <div className="flex-shrink-0 bg-sinner-red/20 p-2 rounded-lg mr-3">
+                  <Target className="h-5 w-5 text-sinner-red" />
                 </div>
                 <div>
                   <h4 className="font-semibold">Consistency Breeds Excellence</h4>
@@ -80,7 +81,7 @@ const About: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-start">
-                <div className="flex-shrink-0 bg-white/10 p-2 rounded-lg mr-3">
+                <div className="flex-shrink-0 bg-sinner-red/20 p-2 rounded-lg mr-3">
                   <Award className="h-5 w-5 text-white" />
                 </div>
                 <div>
@@ -88,6 +89,13 @@ const About: React.FC = () => {
                   <p className="text-white/70">We embrace the struggle that forges extraordinary results.</p>
                 </div>
               </div>
+            </div>
+            
+            {/* Added CTA button */}
+            <div className="mt-8">
+              <a href="#contact" className="btn-primary pulse-glow inline-flex">
+                Book Free Consultation
+              </a>
             </div>
           </div>
         </div>
