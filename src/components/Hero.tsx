@@ -34,12 +34,7 @@ const Hero: React.FC = () => {
 
       <div className="container-custom relative z-10 mt-20 flex flex-col items-center text-center">
         <div className={`transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'} mb-6 relative`}>
-          {/* Improved TV static effect only on the outside of the logo */}
-          <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none" style={{ padding: '10px' }}>
-            <div className="absolute inset-0 ring-4 ring-offset-4 ring-offset-transparent ring-sinner-red/40 rounded-full"></div>
-            <div className="absolute inset-[-10px] opacity-20 mix-blend-overlay tv-static rounded-full"></div>
-          </div>
-          
+          {/* Removed TV static effect that was on the outside of the logo */}
           <img 
             src="/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png" 
             alt="Surrendered Sinner Fitness Logo" 
