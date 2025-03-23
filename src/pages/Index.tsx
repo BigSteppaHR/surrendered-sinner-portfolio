@@ -17,9 +17,14 @@ const Index = () => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <Hero />
+      {/* Add section dividers between each section */}
+      <div className="w-full h-8 bg-sinner-red/10"></div>
       <About />
+      <div className="w-full h-8 bg-sinner-red/10"></div>
       <Services />
+      <div className="w-full h-8 bg-sinner-red/10"></div>
       <Testimonials />
+      <div className="w-full h-8 bg-sinner-red/10"></div>
       <Contact />
       <Footer />
     </div>
