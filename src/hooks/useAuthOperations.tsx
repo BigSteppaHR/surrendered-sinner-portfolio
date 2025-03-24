@@ -114,7 +114,7 @@ export const useAuthOperations = () => {
         console.error('Error storing verification token:', tokenError);
       }
       
-      const BASE_URL = window.location.origin;
+      const BASE_URL = "https://codecove.dev";
       const verificationApiUrl = `${BASE_URL}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
       console.log("Generated verification URL:", verificationApiUrl);
