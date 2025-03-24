@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { WeightRecord } from "@/types";
-import { format, subMonths, parseISO, addWeeks, startOfWeek, endOfWeek } from "date-fns";
+import { format, subMonths, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,10 +126,11 @@ const Progress = () => {
       const emptyData = [];
       const today = new Date();
       for (let i = 5; i >= 0; i--) {
-        const date = addWeeks(today, -i);
+        const date = new Date();
+        date.setDate(today.getDate() - (i * 7)); // Go back by weeks
         emptyData.push({
           date: format(date, 'MMM dd'),
-          weight: 0
+          weight: null
         });
       }
       return emptyData;
