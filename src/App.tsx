@@ -11,18 +11,9 @@ import { AuthProvider } from "./components/AuthProvider";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import Dashboard from "./pages/Dashboard";
-import Schedule from "./pages/Schedule";
-import Payment from "./pages/Payment";
-import PaymentPortal from "./pages/PaymentPortal";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ResetPassword from "./pages/ResetPassword";
-import VerifyEmail from "./pages/VerifyEmail";
-import Progress from "./pages/Progress";
-import Account from "./pages/Account";
-import TrainingPlans from "./pages/TrainingPlans";
+import Dashboard from "./pages/dashboard/Dashboard";
 import { useAuth } from "./hooks/useAuth";
+import DashboardLayout from "./pages/dashboard/DashboardLayout";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -121,8 +112,8 @@ const AuthNavigation = () => {
   
   // Only return a loading component when auth is not initialized
   return isLoading ? (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#1A1F2C] z-50">
-      <div className="animate-spin h-8 w-8 border-4 border-[#9b87f5] border-t-transparent rounded-full"></div>
+    <div className="fixed inset-0 flex items-center justify-center bg-[#000000] z-50">
+      <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
     </div>
   ) : null;
 };
@@ -135,21 +126,40 @@ const AppRoutes = () => {
       <AuthNavigation />
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/progress" element={<Progress />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/payment" element={<Payment />} />
-        <Route path="/payment-portal" element={<PaymentPortal />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/plans" element={<TrainingPlans />} />
-        {/* Redirect /confirm-email to /login for backward compatibility */}
-        <Route path="/confirm-email" element={<Navigate to="/login" replace />} />
-        {/* Redirect /auth to /login for backward compatibility */}
-        <Route path="/auth" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Navigate to="/dashboard/login" replace />} />
+        <Route path="/signup" element={<Navigate to="/dashboard/signup" replace />} />
+        <Route path="/reset-password" element={<Navigate to="/dashboard/reset-password" replace />} />
+        <Route path="/verify-email" element={<Navigate to="/dashboard/verify-email" replace />} />
+        
+        {/* Dashboard routes - all nested under /dashboard */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="sessions" element={<import("./pages/dashboard/Sessions").then(mod => <mod.default />)} />
+          <Route path="plans" element={<import("./pages/dashboard/TrainingPlans").then(mod => <mod.default />)} />
+          <Route path="payment" element={<import("./pages/dashboard/Payment").then(mod => <mod.default />)} />
+          <Route path="progress" element={<import("./pages/dashboard/Progress").then(mod => <mod.default />)} />
+          <Route path="account" element={<import("./pages/dashboard/Account").then(mod => <mod.default />)} />
+          <Route path="login" element={<import("./pages/Login").then(mod => <mod.default />)} />
+          <Route path="signup" element={<import("./pages/Signup").then(mod => <mod.default />)} />
+          <Route path="reset-password" element={<import("./pages/ResetPassword").then(mod => <mod.default />)} />
+          <Route path="verify-email" element={<import("./pages/VerifyEmail").then(mod => <mod.default />)} />
+          <Route path="payment-portal" element={<import("./pages/PaymentPortal").then(mod => <mod.default />)} />
+        </Route>
+        
+        {/* Redirect old routes to new dashboard routes */}
+        <Route path="/dashboard" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/schedule" element={<Navigate to="/dashboard/sessions" replace />} />
+        <Route path="/progress" element={<Navigate to="/dashboard/progress" replace />} />
+        <Route path="/account" element={<Navigate to="/dashboard/account" replace />} />
+        <Route path="/payment" element={<Navigate to="/dashboard/payment" replace />} />
+        <Route path="/payment-portal" element={<Navigate to="/dashboard/payment-portal" replace />} />
+        <Route path="/plans" element={<Navigate to="/dashboard/plans" replace />} />
+        
+        {/* Redirect /confirm-email to /dashboard/login for backward compatibility */}
+        <Route path="/confirm-email" element={<Navigate to="/dashboard/login" replace />} />
+        {/* Redirect /auth to /dashboard/login for backward compatibility */}
+        <Route path="/auth" element={<Navigate to="/dashboard/login" replace />} />
+        
         <Route path="/admin/*" element={<AdminDashboard />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />

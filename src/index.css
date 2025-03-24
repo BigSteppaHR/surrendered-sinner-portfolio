@@ -7,33 +7,33 @@
 
 @layer base {
   :root {
-    --background: 0 0% 5%;
-    --foreground: 0 0% 98%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
 
     --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
+    --card-foreground: 0 0% 100%;
 
     --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 0 90% 59%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 359 70% 57%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 200 100% 58%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 100%;
+    --secondary-foreground: 0 0% 0%;
 
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 70%;
 
     --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 90% 59%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 359 70% 57%;
+    --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 15%;
     --input: 0 0% 15%;
-    --ring: 0 90% 59%;
+    --ring: 359 70% 57%;
 
     --radius: 0.5rem;
   }
@@ -47,7 +47,7 @@
   }
 
   body {
-    @apply bg-sinner-black text-white font-sans overflow-x-hidden;
+    @apply bg-[#000000] text-white font-sans overflow-x-hidden;
     font-family: 'Montserrat', sans-serif;
   }
 
@@ -56,15 +56,11 @@
   }
 
   .text-shadow {
-    text-shadow: 0 0 5px rgba(255, 45, 45, 0.7);
+    text-shadow: 0 0 5px rgba(234, 56, 76, 0.7);
   }
 
   .text-shadow-strong {
-    text-shadow: 0 0 10px rgba(255, 45, 45, 0.8), 0 0 20px rgba(255, 45, 45, 0.4);
-  }
-
-  .text-shadow-blue {
-    text-shadow: 0 0 5px rgba(41, 169, 255, 0.7);
+    text-shadow: 0 0 10px rgba(234, 56, 76, 0.8), 0 0 20px rgba(234, 56, 76, 0.4);
   }
 
   .text-shadow-sm {
@@ -72,11 +68,7 @@
   }
 
   .red-glow {
-    filter: drop-shadow(0 0 8px rgba(255, 45, 45, 0.8));
-  }
-
-  .blue-glow {
-    filter: drop-shadow(0 0 5px rgba(41, 169, 255, 0.5));
+    filter: drop-shadow(0 0 8px rgba(234, 56, 76, 0.8));
   }
 
   .white-glow {
@@ -136,13 +128,13 @@
 
   @keyframes pulse-glow {
     0% {
-      box-shadow: 0 0 0 0 rgba(255, 45, 45, 0.7);
+      box-shadow: 0 0 0 0 rgba(234, 56, 76, 0.7);
     }
     70% {
-      box-shadow: 0 0 0 10px rgba(255, 45, 45, 0);
+      box-shadow: 0 0 0 10px rgba(234, 56, 76, 0);
     }
     100% {
-      box-shadow: 0 0 0 0 rgba(255, 45, 45, 0);
+      box-shadow: 0 0 0 0 rgba(234, 56, 76, 0);
     }
   }
 }
@@ -157,12 +149,12 @@
   }
 
   .btn-primary {
-    @apply relative flex items-center justify-center px-6 py-3 overflow-hidden font-bold text-white rounded-md bg-sinner-red 
+    @apply relative flex items-center justify-center px-6 py-3 overflow-hidden font-bold text-white rounded-md bg-[#ea384c] 
     hover:bg-opacity-90 transition-all duration-300 focus:outline-none transform hover:scale-[1.02] active:scale-[0.98];
   }
 
   .btn-secondary {
-    @apply relative flex items-center justify-center px-6 py-3 overflow-hidden font-bold text-white rounded-md bg-sinner-red/80
+    @apply relative flex items-center justify-center px-6 py-3 overflow-hidden font-bold text-white rounded-md bg-[#ea384c]/80
     hover:bg-opacity-90 transition-all duration-300 focus:outline-none transform hover:scale-[1.02] active:scale-[0.98];
   }
 
@@ -178,11 +170,11 @@
   
   .section-divider::before {
     content: "";
-    @apply absolute inset-0 bg-gradient-to-r from-sinner-red/5 via-sinner-red/20 to-sinner-red/5 transform skew-y-1;
+    @apply absolute inset-0 bg-gradient-to-r from-[#ea384c]/5 via-[#ea384c]/20 to-[#ea384c]/5 transform skew-y-1;
   }
   
   .section-divider::after {
     content: "";
-    @apply absolute top-1/2 left-1/2 -translate-x-1/2 w-40 h-[1px] bg-sinner-red/40;
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 w-40 h-[1px] bg-[#ea384c]/40;
   }
 }
