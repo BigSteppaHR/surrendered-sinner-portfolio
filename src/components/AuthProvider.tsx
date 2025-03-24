@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,7 +33,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
@@ -46,7 +44,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Check for existing session
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
@@ -106,9 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) throw error;
       
-      // Send a custom confirmation email
       try {
-        // Generate a verification URL since it's not directly available on the user object
         const verificationUrl = `${window.location.origin}/auth?verify=success&email=${encodeURIComponent(email)}`;
         
         await sendEmail({
@@ -141,7 +136,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       } catch (emailError: any) {
         console.error('Error sending verification email:', emailError);
-        // Continue with the signup process even if the custom email fails
       }
       
       toast({
@@ -149,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Please check your email to verify your account",
       });
       
-      return { error: null };
+      return { error: null, data };
     } catch (error: any) {
       console.error('Signup error:', error.message);
       toast({
@@ -157,7 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: error.message || "There was a problem creating your account",
         variant: "destructive",
       });
-      return { error };
+      return { error, data: null };
     }
   };
 
@@ -169,7 +163,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) throw error;
       
-      // Send a custom reset password email
       try {
         await sendEmail({
           to: email,
@@ -189,7 +182,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       } catch (emailError: any) {
         console.error('Error sending reset password email:', emailError);
-        // Continue with the process even if the custom email fails
       }
       
       toast({

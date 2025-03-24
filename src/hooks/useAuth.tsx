@@ -19,7 +19,7 @@ export type AuthContextType = {
   isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: any | null }>;
-  signup: (email: string, password: string, fullName: string) => Promise<{ error: any | null }>;
+  signup: (email: string, password: string, fullName: string) => Promise<{ error: any | null, data: any | null }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any | null }>;

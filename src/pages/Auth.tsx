@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Navigate, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,22 +23,19 @@ const Auth = () => {
   const [isSignupLoading, setIsSignupLoading] = useState(false);
   const [isResetLoading, setIsResetLoading] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   
-  // Login form state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   
-  // Signup form state
   const [signupFullName, setSignupFullName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   
-  // Reset password state
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   
-  // Handle URL parameters for verification and password reset
   useEffect(() => {
     const verify = searchParams.get("verify");
     const reset = searchParams.get("reset");
@@ -49,6 +45,7 @@ const Auth = () => {
         title: "Email verified",
         description: "Your email has been verified. You can now log in.",
       });
+      setActiveTab("login");
     }
     
     if (reset === "true") {
@@ -79,8 +76,16 @@ const Auth = () => {
     setIsSignupLoading(true);
     
     try {
-      await signup(signupEmail, signupPassword, signupFullName);
-      // Note: We don't navigate here since we might require email verification
+      const { error } = await signup(signupEmail, signupPassword, signupFullName);
+      if (!error) {
+        setSignupSuccess(true);
+        setSignupEmail("");
+        setSignupPassword("");
+        setSignupFullName("");
+        setTimeout(() => {
+          setActiveTab("login");
+        }, 3000);
+      }
     } finally {
       setIsSignupLoading(false);
     }
@@ -238,79 +243,90 @@ const Auth = () => {
                   Enter your information to create a new account
                 </CardDescription>
               </CardHeader>
-              <form onSubmit={handleSignup}>
+              {signupSuccess ? (
                 <CardContent className="space-y-4">
-                  <Alert className="bg-gray-800 border-gray-700 text-gray-300">
-                    <AlertTitle>Verification Required</AlertTitle>
+                  <Alert className="bg-green-800 border-green-700 text-white">
+                    <AlertTitle>Account Created Successfully!</AlertTitle>
                     <AlertDescription>
-                      After signing up, you'll need to verify your email before logging in.
+                      Please check your email to verify your account. You will be redirected to the login page shortly.
                     </AlertDescription>
                   </Alert>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                      <Input
-                        id="fullName"
-                        type="text"
-                        placeholder="John Doe"
-                        className="pl-10 bg-gray-800 border-gray-700"
-                        value={signupFullName}
-                        onChange={(e) => setSignupFullName(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signupEmail">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                      <Input
-                        id="signupEmail"
-                        type="email"
-                        placeholder="your@email.com"
-                        className="pl-10 bg-gray-800 border-gray-700"
-                        value={signupEmail}
-                        onChange={(e) => setSignupEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signupPassword">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                      <Input
-                        id="signupPassword"
-                        type="password"
-                        className="pl-10 bg-gray-800 border-gray-700"
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
                 </CardContent>
-                
-                <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isSignupLoading}>
-                    {isSignupLoading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        Creating Account...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <UserPlus className="h-4 w-4" />
-                        Create Account
-                      </span>
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
+              ) : (
+                <form onSubmit={handleSignup}>
+                  <CardContent className="space-y-4">
+                    <Alert className="bg-gray-800 border-gray-700 text-gray-300">
+                      <AlertTitle>Verification Required</AlertTitle>
+                      <AlertDescription>
+                        After signing up, you'll need to verify your email before logging in.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                        <Input
+                          id="fullName"
+                          type="text"
+                          placeholder="John Doe"
+                          className="pl-10 bg-gray-800 border-gray-700"
+                          value={signupFullName}
+                          onChange={(e) => setSignupFullName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="signupEmail">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                        <Input
+                          id="signupEmail"
+                          type="email"
+                          placeholder="your@email.com"
+                          className="pl-10 bg-gray-800 border-gray-700"
+                          value={signupEmail}
+                          onChange={(e) => setSignupEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="signupPassword">Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                        <Input
+                          id="signupPassword"
+                          type="password"
+                          className="pl-10 bg-gray-800 border-gray-700"
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter>
+                    <Button type="submit" className="w-full" disabled={isSignupLoading}>
+                      {isSignupLoading ? (
+                        <span className="flex items-center gap-2">
+                          <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          Creating Account...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <UserPlus className="h-4 w-4" />
+                          Create Account
+                        </span>
+                      )}
+                    </Button>
+                  </CardFooter>
+                </form>
+              )}
             </Card>
           </TabsContent>
           
