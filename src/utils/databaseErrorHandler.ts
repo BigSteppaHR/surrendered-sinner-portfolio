@@ -112,7 +112,8 @@ export const withErrorHandling = async <T>(
           message: 'Unexpected error', 
           details: '', 
           hint: '', 
-          code: 'UNKNOWN' 
+          code: 'UNKNOWN',
+          name: 'UnexpectedError' // Add the missing name property
         } 
       };
     }
@@ -125,7 +126,8 @@ export const withErrorHandling = async <T>(
       message: 'Maximum retry attempts exceeded', 
       details: '', 
       hint: '', 
-      code: 'MAX_RETRIES' 
+      code: 'MAX_RETRIES',
+      name: 'RetryError' // Add the missing name property
     } 
   };
 };
