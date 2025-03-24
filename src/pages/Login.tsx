@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -10,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedBackground from "@/components/auth/AnimatedBackground";
 
-// Lazy load the EmailVerificationDialog component
 const EmailVerificationDialogLazy = lazy(() => import("@/components/email/EmailVerificationDialog"));
 
 const loginSchema = z.object({
@@ -19,7 +17,7 @@ const loginSchema = z.object({
 });
 
 export default function Login() {
-  const { login, isAuthenticated, profile, isLoading, isInitialized, resetPassword } = useAuth();
+  const { login, isAuthenticated, profile, isLoading, isInitialized } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
@@ -133,7 +131,6 @@ export default function Login() {
       console.log("Login result:", result);
       
       if (result.error) {
-        console.log("Login error:", result.error);
         if (result.error.code === "email_not_confirmed" && result.data?.showVerification) {
           const isVerified = await checkEmailVerification(values.email);
           
@@ -176,7 +173,6 @@ export default function Login() {
         });
         
         if (result.data.profile?.email_confirmed) {
-          // Redirect based on user role
           if (result.data.profile?.is_admin) {
             navigate("/admin", { replace: true });
           } else {
