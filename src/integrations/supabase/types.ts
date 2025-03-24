@@ -12,6 +12,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          email: string | null
+          email_confirmed: boolean | null
           full_name: string | null
           id: string
           is_admin: boolean | null
@@ -20,6 +22,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          email?: string | null
+          email_confirmed?: boolean | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
@@ -28,11 +32,37 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          email?: string | null
+          email_confirmed?: boolean | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
           updated_at?: string | null
           username?: string | null
+        }
+        Relationships: []
+      }
+      verification_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          user_email?: string
         }
         Relationships: []
       }

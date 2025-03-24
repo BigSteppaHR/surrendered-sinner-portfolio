@@ -123,7 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Generate a verification token
       const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
-      // Store the verification token in a separate table
+      // Store the verification token in the verification_tokens table
       const { error: tokenError } = await supabase
         .from('verification_tokens')
         .insert({ 

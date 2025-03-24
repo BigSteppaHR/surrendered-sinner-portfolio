@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Navigate, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +55,7 @@ const Auth = () => {
             throw new Error("Email parameter is missing");
           }
           
+          // Get the token from the verification_tokens table
           const { data: tokenData, error: tokenError } = await supabase
             .from('verification_tokens')
             .select('*')
@@ -65,19 +67,22 @@ const Auth = () => {
             throw new Error("Invalid or expired verification token");
           }
           
+          // Check if token has expired
           if (new Date(tokenData.expires_at) < new Date()) {
             throw new Error("Verification token has expired");
           }
           
+          // Update the user's profile to mark email as confirmed
           const { error: updateError } = await supabase
             .from('profiles')
-            .update({ email_confirmed: true })
+            .update({ email_confirmed: true, email: email })
             .eq('email', email);
           
           if (updateError) {
             throw new Error("Failed to verify email");
           }
           
+          // Delete the used token
           await supabase
             .from('verification_tokens')
             .delete()
