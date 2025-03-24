@@ -6,6 +6,7 @@ import { useEmailVerification } from "@/hooks/useEmailVerification";
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/safe-dialog";
 import { X } from "lucide-react";
 import EmailVerificationCard from "@/components/email/EmailVerificationCard";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmailVerificationDialogProps {
   isOpen: boolean;
@@ -20,12 +21,14 @@ const EmailVerificationDialog = ({
   initialEmail = "",
   redirectToLogin = true
 }: EmailVerificationDialogProps) => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const mounted = useRef(true);
   const [isVisible, setIsVisible] = useState(false);
   const [email, setEmail] = useState("");
+  const [isCheckingVerification, setIsCheckingVerification] = useState(true);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [dialogDescription, setDialogDescription] = useState("");
   const descriptionId = "email-verification-description";
 
@@ -40,20 +43,84 @@ const EmailVerificationDialog = ({
       setEmail(emailToUse);
       // Update dialog description when email changes
       setDialogDescription(`Please verify your email address ${emailToUse ? `(${emailToUse})` : ""} to continue using your account`);
+      
+      // Check if email is already verified
+      checkEmailVerification(emailToUse);
     }
   }, [initialEmail, location.state?.email, user?.email]);
+
+  // Check if email is already verified in the database
+  const checkEmailVerification = async (emailToCheck: string) => {
+    if (!emailToCheck) return;
+    
+    setIsCheckingVerification(true);
+    
+    try {
+      // First check if the current profile has email_confirmed=true
+      if (profile?.email_confirmed) {
+        console.log("Email already verified according to profile:", profile);
+        setIsEmailVerified(true);
+        setIsCheckingVerification(false);
+        
+        // Close dialog if email is verified
+        if (isOpen && mounted.current) {
+          setIsVisible(false);
+          setTimeout(() => {
+            if (mounted.current) {
+              onClose();
+            }
+          }, 300);
+        }
+        return;
+      }
+      
+      // If we don't have a profile or email_confirmed is false, explicitly check the profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('email_confirmed')
+        .eq('email', emailToCheck)
+        .maybeSingle();
+      
+      if (!error && data && data.email_confirmed) {
+        console.log("Email already verified according to database check:", data);
+        setIsEmailVerified(true);
+        
+        // Refresh profile to update the local state
+        await refreshProfile();
+        
+        // Close dialog if email is verified
+        if (isOpen && mounted.current) {
+          setIsVisible(false);
+          setTimeout(() => {
+            if (mounted.current) {
+              onClose();
+            }
+          }, 300);
+        }
+      } else {
+        console.log("Email not verified in database:", error || "No verified profile found");
+        setIsEmailVerified(false);
+      }
+    } catch (err) {
+      console.error("Error checking email verification:", err);
+    } finally {
+      if (mounted.current) {
+        setIsCheckingVerification(false);
+      }
+    }
+  };
 
   // Handle visibility with a delay to prevent race conditions
   useEffect(() => {
     if (!mounted.current) return;
-    if (!isOpen) {
+    if (!isOpen || isEmailVerified) {
       setIsVisible(false);
       return;
     }
     
     // Small delay to ensure DOM is ready
     const timer = setTimeout(() => {
-      if (mounted.current) {
+      if (mounted.current && !isEmailVerified) {
         setIsVisible(true);
       }
     }, 100);
@@ -61,7 +128,7 @@ const EmailVerificationDialog = ({
     return () => {
       clearTimeout(timer);
     };
-  }, [isOpen]);
+  }, [isOpen, isEmailVerified]);
 
   // Handle back to login
   const handleBackToLogin = () => {
@@ -119,9 +186,23 @@ const EmailVerificationDialog = ({
     };
   }, [profile, navigate, onClose]);
 
-  // Don't render anything if not open
-  if (!isOpen) {
+  // Don't render anything if not open or if email is verified
+  if (!isOpen || isEmailVerified) {
     return null;
+  }
+
+  // Show loading state while checking verification
+  if (isCheckingVerification) {
+    return (
+      <Dialog open={isVisible}>
+        <DialogContent className="p-0 bg-transparent border-none shadow-none max-w-md mx-auto">
+          <div className="bg-gray-900 text-white p-6 rounded-lg flex justify-center items-center">
+            <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+            <span>Checking verification status...</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (

@@ -1,13 +1,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import * as z from "zod";
 import LoginHeader from "@/components/auth/LoginHeader";
 import LoginForm from "@/components/auth/LoginForm";
 import LoginFooter from "@/components/auth/LoginFooter";
 import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -20,7 +21,9 @@ export default function Login() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const mountedRef = useRef(true);
   const { toast } = useToast();
 
@@ -29,6 +32,35 @@ export default function Login() {
       mountedRef.current = false;
     };
   }, []);
+
+  // Check if an email is already verified in the database
+  const checkEmailVerification = async (email: string): Promise<boolean> => {
+    if (!email) return false;
+    
+    setIsCheckingVerification(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('email_confirmed')
+        .eq('email', email)
+        .maybeSingle();
+      
+      if (!error && data && data.email_confirmed) {
+        console.log("Email already verified according to database check:", data);
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      console.error("Error checking email verification:", err);
+      return false;
+    } finally {
+      if (mountedRef.current) {
+        setIsCheckingVerification(false);
+      }
+    }
+  };
 
   // Debug logs
   useEffect(() => {
@@ -60,9 +92,33 @@ export default function Login() {
       if (result.error) {
         console.log("Login error:", result.error);
         if (result.error.code === "email_not_confirmed" && result.data?.showVerification) {
-          console.log("Email not confirmed, showing verification dialog for:", values.email);
-          setVerificationEmail(values.email);
-          setShowEmailVerification(true);
+          // Check if email is already verified in the database
+          const isVerified = await checkEmailVerification(values.email);
+          
+          if (isVerified) {
+            // If verified but auth state doesn't know it yet, refresh and try login again
+            toast({
+              title: "Email already verified",
+              description: "Your email is already verified. Attempting to sign you in...",
+            });
+            
+            // Try signing in again
+            const retryResult = await login(values.email, values.password);
+            
+            if (retryResult.error) {
+              setLoginError(retryResult.error.message || "Login failed. Please try again.");
+              toast({
+                title: "Login failed",
+                description: retryResult.error.message || "Login failed. Please try again.",
+                variant: "destructive",
+              });
+            }
+          } else {
+            // Email not verified, show verification dialog
+            console.log("Email not confirmed, showing verification dialog for:", values.email);
+            setVerificationEmail(values.email);
+            setShowEmailVerification(true);
+          }
         } else {
           const errorMessage = result.error.message || "Login failed. Please try again.";
           setLoginError(errorMessage);
@@ -118,7 +174,7 @@ export default function Login() {
         
         <LoginForm 
           onSubmit={onSubmit}
-          isSubmitting={isSubmitting}
+          isSubmitting={isSubmitting || isCheckingVerification}
           isLoading={isLoading}
           loginError={loginError}
         />
