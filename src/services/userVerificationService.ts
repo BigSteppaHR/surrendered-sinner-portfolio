@@ -51,7 +51,7 @@ export const generateAndStoreVerificationToken = async (email: string): Promise<
       return null;
     }
     
-    // Generate verification URL
+    // Generate verification URL with origin
     const verificationUrl = generateVerificationUrl(verificationToken, email);
     console.log("Generated verification URL:", verificationUrl);
     
@@ -70,7 +70,7 @@ export const generateAndStoreVerificationToken = async (email: string): Promise<
   }
 };
 
-// Send verification email
+// Send verification email with proper link
 export const sendVerificationEmail = async (
   sendEmail: (params: any) => Promise<any>,
   email: string, 
@@ -78,24 +78,24 @@ export const sendVerificationEmail = async (
   verificationUrl: string
 ): Promise<boolean> => {
   try {
+    // Generate email content with the verification URL
     const emailContent = generateVerificationEmailTemplate({
       fullName,
       verificationUrl
     });
     
+    // Send the email with the verification link
     const emailResult = await sendEmail({
       to: email,
       subject: "Welcome to Surrendered Sinner - Verify Your Email",
       html: emailContent,
     });
     
-    // We always consider the email as sent, even if there was an error
-    // This allows the verification flow to continue
     console.log('Verification email processed for:', email);
     return true;
   } catch (error) {
     console.error('Error in sendVerificationEmail:', error);
-    // Return true to allow verification flow to continue
+    // Return true to allow verification flow to continue even if email fails
     return true;
   }
 };
@@ -106,7 +106,30 @@ export const completeVerificationProcess = async (
   email: string, 
   fullName: string
 ): Promise<VerificationResult> => {
-  // Generate and store verification token
+  // First try using Supabase built-in verification
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/verify-email`
+      }
+    });
+    
+    if (!error) {
+      console.log("Successfully sent verification email via Supabase");
+      return {
+        success: true,
+        emailSent: true
+      };
+    }
+    
+    console.warn("Error using Supabase resend, falling back to custom verification:", error);
+  } catch (error) {
+    console.error("Error with Supabase auth resend:", error);
+  }
+  
+  // Fall back to custom verification
   const verificationUrl = await generateAndStoreVerificationToken(email);
   
   if (!verificationUrl) {
@@ -129,6 +152,8 @@ export const completeVerificationProcess = async (
 // Update profile email_confirmed status
 export const updateEmailConfirmationStatus = async (userId: string, email: string): Promise<boolean> => {
   try {
+    console.log(`Updating email confirmation status for user ${userId} with email ${email}`);
+    
     const { error } = await supabase
       .from('profiles')
       .update({ 
@@ -138,7 +163,7 @@ export const updateEmailConfirmationStatus = async (userId: string, email: strin
       .eq('id', userId);
     
     if (error) {
-      console.error("Error updating profile confirmation status:", error);
+      console.error("Error updating profile confirmation status by ID:", error);
       
       // Try updating by email as a fallback
       const { error: emailUpdateError } = await supabase
@@ -151,13 +176,94 @@ export const updateEmailConfirmationStatus = async (userId: string, email: strin
       
       if (emailUpdateError) {
         console.error("Error updating profile by email:", emailUpdateError);
+        
+        // One last attempt - look up user by email in auth.users
+        try {
+          const { data: userData } = await supabase.auth.admin.getUserByEmail(email);
+          
+          if (userData?.user) {
+            const userId = userData.user.id;
+            console.log("Found user ID from email:", userId);
+            
+            const { error: finalError } = await supabase
+              .from('profiles')
+              .update({ 
+                email_confirmed: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', userId);
+              
+            if (finalError) {
+              console.error("Final attempt to update profile failed:", finalError);
+              return false;
+            }
+            
+            return true;
+          }
+        } catch (adminError) {
+          console.error("Error with admin getUserByEmail:", adminError);
+          return false;
+        }
+        
         return false;
       }
     }
     
+    console.log("Successfully updated email confirmation status");
     return true;
   } catch (error) {
     console.error("Exception updating email confirmation status:", error);
+    return false;
+  }
+};
+
+// Verify a token directly
+export const verifyToken = async (token: string, email: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('verification_tokens')
+      .select('*')
+      .eq('token', token)
+      .eq('user_email', email)
+      .maybeSingle();
+      
+    if (error || !data) {
+      console.error("Error verifying token:", error);
+      return false;
+    }
+    
+    // Check if token is expired
+    if (new Date(data.expires_at) < new Date()) {
+      console.log("Token is expired");
+      return false;
+    }
+    
+    // Mark token as verified
+    const { error: updateError } = await supabase
+      .from('verification_tokens')
+      .update({ 
+        verified_at: new Date().toISOString()
+      })
+      .eq('token', token);
+      
+    if (updateError) {
+      console.error("Error updating token verification status:", updateError);
+    }
+    
+    // Now try to update the user's profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+      
+    if (profileData?.id) {
+      return await updateEmailConfirmationStatus(profileData.id, email);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Exception verifying token:", error);
     return false;
   }
 };

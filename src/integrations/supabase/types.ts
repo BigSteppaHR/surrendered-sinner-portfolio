@@ -48,21 +48,27 @@ export type Database = {
           expires_at: string
           id: string
           token: string
+          token_type: string | null
           user_email: string
+          verified_at: string | null
         }
         Insert: {
           created_at?: string
           expires_at: string
           id?: string
           token: string
+          token_type?: string | null
           user_email: string
+          verified_at?: string | null
         }
         Update: {
           created_at?: string
           expires_at?: string
           id?: string
           token?: string
+          token_type?: string | null
           user_email?: string
+          verified_at?: string | null
         }
         Relationships: []
       }

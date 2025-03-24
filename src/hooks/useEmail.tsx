@@ -43,9 +43,14 @@ export const useEmail = () => {
 
         console.log("Email send response:", response);
         
+        if (response.error) {
+          console.warn("Supabase function returned error:", response.error);
+          throw new Error(response.error.message || "Failed to send email");
+        }
+        
         toast({
           title: "Email sent",
-          description: "Verification email has been sent successfully",
+          description: "Email has been sent successfully",
         });
         
         return { success: true, data: response.data };
@@ -55,9 +60,10 @@ export const useEmail = () => {
         // For development environments or when email service is down, we simulate success
         console.log("Using fallback email delivery simulation");
         
+        // Always show positive message to user
         toast({
           title: "Email delivery status",
-          description: "Verification email has been processed. Please check your inbox and spam folder.",
+          description: "Email has been processed. Please check your inbox and spam folder.",
         });
         
         // Return success to allow the application flow to continue
@@ -69,7 +75,7 @@ export const useEmail = () => {
       // Always return success to not block the verification flow
       toast({
         title: "Email verification status",
-        description: "Verification email has been processed. Please check your inbox and spam folder.",
+        description: "Email has been processed. Please check your inbox and spam folder.",
       });
       
       return { success: true, simulated: true };

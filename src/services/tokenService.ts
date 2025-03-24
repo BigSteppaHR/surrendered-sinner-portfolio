@@ -11,7 +11,7 @@ export const createVerificationToken = async (email: string): Promise<string | n
     
     console.log("Generated new verification token for:", email);
     
-    // Return the token but don't try to save it in the database
+    // Return the token
     return verificationToken;
   } catch (error) {
     console.error("Error creating verification token:", error);
@@ -22,5 +22,6 @@ export const createVerificationToken = async (email: string): Promise<string | n
 export const generateVerificationUrl = (token: string, email: string): string => {
   // Use the current origin for the verification URL
   const BASE_URL = window.location.origin;
+  // Include both token and email to ensure we can identify the user even if token lookup fails
   return `${BASE_URL}/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
 };

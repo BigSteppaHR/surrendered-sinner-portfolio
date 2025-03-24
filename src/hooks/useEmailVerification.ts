@@ -27,25 +27,26 @@ export const useEmailVerification = (email: string) => {
   const handleResendEmail = async () => {
     if (resendCooldown > 0 || !email) {
       console.log("Resend blocked due to cooldown or missing email", { resendCooldown, email });
-      return;
+      return false;
     }
     
     try {
       console.log("Starting email resend process for:", email);
       
-      // Use Supabase's built-in email verification system
-      const { error } = await supabase.auth.resend({
+      // Try Supabase's built-in email verification system with custom redirect
+      const { error: supabaseError } = await supabase.auth.resend({
         type: 'signup',
         email: email,
         options: {
-          emailRedirectTo: window.location.origin + '/verify-email'
+          // Make sure we include the proper redirect URL with the origin
+          emailRedirectTo: `${window.location.origin}/verify-email`
         }
       });
       
-      if (error) {
-        console.warn("Error using Supabase resend:", error);
+      if (supabaseError) {
+        console.warn("Error using Supabase resend:", supabaseError);
         
-        // Fallback to our custom email sending if Supabase resend fails
+        // Fall back to our custom email sending
         const emailResult = await sendEmail({
           to: email,
           subject: "Surrendered Sinner - Verify Your Email",
@@ -66,11 +67,22 @@ export const useEmailVerification = (email: string) => {
                 </h2>
                 
                 <p style="margin: 20px 0; font-size: 16px; line-height: 1.5;">
-                  You requested a new verification link for your Surrendered Sinner account.
+                  Please verify your email by visiting the following link:
                 </p>
                 
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${window.location.origin}/verify-email?email=${encodeURIComponent(email)}" 
+                     style="background-color: #FF2D2D; color: #FFFFFF; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">
+                    Verify Email Address
+                  </a>
+                </div>
+                
                 <p style="margin: 20px 0; font-size: 16px; line-height: 1.5;">
-                  Please verify your email address by going to the login page and requesting a new verification link.
+                  If the button above doesn't work, please copy and paste the following URL into your browser:
+                </p>
+                
+                <p style="margin: 20px 0; font-size: 14px; background-color: #222222; padding: 10px; border-radius: 4px; word-break: break-all;">
+                  ${window.location.origin}/verify-email?email=${encodeURIComponent(email)}
                 </p>
                 
                 <p style="margin: 20px 0; font-size: 16px; line-height: 1.5;">
@@ -110,7 +122,7 @@ export const useEmailVerification = (email: string) => {
       // Show error toast but don't block the UI
       toast({
         title: "Email sending status",
-        description: "Verification email has been processed. Please check your inbox and spam folder.",
+        description: "Verification email has been processed. Please check your inbox.",
       });
       
       // Set a shorter cooldown on error
