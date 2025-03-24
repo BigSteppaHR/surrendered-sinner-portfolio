@@ -30,14 +30,14 @@ Deno.serve(async (req) => {
     const buckets = [
       {
         id: 'profile-pictures',
-        name: 'profile-pictures',
+        name: 'Profile Pictures',
         public: true,
         fileSizeLimit: 5 * 1024 * 1024, // 5MB limit
         allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
       },
       {
         id: 'weight-images',
-        name: 'weight-images',
+        name: 'Weight Images',
         public: true,
         fileSizeLimit: 10 * 1024 * 1024, // 10MB limit
         allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']

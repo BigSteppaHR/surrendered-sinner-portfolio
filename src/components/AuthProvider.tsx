@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const authOperations = useAuthOperations();
   const [isInitialized, setIsInitialized] = useState(false);
   const initializeAttempted = useRef(false);
+  const sessionRefreshInterval = useRef<number | null>(null);
 
   // Setup supabase client and initialize session
   useEffect(() => {
@@ -25,10 +26,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         console.log('Initializing auth provider...');
         // Get session first to ensure we have the most up-to-date state
-        await supabase.auth.getSession();
+        const { data } = await supabase.auth.getSession();
+        console.log('Current session:', JSON.stringify(data.session, null, 2));
         
         // Set up automatic session refresh - use a more conservative interval
-        const refreshInterval = setInterval(async () => {
+        if (sessionRefreshInterval.current) {
+          clearInterval(sessionRefreshInterval.current);
+        }
+        
+        sessionRefreshInterval.current = window.setInterval(async () => {
           try {
             // Only attempt to refresh if there's a session
             const { data: { session } } = await supabase.auth.getSession();
@@ -42,8 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }, 5 * 60 * 1000); // Refresh every 5 minutes
         
         setIsInitialized(true);
-        
-        return () => clearInterval(refreshInterval);
       } catch (error) {
         console.error('Error initializing auth:', error);
         setIsInitialized(true);
@@ -51,6 +55,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeAuth();
+
+    return () => {
+      if (sessionRefreshInterval.current) {
+        clearInterval(sessionRefreshInterval.current);
+        sessionRefreshInterval.current = null;
+      }
+    };
   }, []);
 
   // Combine state and operations

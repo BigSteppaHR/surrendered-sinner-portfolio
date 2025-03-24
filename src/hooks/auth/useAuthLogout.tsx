@@ -11,6 +11,8 @@ export const useAuthLogout = () => {
       await supabase.auth.signOut({ scope: 'global' }); // Use global to clear all sessions
       
       // Clear all auth-related data from localStorage
+      const keysToRemove: string[] = [];
+      
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && (
@@ -19,9 +21,12 @@ export const useAuthLogout = () => {
           key.startsWith('temp_creds_') ||
           key.includes('auth')
         )) {
-          localStorage.removeItem(key);
+          keysToRemove.push(key);
         }
       }
+      
+      // Remove the keys (outside the loop to avoid index shifting)
+      keysToRemove.forEach(key => localStorage.removeItem(key));
       
       // Clear all cookies related to authentication
       document.cookie.split(';').forEach(cookie => {
@@ -35,15 +40,15 @@ export const useAuthLogout = () => {
         }
       });
       
-      // Force reload the page to clear any in-memory state
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 300);
-      
       toast({
         title: "Logout successful",
         description: "You have been logged out successfully",
       });
+      
+      // Force reload the page to clear any in-memory state - delay to allow toast to show
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 300);
       
       return { success: true, redirectTo: '/login' };
     } catch (error: any) {
