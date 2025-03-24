@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { WeightRecord } from "@/types";
-import { format, subMonths, parseISO } from "date-fns";
+import { format, subMonths, parseISO, differenceInDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { ChevronDown, TrendingDown, TrendingUp, Award, Scale } from "lucide-react";
 
 const Progress = () => {
   const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
@@ -23,6 +24,7 @@ const Progress = () => {
   const [weight, setWeight] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   
   useEffect(() => {
     if (!isInitialized) return;
@@ -142,6 +144,64 @@ const Progress = () => {
     }));
   };
 
+  // Get average weight loss/gain per week
+  const getAverageWeeklyChange = () => {
+    if (weightRecords.length < 2) return 'N/A';
+    
+    const firstWeight = weightRecords[0].weight;
+    const lastWeight = weightRecords[weightRecords.length - 1].weight;
+    const firstDate = parseISO(weightRecords[0].recorded_at);
+    const lastDate = parseISO(weightRecords[weightRecords.length - 1].recorded_at);
+    
+    const totalDays = differenceInDays(lastDate, firstDate);
+    if (totalDays < 1) return 'N/A';
+    
+    const totalChange = lastWeight - firstWeight;
+    const weeklyChange = (totalChange / totalDays) * 7;
+    
+    return `${weeklyChange.toFixed(2)} lbs/week`;
+  };
+
+  // Get max weight recorded
+  const getMaxWeight = () => {
+    if (weightRecords.length === 0) return 'N/A';
+    
+    const maxWeight = Math.max(...weightRecords.map(record => record.weight));
+    return `${maxWeight.toFixed(1)} lbs`;
+  };
+
+  // Get min weight recorded
+  const getMinWeight = () => {
+    if (weightRecords.length === 0) return 'N/A';
+    
+    const minWeight = Math.min(...weightRecords.map(record => record.weight));
+    return `${minWeight.toFixed(1)} lbs`;
+  };
+
+  // Get consistency score (percentage of weeks with at least one weigh-in)
+  const getConsistencyScore = () => {
+    if (weightRecords.length === 0) return 'N/A';
+    
+    const firstRecord = parseISO(weightRecords[0].recorded_at);
+    const lastRecord = parseISO(weightRecords[weightRecords.length - 1].recorded_at);
+    const totalWeeks = Math.ceil(differenceInDays(lastRecord, firstRecord) / 7) + 1;
+    
+    if (totalWeeks <= 1) return '100%'; // If all records are within a week
+    
+    // Map each record to its ISO week
+    const weekMap = new Set();
+    weightRecords.forEach(record => {
+      const date = parseISO(record.recorded_at);
+      const weekKey = `${date.getFullYear()}-W${Math.ceil(date.getDate() / 7)}`;
+      weekMap.add(weekKey);
+    });
+    
+    const weeksWithRecords = weekMap.size;
+    const consistencyScore = (weeksWithRecords / totalWeeks) * 100;
+    
+    return `${Math.round(consistencyScore)}%`;
+  };
+
   // Loading state
   if (isLoading || !isInitialized) {
     return (
@@ -161,13 +221,13 @@ const Progress = () => {
       <DashboardNav />
       
       <div className="flex-1 overflow-auto">
-        <div className="p-6 max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Progress Tracking</h1>
+        <div className="p-4 md:p-6 max-w-7xl mx-auto">
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold">Progress Tracking</h1>
             <p className="text-gray-400 mt-1">Monitor your fitness journey</p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <div className="lg:col-span-2">
               <Card className="bg-gray-900 border-gray-800">
                 <CardHeader>
@@ -204,7 +264,82 @@ const Progress = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gray-900 border-gray-800 mt-6">
+              <Card className="bg-gray-900 border-gray-800 mt-4 md:mt-6">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-center">
+                    <CardTitle>Advanced Statistics</CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="h-8 w-8 p-0" 
+                      onClick={() => setShowStats(!showStats)}
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showStats ? 'rotate-180' : ''}`} />
+                      <span className="sr-only">Toggle stats</span>
+                    </Button>
+                  </div>
+                  <CardDescription className="text-gray-400">
+                    Detailed analysis of your progress
+                  </CardDescription>
+                </CardHeader>
+                {showStats && (
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <TrendingDown className="h-4 w-4 text-green-500" />
+                            <span className="text-sm text-gray-400">Total Change</span>
+                          </div>
+                          <div className="text-lg font-semibold">{getWeightChange()}</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <TrendingUp className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm text-gray-400">Weekly Change</span>
+                          </div>
+                          <div className="text-lg font-semibold">{getAverageWeeklyChange()}</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Scale className="h-4 w-4 text-violet-500" />
+                            <span className="text-sm text-gray-400">Heaviest</span>
+                          </div>
+                          <div className="text-lg font-semibold">{getMaxWeight()}</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Scale className="h-4 w-4 text-emerald-500" />
+                            <span className="text-sm text-gray-400">Lightest</span>
+                          </div>
+                          <div className="text-lg font-semibold">{getMinWeight()}</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Award className="h-4 w-4 text-yellow-500" />
+                            <span className="text-sm text-gray-400">Consistency</span>
+                          </div>
+                          <div className="text-lg font-semibold">{getConsistencyScore()}</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              <Card className="bg-gray-900 border-gray-800 mt-4 md:mt-6">
                 <CardHeader>
                   <CardTitle>Submit Weight Update</CardTitle>
                   <CardDescription className="text-gray-400">
@@ -256,7 +391,7 @@ const Progress = () => {
               </Card>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               <Card className="bg-gray-900 border-gray-800">
                 <CardHeader>
                   <CardTitle>Stats Overview</CardTitle>
@@ -343,6 +478,20 @@ const Progress = () => {
                           <div>
                             <p className="font-medium">Weight Loss Achievement</p>
                             <p className="text-xs text-gray-400">Successfully lost weight</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {weightRecords.length >= 10 && (
+                        <div className="p-3 rounded-lg bg-blue-500/20 flex items-center">
+                          <div className="bg-blue-500 p-2 rounded-full mr-3">
+                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium">Dedicated Tracker</p>
+                            <p className="text-xs text-gray-400">10+ weight entries recorded</p>
                           </div>
                         </div>
                       )}
