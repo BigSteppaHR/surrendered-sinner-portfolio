@@ -26,6 +26,7 @@ export const useAuthLogout = () => {
         const key = localStorage.key(i);
         if (key && (
           key.startsWith('supabase') || 
+          key === 'supabase_session' ||
           key.startsWith('sb-') || 
           key.startsWith('temp_creds_') ||
           key.includes('auth')

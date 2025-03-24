@@ -113,7 +113,7 @@ export const useAuthState = () => {
           authSubscription.current.unsubscribe();
         }
         
-        // Set up the auth state listener first
+        // Set up the auth state listener first (IMPORTANT: must be before getSession)
         const { data } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
           logDebug('Auth state changed:', event, currentSession?.user?.email);
           
@@ -134,27 +134,79 @@ export const useAuthState = () => {
             setProfile(null);
           }
           
+          // Save session to localStorage for persistence during hard refreshes
+          if (currentSession) {
+            try {
+              localStorage.setItem('supabase_session', JSON.stringify(currentSession));
+              logDebug('Session saved to localStorage during auth change');
+            } catch (e) {
+              console.warn('Failed to save session to localStorage:', e);
+            }
+          }
+          
           // Complete loading
           setIsLoading(false);
         });
         
         authSubscription.current = data.subscription;
 
-        // Then get the current session
+        // Try to get session from localStorage first (faster than network request)
+        try {
+          const savedSession = localStorage.getItem('supabase_session');
+          if (savedSession) {
+            const parsedSession = JSON.parse(savedSession) as Session;
+            if (parsedSession && parsedSession.expires_at) {
+              // Check if session is not expired
+              const expiresAt = new Date(parsedSession.expires_at * 1000);
+              if (expiresAt > new Date()) {
+                logDebug('Using saved session from localStorage');
+                setSession(parsedSession);
+                setUser(parsedSession.user);
+                
+                // Load profile data based on saved session
+                if (parsedSession.user) {
+                  const profileData = await refreshProfileData(parsedSession.user);
+                  if (profileData) {
+                    setProfile(profileData);
+                    logDebug('Profile loaded from saved session:', profileData);
+                  }
+                }
+              } else {
+                logDebug('Saved session is expired, removing from localStorage');
+                localStorage.removeItem('supabase_session');
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Error reading session from localStorage:', e);
+          localStorage.removeItem('supabase_session');
+        }
+
+        // THEN get the current session from Supabase (network request)
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        // Set session and user state
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        if (currentSession) {
+          // Save session to localStorage for persistence
+          try {
+            localStorage.setItem('supabase_session', JSON.stringify(currentSession));
+            logDebug('Session saved to localStorage after getSession');
+          } catch (e) {
+            console.warn('Failed to save session to localStorage:', e);
+          }
         
-        // Update profile if user exists
-        if (currentSession?.user) {
-          const profileData = await refreshProfileData(currentSession.user);
-          if (profileData) {
-            setProfile(profileData);
-            logDebug('Profile loaded during initialization:', profileData);
-          } else {
-            console.warn('No profile data available during initialization');
+          // Set session and user state
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          // Update profile if user exists
+          if (currentSession?.user) {
+            const profileData = await refreshProfileData(currentSession.user);
+            if (profileData) {
+              setProfile(profileData);
+              logDebug('Profile loaded during initialization:', profileData);
+            } else {
+              console.warn('No profile data available during initialization');
+            }
           }
         }
         

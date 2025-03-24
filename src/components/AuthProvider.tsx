@@ -40,6 +40,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           async (event, session) => {
             logDebug('Auth state changed:', event, session ? 'Session active' : 'No session');
             
+            // Save session data to localStorage for persistence across refreshes
+            if (session) {
+              try {
+                localStorage.setItem('supabase_session', JSON.stringify(session));
+                logDebug('Session saved to localStorage on auth state change');
+              } catch (e) {
+                console.warn('Failed to save session to localStorage:', e);
+              }
+            } else {
+              // Remove session data if logged out
+              try {
+                localStorage.removeItem('supabase_session');
+                logDebug('Session removed from localStorage on logout');
+              } catch (e) {
+                console.warn('Failed to remove session from localStorage:', e);
+              }
+            }
+            
             // Don't try to refresh profile during initialization to avoid loops
             if (session?.user && authLoaded.current && !isRefreshingProfile.current) {
               // Set a debounce to avoid rapid refresh calls
@@ -102,10 +120,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (currentSession.session) {
                   logDebug("Refreshing session at", new Date().toISOString());
                   const { data, error } = await supabase.auth.refreshSession();
+                  
                   if (error) {
                     console.error("Session refresh failed:", error);
                   } else if (data.session) {
                     logDebug("Session refreshed successfully at", new Date().toISOString());
+                    
+                    // Save refreshed session to localStorage
+                    try {
+                      localStorage.setItem('supabase_session', JSON.stringify(data.session));
+                      logDebug('Refreshed session saved to localStorage');
+                    } catch (e) {
+                      console.warn('Failed to save refreshed session to localStorage:', e);
+                    }
                   }
                 } else {
                   logDebug("No active session to refresh");
