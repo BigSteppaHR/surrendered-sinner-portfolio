@@ -34,6 +34,9 @@ serve(async (req) => {
       throw error
     }
 
+    // Set up RLS policies for the weight_images bucket if they don't exist
+    // This is now handled by the SQL migration
+
     // Return success
     return new Response(
       JSON.stringify({ 
