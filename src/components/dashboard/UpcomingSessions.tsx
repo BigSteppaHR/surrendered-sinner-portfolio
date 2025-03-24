@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,18 +7,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { formatRelative } from 'date-fns';
 import { UserSession } from '@/types';
+import { useToast } from "@/hooks/use-toast";
 
 const UpcomingSessions = () => {
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchSessions = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
       
       setIsLoading(true);
+      setError(null);
+      
       try {
+        console.log('Fetching upcoming sessions for user:', user.id);
         const { data, error } = await supabase
           .from('user_sessions')
           .select('*')
@@ -26,18 +36,28 @@ const UpcomingSessions = () => {
           .order('session_time', { ascending: true })
           .limit(5);
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching upcoming sessions:', error);
+          setError(error.message);
+          toast({
+            title: "Failed to load sessions",
+            description: "There was an error loading your upcoming sessions. Please try again later.",
+            variant: "destructive"
+          });
+          throw error;
+        }
         
+        console.log('Fetched sessions:', data?.length || 0);
         setSessions(data || []);
       } catch (error) {
-        console.error('Error fetching upcoming sessions:', error);
+        console.error('Exception fetching upcoming sessions:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchSessions();
-  }, [user]);
+  }, [user, toast]);
 
   const formatSessionTime = (time: string) => {
     const date = new Date(time);
@@ -58,6 +78,11 @@ const UpcomingSessions = () => {
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-gray-400">
+            <p>Something went wrong loading your sessions.</p>
+            <p className="text-sm mt-2">Please try again later or contact support.</p>
           </div>
         ) : sessions.length > 0 ? (
           <div className="space-y-4">

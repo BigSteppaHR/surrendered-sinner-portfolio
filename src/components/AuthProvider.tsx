@@ -14,6 +14,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const initializeAttempted = useRef(false);
   const sessionRefreshInterval = useRef<number | null>(null);
+  const authLoaded = useRef(false);
 
   // Setup supabase client and initialize session
   useEffect(() => {
@@ -31,13 +32,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           async (event, session) => {
             console.log('Auth state changed:', event, session ? 'Session active' : 'No session');
             
-            // Trigger a profile refresh when authentication state changes
-            if (session?.user) {
+            // Don't try to refresh profile during initialization to avoid loops
+            if (session?.user && authLoaded.current) {
               try {
-                // Only attempt to refresh profile if not already initialized
-                if (!isInitialized) {
-                  await authState.refreshProfile();
-                }
+                await authState.refreshProfile();
               } catch (error) {
                 console.error("Error refreshing profile:", error);
               }
@@ -58,10 +56,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
         
-        // Always mark as initialized even if there's no session
+        // Always mark as initialized and loaded even if there's no session
         setIsInitialized(true);
+        authLoaded.current = true;
         
-        // Set up automatic session refresh - use a more conservative interval
+        // Set up automatic session refresh with a more conservative interval
         if (sessionRefreshInterval.current) {
           clearInterval(sessionRefreshInterval.current);
           sessionRefreshInterval.current = null;
@@ -74,27 +73,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const refreshInterval = Math.floor(3600 * 0.8) * 1000; // 80% of session lifetime in ms
           
           sessionRefreshInterval.current = window.setInterval(async () => {
-            try {
-              // Check if we still have a session before attempting refresh
-              const { data: currentSession } = await supabase.auth.getSession();
-              if (currentSession.session) {
-                console.log("Refreshing session at", new Date().toISOString());
-                const { data, error } = await supabase.auth.refreshSession();
-                if (error) {
-                  console.error("Session refresh failed:", error);
-                } else if (data.session) {
-                  console.log("Session refreshed successfully at", new Date().toISOString());
+            if (!document.hidden) { // Only refresh when tab is visible
+              try {
+                // Check if we still have a session before attempting refresh
+                const { data: currentSession } = await supabase.auth.getSession();
+                if (currentSession.session) {
+                  console.log("Refreshing session at", new Date().toISOString());
+                  const { data, error } = await supabase.auth.refreshSession();
+                  if (error) {
+                    console.error("Session refresh failed:", error);
+                  } else if (data.session) {
+                    console.log("Session refreshed successfully at", new Date().toISOString());
+                  }
+                } else {
+                  console.log("No active session to refresh");
+                  // Clear the interval if there's no session
+                  if (sessionRefreshInterval.current) {
+                    clearInterval(sessionRefreshInterval.current);
+                    sessionRefreshInterval.current = null;
+                  }
                 }
-              } else {
-                console.log("No active session to refresh");
-                // Clear the interval if there's no session
-                if (sessionRefreshInterval.current) {
-                  clearInterval(sessionRefreshInterval.current);
-                  sessionRefreshInterval.current = null;
-                }
+              } catch (err) {
+                console.error("Error in refresh interval:", err);
               }
-            } catch (err) {
-              console.error("Error in refresh interval:", err);
             }
           }, refreshInterval || 4 * 60 * 1000); // Fallback to 4 minutes if calculation fails
           
@@ -107,6 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         console.error('Error initializing auth:', error);
         setIsInitialized(true); // Still mark as initialized to not block the UI
+        authLoaded.current = true;
       }
     };
 

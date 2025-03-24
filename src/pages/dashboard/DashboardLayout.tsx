@@ -2,6 +2,7 @@
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 // We no longer need to include auth-related paths here as they're now directly at root level
 const publicPages: string[] = [];
@@ -11,11 +12,17 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const { toast } = useToast();
   
   const isPublicPage = publicPages.includes(location.pathname);
   
   useEffect(() => {
-    console.log("DashboardLayout - Auth state:", { isAuthenticated, isInitialized, profile });
+    console.log("DashboardLayout - Auth state:", { 
+      isAuthenticated, 
+      isInitialized, 
+      isLoading,
+      profile: profile ? `${profile.id} (${profile.email})` : 'No profile'
+    });
     
     // Only set page as loaded after auth is initialized
     if (isInitialized) {
@@ -25,10 +32,18 @@ const DashboardLayout = () => {
     // Set a timeout to prevent infinite loading
     const timer = setTimeout(() => {
       setLoadingTimeout(true);
+      
+      if (!isAuthenticated && !isLoading) {
+        toast({
+          title: "Session expired",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive"
+        });
+      }
     }, 5000); // 5 seconds timeout
     
     return () => clearTimeout(timer);
-  }, [isInitialized, isAuthenticated, profile]);
+  }, [isInitialized, isAuthenticated, profile, isLoading, toast]);
   
   // Show loading state while checking auth, but with a timeout
   if ((isLoading || !isInitialized || !isPageLoaded) && !loadingTimeout) {
