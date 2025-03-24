@@ -31,6 +31,7 @@ const queryClient = new QueryClient({
 });
 
 // Create a navigation handler component that will be inside Router context
+// AND inside AuthProvider context
 const AuthNavigation = () => {
   const { isInitialized } = useAuth();
   const location = useLocation();
@@ -123,7 +124,8 @@ const AuthNavigation = () => {
   ) : null;
 };
 
-// Routes component that uses the AuthNavigation but is already inside AuthProvider
+// Routes component that includes navigation and routes
+// This component must be used INSIDE AuthProvider
 const AppRoutes = () => {
   return (
     <>
@@ -155,6 +157,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <BrowserRouter>
+          {/* AuthProvider must wrap the components that use useAuth() */}
           <AuthProvider>
             <StripeProvider>
               <TooltipProvider>
