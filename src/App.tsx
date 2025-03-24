@@ -20,7 +20,6 @@ import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import { useAuth } from "./hooks/useAuth";
-import RemoveBadge from "./components/RemoveBadge";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -124,7 +123,6 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <BrowserRouter>
-          <RemoveBadge />
           <AuthProvider>
             <StripeProvider>
               <TooltipProvider>

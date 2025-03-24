@@ -45,66 +45,55 @@ const EmailVerificationDialog = ({
 
   // Handle visibility with a delay to prevent race conditions
   useEffect(() => {
-    let visibilityTimer: NodeJS.Timeout | undefined;
-
-    if (mounted.current) {
-      if (isOpen) {
-        // Increased delay for dialog opening to ensure DOM is ready
-        visibilityTimer = setTimeout(() => {
-          if (mounted.current) {
-            setIsVisible(true);
-          }
-        }, 500);
-      } else {
-        setIsVisible(false);
-      }
+    if (!mounted.current) return;
+    if (!isOpen) {
+      setIsVisible(false);
+      return;
     }
-
+    
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      if (mounted.current) {
+        setIsVisible(true);
+      }
+    }, 100);
+    
     return () => {
-      if (visibilityTimer) clearTimeout(visibilityTimer);
+      clearTimeout(timer);
     };
   }, [isOpen]);
 
-  // Handle back to login with proper unmounting
+  // Handle back to login
   const handleBackToLogin = () => {
     if (!mounted.current) return;
-    
-    // First hide the dialog
     setIsVisible(false);
     
-    // Longer delay to ensure all animations complete before navigation
+    // Small delay to ensure animation completes
     setTimeout(() => {
       if (mounted.current) {
         onClose();
         navigate("/login");
       }
-    }, 500);
+    }, 300);
   };
 
-  // Handle dialog close with improved timing
+  // Handle dialog close
   const handleDialogClose = () => {
     if (!mounted.current) return;
-    
-    // First hide the dialog
     setIsVisible(false);
-
-    // Increased delay before actually closing
-    const closeTimer = setTimeout(() => {
+    
+    // Small delay to ensure animation completes
+    setTimeout(() => {
       if (mounted.current) {
         onClose();
-        // Redirect to login page if redirectToLogin is true
         if (redirectToLogin) {
           navigate("/login");
         }
       }
-    }, 500);
-
-    return () => {
-      clearTimeout(closeTimer);
-    };
+    }, 300);
   };
 
-  // Ensure proper cleanup to prevent memory leaks
+  // Ensure proper cleanup
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -114,26 +103,23 @@ const EmailVerificationDialog = ({
 
   // If user has confirmed email, close dialog and redirect to dashboard
   useEffect(() => {
-    let redirectTimer: NodeJS.Timeout | undefined;
-
-    if (profile?.email_confirmed && mounted.current) {
-      setIsVisible(false);
-
-      // Increased delay before redirecting
-      redirectTimer = setTimeout(() => {
-        if (mounted.current) {
-          onClose();
-          navigate("/dashboard");
-        }
-      }, 500);
-    }
-
+    if (!profile?.email_confirmed || !mounted.current) return;
+    
+    setIsVisible(false);
+    
+    const timer = setTimeout(() => {
+      if (mounted.current) {
+        onClose();
+        navigate("/dashboard");
+      }
+    }, 300);
+    
     return () => {
-      if (redirectTimer) clearTimeout(redirectTimer);
+      clearTimeout(timer);
     };
   }, [profile, navigate, onClose]);
 
-  // Don't render anything if not open to prevent DOM issues
+  // Don't render anything if not open
   if (!isOpen) {
     return null;
   }
@@ -157,11 +143,8 @@ const EmailVerificationDialog = ({
           <span className="sr-only">Close</span>
         </DialogClose>
 
-        {/* Description for accessibility - properly linked with aria-describedby */}
-        <div
-          id={descriptionId}
-          className="sr-only"
-        >
+        {/* Description for accessibility */}
+        <div id={descriptionId} className="sr-only">
           {dialogDescription}
         </div>
 
