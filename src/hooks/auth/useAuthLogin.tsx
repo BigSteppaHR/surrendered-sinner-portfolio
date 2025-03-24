@@ -14,7 +14,9 @@ export const useAuthLogin = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       // Fetch profile to check email confirmation status
       const { data: profile } = await supabase
@@ -28,15 +30,16 @@ export const useAuthLogin = () => {
         // If email is not confirmed, sign out immediately
         await supabase.auth.signOut();
         
+        // Show more detailed toast about email verification
         toast({
           title: "Email not verified",
-          description: "Please verify your email before logging in",
+          description: "Please check your inbox and spam folder for the verification email",
           variant: "destructive",
         });
         
         // Return the error instead of a redirect
         return { 
-          error: { message: "Email not verified. Please check your inbox and verify your email before logging in." }, 
+          error: { message: "Your email is not verified. Please check your inbox and spam folder for the verification link." }, 
           data: null 
         };
       }
@@ -57,11 +60,22 @@ export const useAuthLogin = () => {
       };
     } catch (error: any) {
       console.error('Login error:', error.message);
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid email or password",
-        variant: "destructive",
-      });
+      
+      // Check if the error is about unconfirmed email
+      if (error.message && error.message.includes('Email not confirmed')) {
+        toast({
+          title: "Email not verified",
+          description: "Please check your inbox and spam folder for the verification email",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login failed",
+          description: error.message || "Invalid email or password",
+          variant: "destructive",
+        });
+      }
+      
       return { error, data: null };
     }
   };

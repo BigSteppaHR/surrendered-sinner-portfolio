@@ -11,7 +11,8 @@ const RemoveBadge: React.FC = () => {
     isMountedRef.current = true;
 
     // Function to safely check if an element is still in the DOM
-    const isElementInDOM = (element: Element): boolean => {
+    const isElementInDOM = (element: Element | null): boolean => {
+      if (!element) return false;
       try {
         return document.body.contains(element);
       } catch (err) {
@@ -43,17 +44,13 @@ const RemoveBadge: React.FC = () => {
                     if (content) {
                       el.setAttribute('content', content.replace(/lovable\.dev/g, 'surrenderedsinner.fitness'));
                     }
-                  } else if (el.parentNode && isElementInDOM(el)) {
+                  } else if (isElementInDOM(el) && el.parentNode) {
                     // Double check: Only remove if parent exists AND element is still in the DOM
                     el.parentNode.removeChild(el);
                   }
                 } catch (err) {
-                  // Log detailed info for debugging but don't break execution
-                  console.debug('Error removing element:', {
-                    selector, 
-                    element: el.outerHTML.slice(0, 100), 
-                    error: err
-                  });
+                  // Just log the error but don't break execution
+                  console.debug('Error removing element:', err);
                 }
               });
             }
@@ -98,14 +95,13 @@ const RemoveBadge: React.FC = () => {
     
     timeoutIdsRef.current.push(initialRemovalTimeout);
 
-    // Set up periodic checks
+    // Set up periodic checks but with a longer interval to reduce DOM operations
     const periodicRemovalTimeout = setInterval(() => {
       if (isMountedRef.current) {
         safelyRemoveElements(selectors);
       }
-    }, 5000);
+    }, 10000); // Less frequent checks (10 seconds)
     
-    // Store interval ID - no need for casting as setInterval returns NodeJS.Timeout
     timeoutIdsRef.current.push(periodicRemovalTimeout);
 
     // Set up a more careful MutationObserver with debouncing
@@ -121,7 +117,7 @@ const RemoveBadge: React.FC = () => {
         if (isMountedRef.current) {
           safelyRemoveElements(selectors);
         }
-      }, 200);
+      }, 500); // Longer debounce to prevent too many operations
       
       if (debounceTimer) {
         timeoutIdsRef.current.push(debounceTimer);
@@ -129,14 +125,17 @@ const RemoveBadge: React.FC = () => {
     };
 
     try {
-      observerRef.current = new MutationObserver(debouncedRemoval);
-      
-      // Start observing with a more focused approach
-      observerRef.current.observe(document.body, { 
-        childList: true,
-        subtree: true,
-        attributes: false
-      });
+      // Only observe if the document is ready
+      if (document && document.body) {
+        observerRef.current = new MutationObserver(debouncedRemoval);
+        
+        // Start observing with a more focused approach
+        observerRef.current.observe(document.body, { 
+          childList: true,
+          subtree: true,
+          attributes: false // Disable attribute monitoring to reduce callbacks
+        });
+      }
     } catch (err) {
       console.debug('Error setting up MutationObserver:', err);
     }

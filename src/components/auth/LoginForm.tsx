@@ -38,6 +38,10 @@ const LoginForm: React.FC<LoginFormProps> = ({
     },
   });
 
+  const handleSubmit = form.handleSubmit(async (values) => {
+    await onSubmit(values);
+  });
+
   return (
     <Card className="bg-gray-900 text-white border-gray-800">
       <CardHeader className="pb-4">
@@ -56,7 +60,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
         )}
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <FormField
               control={form.control}
               name="email"
