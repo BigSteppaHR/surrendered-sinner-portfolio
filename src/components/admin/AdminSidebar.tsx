@@ -1,167 +1,204 @@
 
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
+  ClipboardList,
   CreditCard,
-  LineChart,
-  Calendar,
+  BarChart3,
+  LifeBuoy,
   Settings,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
-  TicketIcon,
-  MessageSquare,
+  Bell,
+  Quote,
   FileText
 } from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Sidebar, SidebarProvider } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { cn } from "@/lib/utils";
-import { useAuthLogout } from "@/hooks/auth/useAuthLogout";
-import { useState } from "react";
 
 const AdminSidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  const { profile } = useAuth();
-  const { logout } = useAuthLogout();
   const location = useLocation();
-  const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
 
-  const isActive = (path: string) => location.pathname === path;
-
-  const menuItems = [
-    {
-      title: "Overview",
-      icon: LayoutDashboard,
-      href: "/admin/overview",
-    },
-    {
-      title: "Sessions",
-      icon: Calendar,
-      href: "/admin/sessions",
-    },
-    {
-      title: "Payments",
-      icon: CreditCard,
-      href: "/admin/payments",
-    },
-    {
-      title: "Invoices",
-      icon: FileText,
-      href: "/admin/invoices",
-    },
-    {
-      title: "Analytics",
-      icon: LineChart,
-      href: "/admin/analytics",
-    },
-    {
-      title: "Support Tickets",
-      icon: MessageSquare,
-      href: "/admin/tickets",
-    },
-  ];
-
-  const getInitials = (name: string) => {
-    if (!name) return "A";
+  const getFirstLetters = (name: string) => {
+    if (!name) return "U";
     return name
       .split(" ")
-      .map((n) => n[0])
+      .map((part) => part[0])
       .join("")
       .toUpperCase();
   };
 
-  const handleLogout = async () => {
-    await logout();
-  };
-
   return (
-    <div
-      className={cn(
-        "h-screen flex flex-col border-r border-[#333333] bg-[#111111] transition-all duration-300",
-        collapsed ? "w-[70px]" : "w-[240px]"
-      )}
-    >
-      <div className="flex justify-between items-center p-4 h-16 border-b border-[#333333]">
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-lg text-sinner-red">ADMIN</span>
-            <span className="text-white">PANEL</span>
-          </div>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-auto text-white hover:bg-sinner-red/10"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </Button>
-      </div>
-
-      <div className="p-4 border-b border-[#333333]">
-        <div className={cn("flex items-center", collapsed ? "justify-center" : "gap-3")}>
-          <Avatar className="h-9 w-9 border border-[#333333]">
-            <AvatarImage src={profile?.avatar_url || ""} alt="Admin" />
-            <AvatarFallback className="bg-sinner-red text-white">
-              {profile?.full_name ? getInitials(profile.full_name) : "A"}
+    <Sidebar className="border-r border-[#333333] bg-[#111111]">
+      <SidebarHeader className="p-4 border-b border-[#333333]">
+        <div className="flex items-center space-x-2">
+          <Avatar className="h-8 w-8 border border-[#333333]">
+            <AvatarImage src={profile?.avatar_url || undefined} />
+            <AvatarFallback className="bg-sinner-red/20 text-sinner-red">
+              {getFirstLetters(profile?.full_name || "Admin")}
             </AvatarFallback>
           </Avatar>
-          {!collapsed && (
-            <div>
-              <h4 className="font-medium text-white">
-                {profile?.full_name || "Admin User"}
-              </h4>
-              <p className="text-xs text-gray-400">Administrator</p>
-            </div>
-          )}
+          <div className="flex-1 overflow-hidden">
+            <h3 className="font-medium text-white truncate">
+              {profile?.full_name || "Admin User"}
+            </h3>
+            <p className="text-xs text-gray-400 truncate">Administrator</p>
+          </div>
+          <SidebarTrigger />
         </div>
-      </div>
+      </SidebarHeader>
 
-      <div className="flex-1 overflow-auto py-4">
-        <nav className="space-y-1 px-2">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
-                  isActive
-                    ? "bg-sinner-red/20 text-white"
-                    : "text-gray-400 hover:text-white hover:bg-sinner-red/10",
-                  collapsed && "justify-center px-0"
-                )
-              }
-            >
-              <item.icon
-                size={20}
-                className={cn(
-                  collapsed && "mx-auto"
-                )}
-              />
-              {!collapsed && <span>{item.title}</span>}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-      
-      <div className="p-4 border-t border-[#333333]">
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full text-gray-400 hover:text-white hover:bg-sinner-red/10", 
-            collapsed ? "justify-center px-0" : "justify-start"
-          )}
-          onClick={handleLogout}
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link to="/admin/overview" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/overview"}>
+                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    Overview
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <Link to="/admin/sessions" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/sessions"}>
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    Sessions
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Content</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link to="/admin/quotes" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/quotes"}>
+                    <Quote className="h-4 w-4 mr-2" />
+                    Daily Quotes
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Financials</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link to="/admin/payments" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/payments"}>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Payments
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <Link to="/admin/invoices" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/invoices"}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Invoices
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Support</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link to="/admin/tickets" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/tickets"}>
+                    <LifeBuoy className="h-4 w-4 mr-2" />
+                    Support Tickets
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <Link to="/admin/notifications" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/notifications"}>
+                    <Bell className="h-4 w-4 mr-2" />
+                    Notifications
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Analytics</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link to="/admin/analytics" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/analytics"}>
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Analytics
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>System</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link to="/admin/settings" className="w-full">
+                  <SidebarMenuButton active={location.pathname === "/admin/settings"}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="p-4 border-t border-[#333333]">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-gray-400 hover:text-sinner-red"
+          onClick={() => signOut()}
         >
-          <LogOut size={20} className={collapsed ? "mx-auto" : "mr-2"} />
-          {!collapsed && "Sign Out"}
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
         </Button>
-      </div>
-    </div>
+      </SidebarFooter>
+    </Sidebar>
   );
 };
 

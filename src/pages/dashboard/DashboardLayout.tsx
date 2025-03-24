@@ -23,6 +23,22 @@ const DashboardLayout = () => {
   const authCheckStarted = useRef(false);
   
   const isPublicPage = publicPages.includes(location.pathname);
+  const isDebugMode = profile?.debug_mode || false;
+  
+  // Log debug information if in debug mode
+  useEffect(() => {
+    if (isDebugMode) {
+      console.log("[DEBUG] Dashboard Component State:", {
+        isAuthenticated,
+        isLoading,
+        isInitialized,
+        isAdmin,
+        publicPages,
+        location: location.pathname,
+        profile
+      });
+    }
+  }, [isAuthenticated, isLoading, isInitialized, isAdmin, location.pathname, profile, isDebugMode]);
   
   // Set a shorter timeout for auth check to prevent showing loader indefinitely
   useEffect(() => {
@@ -57,7 +73,7 @@ const DashboardLayout = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [isInitialized, isAuthenticated, profile, isLoading, toast]);
+  }, [isInitialized, isAuthenticated, profile, isLoading, toast, isDebugMode]);
   
   // Show loading state while checking auth, but with a timeout
   if ((isLoading || !isInitialized || !isPageLoaded) && !loadingTimeout) {
@@ -96,6 +112,11 @@ const DashboardLayout = () => {
   // For authenticated dashboard pages, show the dashboard layout with navigation
   return (
     <div className="min-h-screen bg-[#000000] text-white">
+      {isDebugMode && (
+        <div className="bg-sinner-red/20 border border-sinner-red/40 p-2 text-xs text-white">
+          <strong>DEBUG MODE</strong>: User ID: {profile?.id}, Admin: {isAdmin ? 'Yes' : 'No'}
+        </div>
+      )}
       {/* We removed the DashboardNav component from here since it's already included in child pages */}
       <div className="flex-1 overflow-auto">
         <Outlet />

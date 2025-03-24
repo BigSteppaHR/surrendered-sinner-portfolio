@@ -108,6 +108,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          is_featured: boolean | null
           quote: string
         }
         Insert: {
@@ -115,6 +116,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_featured?: boolean | null
           quote: string
         }
         Update: {
@@ -122,6 +124,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_featured?: boolean | null
           quote?: string
         }
         Relationships: []
@@ -315,6 +318,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          debug_mode: boolean | null
           email: string | null
           email_confirmed: boolean | null
           email_verified_at: string | null
@@ -331,6 +335,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          debug_mode?: boolean | null
           email?: string | null
           email_confirmed?: boolean | null
           email_verified_at?: string | null
@@ -347,6 +352,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          debug_mode?: boolean | null
           email?: string | null
           email_confirmed?: boolean | null
           email_verified_at?: string | null
@@ -578,6 +584,36 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean | null
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       training_packages: {
         Row: {
           created_at: string
@@ -645,6 +681,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_notifications: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_read: boolean
+          message: string
+          notification_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          notification_type?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          notification_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_profiles: {
         Row: {
@@ -905,6 +974,7 @@ export type Database = {
         }
         Returns: {
           avatar_url: string | null
+          debug_mode: boolean | null
           email: string | null
           email_confirmed: boolean | null
           email_verified_at: string | null
