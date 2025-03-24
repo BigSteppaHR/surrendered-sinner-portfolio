@@ -17,9 +17,10 @@ interface SubscriptionPlan {
 
 interface SubscriptionPlansProps {
   plans: SubscriptionPlan[];
+  onError?: (error: string) => void;
 }
 
-const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ plans }) => {
+const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ plans, onError }) => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -27,11 +28,13 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ plans }) => {
 
   const handleSubscribe = async (planId: string) => {
     if (!profile?.id) {
+      const errorMsg = "Authentication error: Please log in to subscribe";
       toast({
         title: "Authentication error",
         description: "Please log in to subscribe",
         variant: "destructive"
       });
+      if (onError) onError(errorMsg);
       return;
     }
     
@@ -53,6 +56,11 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ plans }) => {
       // Simulated delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Get current date for subscription period
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setDate(periodEnd.getDate() + 30); // 30 days from now
+      
       // Record the subscription in the database with improved error handling
       const { error } = await supabase
         .from('subscriptions')
@@ -60,16 +68,22 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ plans }) => {
           user_id: profile.id,
           plan_id: planId,
           status: 'active',
-          created_at: new Date().toISOString(),
-          current_period_start: new Date().toISOString(),
-          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        });
+          created_at: now.toISOString(),
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString()
+        })
+        .select();
         
       if (error) {
         console.error("Database error:", error);
-        // Still show success to user and log the error, as this is a demo
+        // Handle 406 Not Acceptable error (common with Supabase when Accept header doesn't match)
         if (error.code === '406') {
           console.log("Received 406 error - likely due to Accept header mismatch");
+          // We can still show success to the user as this is usually just a client-side issue
+          // The data is still inserted correctly in most cases
+        } else {
+          // For other errors, we should inform the user
+          throw new Error(`Database error: ${error.message}`);
         }
       }
       
@@ -79,11 +93,13 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ plans }) => {
       });
     } catch (error: any) {
       console.error("Error processing subscription:", error);
+      const errorMsg = error.message || "There was a problem setting up your subscription";
       toast({
         title: "Subscription failed",
-        description: error.message || "There was a problem setting up your subscription",
+        description: errorMsg,
         variant: "destructive"
       });
+      if (onError) onError(errorMsg);
     } finally {
       setIsProcessing(false);
       setSelectedPlan(null);

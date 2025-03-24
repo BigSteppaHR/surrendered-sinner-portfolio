@@ -1,20 +1,27 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import SubscriptionPlans from "@/components/payment/SubscriptionPlans";
 import AddFundsForm from "@/components/payment/AddFundsForm";
 import { subscriptionPlans } from "@/components/payment/SubscriptionData";
 import { useToast } from "@/hooks/use-toast";
-
-// Initialize Stripe with a fallback to avoid errors
-const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51QWJOAJ1axkFIKsVApGtDWcUbliJT2kNf90nqUnL3ziUxf3zHANMB6gSKhKkzExWswzuG2pxIa22EqzQA8CD70iZ00LU0YGYQC';
-const stripePromise = loadStripe(stripePublishableKey);
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Payment = () => {
   const [activeTab, setActiveTab] = useState("subscription");
   const { toast } = useToast();
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  
+  // Function to handle Stripe errors from child components
+  const handleStripeError = (error: string) => {
+    setStripeError(error);
+    toast({
+      title: "Payment System Error",
+      description: error,
+      variant: "destructive",
+    });
+  };
   
   return (
     <div className="min-h-screen bg-[#000000] text-white">
@@ -27,6 +34,16 @@ const Payment = () => {
             </p>
           </div>
           
+          {stripeError && (
+            <Alert variant="destructive" className="mb-6 bg-red-950 border-red-800">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Payment System Error</AlertTitle>
+              <AlertDescription>
+                {stripeError}. Please try again later or contact support.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
               <TabsTrigger value="subscription">Subscription</TabsTrigger>
@@ -34,13 +51,11 @@ const Payment = () => {
             </TabsList>
             
             <TabsContent value="subscription" className="space-y-4">
-              <SubscriptionPlans plans={subscriptionPlans} />
+              <SubscriptionPlans plans={subscriptionPlans} onError={handleStripeError} />
             </TabsContent>
             
             <TabsContent value="funds">
-              <Elements stripe={stripePromise}>
-                <AddFundsForm />
-              </Elements>
+              <AddFundsForm onError={handleStripeError} />
             </TabsContent>
           </Tabs>
         </div>
