@@ -11,7 +11,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import SEO from '@/components/SEO';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
+// Define the form schemas
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
@@ -22,6 +27,9 @@ const signupSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
   confirmPassword: z.string(),
+  agreeTerms: z.boolean().refine(val => val === true, {
+    message: "You must agree to the terms and conditions",
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -30,6 +38,9 @@ const signupSchema = z.object({
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { toast } = useToast();
+  const { isAuthenticated, user, login, signup, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -46,27 +57,128 @@ const Dashboard = () => {
       email: "",
       password: "",
       confirmPassword: "",
+      agreeTerms: false,
     },
   });
   
-  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
-    console.log("Login values:", values);
-    // This would be replaced with actual authentication logic
-    toast({
-      title: "Login Attempted",
-      description: "This is a demo. In the full version, you would be logged in now.",
-    });
+  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
+    try {
+      await login(values.email, values.password);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back to your dashboard!",
+      });
+    } catch (error) {
+      toast({
+        title: "Login Failed",
+        description: "Please check your credentials and try again.",
+        variant: "destructive",
+      });
+    }
   };
   
-  const onSignupSubmit = (values: z.infer<typeof signupSchema>) => {
-    console.log("Signup values:", values);
-    // This would be replaced with actual registration logic
-    toast({
-      title: "Account Created",
-      description: "This is a demo. In the full version, a verification email would be sent.",
-    });
-    setActiveTab("login");
+  const onSignupSubmit = async (values: z.infer<typeof signupSchema>) => {
+    try {
+      await signup(values.name, values.email, values.password);
+      setShowVerificationDialog(true);
+      // In a real app, we would send a verification email here
+      toast({
+        title: "Account Created",
+        description: "Please verify your email to complete registration.",
+      });
+    } catch (error) {
+      toast({
+        title: "Signup Failed",
+        description: "There was an error creating your account. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    navigate('/');
+  };
+  
+  if (isAuthenticated && user) {
+    return (
+      <>
+        <SEO 
+          title="My Dashboard | Surrendered Sinner Fitness"
+          description="Access your personalized fitness programs, track your progress, and manage your account."
+          canonical="https://surrenderedsinnerfitness.com/dashboard"
+        />
+        
+        <div className="min-h-screen bg-gray-950 flex flex-col">
+          <header className="bg-black py-4 border-b border-gray-800">
+            <div className="container mx-auto px-4">
+              <div className="flex justify-between items-center">
+                <a href="/" className="text-2xl font-bold">
+                  <span className="text-white">Surrendered</span> 
+                  <span className="text-sinner-red">Sinner</span>
+                </a>
+                <div className="flex items-center gap-4">
+                  <span className="text-gray-300">Welcome, {user.name}</span>
+                  <Button onClick={handleLogout} variant="outline" size="sm">
+                    Logout
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </header>
+          
+          <main className="flex-1 container mx-auto px-4 py-8">
+            <h1 className="text-3xl font-bold mb-6">My Dashboard</h1>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Programs</CardTitle>
+                  <CardDescription>View your current training programs</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-400">You don't have any active programs yet.</p>
+                </CardContent>
+                <CardFooter>
+                  <Button onClick={() => navigate('/schedule')}>Schedule Consultation</Button>
+                </CardFooter>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Progress</CardTitle>
+                  <CardDescription>Track your fitness journey</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-400">No progress data available yet.</p>
+                </CardContent>
+                <CardFooter>
+                  <Button variant="outline">Update Metrics</Button>
+                </CardFooter>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upcoming Sessions</CardTitle>
+                  <CardDescription>Your scheduled training sessions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-400">No upcoming sessions scheduled.</p>
+                </CardContent>
+                <CardFooter>
+                  <Button onClick={() => navigate('/schedule')}>Book Session</Button>
+                </CardFooter>
+              </Card>
+            </div>
+          </main>
+        </div>
+      </>
+    );
+  }
   
   return (
     <>
@@ -215,6 +327,26 @@ const Dashboard = () => {
                             </FormItem>
                           )}
                         />
+                        <FormField
+                          control={signupForm.control}
+                          name="agreeTerms"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                  I agree to the terms of service and privacy policy
+                                </FormLabel>
+                                <FormMessage />
+                              </div>
+                            </FormItem>
+                          )}
+                        />
                         <Button type="submit" className="w-full">
                           Create Account
                         </Button>
@@ -232,6 +364,29 @@ const Dashboard = () => {
           </div>
         </main>
       </div>
+
+      {/* Email Verification Dialog */}
+      <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verify your email</DialogTitle>
+            <DialogDescription>
+              We've sent a verification link to your email address. Please check your inbox and click the link to verify your account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-3 mt-4">
+            <p className="text-sm text-gray-400">
+              If you don't see the email, please check your spam folder. The verification link will expire in 24 hours.
+            </p>
+            <Button onClick={() => {
+              setShowVerificationDialog(false);
+              setActiveTab("login");
+            }}>
+              I'll verify later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
