@@ -5,6 +5,7 @@ const RemoveBadge: React.FC = () => {
   const isMountedRef = useRef(true);
   const observerRef = useRef<MutationObserver | null>(null);
   const timeoutIdsRef = useRef<NodeJS.Timeout[]>([]);
+  const lastOperationTimeRef = useRef<number>(0);
 
   useEffect(() => {
     // Set mounted flag
@@ -24,10 +25,17 @@ const RemoveBadge: React.FC = () => {
     // Function to safely remove elements that match selectors
     const safelyRemoveElements = (selectors: string[]) => {
       if (!isMountedRef.current) return;
-
+      
+      // Rate limit the DOM operations to prevent rendering issues
+      const now = Date.now();
+      if (now - lastOperationTimeRef.current < 200) {
+        return; // Skip if called too frequently
+      }
+      lastOperationTimeRef.current = now;
+      
       // Use requestIdleCallback if available for non-critical operations
       const scheduleIdleTask = window.requestIdleCallback || 
-                              ((cb) => setTimeout(cb, 50));
+                              ((cb) => setTimeout(cb, 200));
       
       scheduleIdleTask(() => {
         if (!isMountedRef.current) return;
@@ -45,7 +53,7 @@ const RemoveBadge: React.FC = () => {
                       el.setAttribute('content', content.replace(/lovable\.dev/g, 'surrenderedsinner.fitness'));
                     }
                   } else if (isElementInDOM(el) && el.parentNode) {
-                    // Double check: Only remove if parent exists AND element is still in the DOM
+                    // Only remove if we can verify parent exists AND element is still in the DOM
                     el.parentNode.removeChild(el);
                   }
                 } catch (err) {

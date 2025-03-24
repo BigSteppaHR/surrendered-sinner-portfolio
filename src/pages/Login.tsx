@@ -2,11 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import * as z from "zod";
 import LoginHeader from "@/components/auth/LoginHeader";
 import LoginForm from "@/components/auth/LoginForm";
 import LoginFooter from "@/components/auth/LoginFooter";
+import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -17,6 +17,8 @@ export default function Login() {
   const { login, isAuthenticated, profile, isLoading, isInitialized } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
   const navigate = useNavigate();
   const mountedRef = useRef(true);
 
@@ -41,7 +43,13 @@ export default function Login() {
       const result = await login(values.email, values.password);
       
       if (result.error) {
-        setLoginError(result.error.message || "Login failed. Please try again.");
+        // Special handling for unconfirmed emails
+        if (result.error.code === "email_not_confirmed" && result.data?.showVerification) {
+          setVerificationEmail(values.email);
+          setShowEmailVerification(true);
+        } else {
+          setLoginError(result.error.message || "Login failed. Please try again.");
+        }
       } 
     } catch (error) {
       console.error("Login error:", error);
@@ -51,6 +59,10 @@ export default function Login() {
         setIsSubmitting(false);
       }
     }
+  };
+
+  const handleCloseVerification = () => {
+    setShowEmailVerification(false);
   };
 
   // Display a simplified loading state while auth is initializing
@@ -76,6 +88,12 @@ export default function Login() {
         
         <LoginFooter />
       </div>
+
+      <EmailVerificationDialog 
+        isOpen={showEmailVerification}
+        onClose={handleCloseVerification}
+        initialEmail={verificationEmail}
+      />
     </div>
   );
 }

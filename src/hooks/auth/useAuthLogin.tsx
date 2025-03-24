@@ -19,28 +19,45 @@ export const useAuthLogin = () => {
       }
 
       // Fetch profile to check email confirmation status
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', data.user.id)
         .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError.message);
+        // Show toast but don't prevent login if profile fetch fails
+        toast({
+          title: "Warning",
+          description: "User profile could not be loaded, but login succeeded.",
+          variant: "default",
+        });
+        return { 
+          error: null, 
+          data: { 
+            ...data, 
+            redirectTo: '/dashboard',
+            profile: null
+          } 
+        };
+      }
 
       if (!profile?.email_confirmed) {
         console.log('Email not confirmed for user:', email);
         // If email is not confirmed, sign out immediately
         await supabase.auth.signOut();
         
-        // Show more detailed toast about email verification
-        toast({
-          title: "Email not verified",
-          description: "Please check your inbox and spam folder for the verification email",
-          variant: "destructive",
-        });
-        
-        // Return the error instead of a redirect
+        // Return the error with state data for email verification dialog
         return { 
-          error: { message: "Your email is not verified. Please check your inbox and spam folder for the verification link." }, 
-          data: null 
+          error: { 
+            message: "Your email is not verified. Please check your inbox and spam folder for the verification link.",
+            code: "email_not_confirmed" 
+          }, 
+          data: {
+            email: email,
+            showVerification: true
+          }
         };
       }
 
@@ -55,19 +72,28 @@ export const useAuthLogin = () => {
         error: null, 
         data: { 
           ...data, 
-          redirectTo: '/dashboard'
+          redirectTo: '/dashboard',
+          profile: profile
         } 
       };
     } catch (error: any) {
       console.error('Login error:', error.message);
       
-      // Check if the error is about unconfirmed email
-      if (error.message && error.message.includes('Email not confirmed')) {
-        toast({
-          title: "Email not verified",
-          description: "Please check your inbox and spam folder for the verification email",
-          variant: "destructive",
-        });
+      // Handle different types of login errors
+      if (error.message && (
+        error.message.includes('Email not confirmed') || 
+        error.message.toLowerCase().includes('email not verified')
+      )) {
+        return { 
+          error: { 
+            message: "Your email is not verified. Please check your inbox and spam folder for the verification link.",
+            code: "email_not_confirmed" 
+          }, 
+          data: {
+            email: email,
+            showVerification: true
+          }
+        };
       } else {
         toast({
           title: "Login failed",
@@ -82,18 +108,28 @@ export const useAuthLogin = () => {
 
   // This refreshProfile function should return the Profile object to match the type definition
   const refreshProfile = async (): Promise<Profile | null> => {
-    const { data: session } = await supabase.auth.getSession();
-    
-    if (session.session?.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.session.user.id)
-        .single();
+    try {
+      const { data: session } = await supabase.auth.getSession();
       
-      return profile;
+      if (session.session?.user) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.session.user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error refreshing profile:', error.message);
+          return null;
+        }
+        
+        return profile;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error in refreshProfile:', error);
+      return null;
     }
-    return null;
   };
 
   return {

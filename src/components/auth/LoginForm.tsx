@@ -68,7 +68,12 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="Enter your email" {...field} />
+                    <Input 
+                      type="email" 
+                      placeholder="Enter your email" 
+                      {...field} 
+                      disabled={isSubmitting || isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -87,10 +92,11 @@ const LoginForm: React.FC<LoginFormProps> = ({
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
                         {...field}
+                        disabled={isSubmitting || isLoading}
                       />
                       <span
                         className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => !isSubmitting && !isLoading && setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
                           <EyeOffIcon className="h-4 w-4 text-gray-500" />
