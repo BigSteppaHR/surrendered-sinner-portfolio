@@ -22,6 +22,11 @@ const RemoveBadge = () => {
         'script[src*="gpteng.co"]',
         'script[src*="lovable.dev"]',
         'meta[content*="lovable.dev"]',
+        '.toast-container', // Target toast containers
+        '[class*="toast"]', // Target toast elements
+        '[class*="Toaster"]', // Target toaster elements
+        '[id*="toast"]', // Target toast by ID
+        '[role="status"]', // Often used for toast notifications
       ];
       
       selectors.forEach(selector => {
@@ -50,6 +55,37 @@ const RemoveBadge = () => {
           tag.setAttribute('content', '/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png');
         }
       });
+
+      // Remove any toast notifications that might appear
+      const removeToastNotifications = () => {
+        // Look for various toast implementations
+        const toastSelectors = [
+          '.toast',
+          '.Toaster',
+          '[role="alert"]',
+          '[role="status"]',
+          '.notification',
+          '.alert',
+          '.sonner-toast',
+          '.react-toast-notifications',
+          '[class*="toast"]',
+          '[id*="toast"]'
+        ];
+        
+        toastSelectors.forEach(selector => {
+          document.querySelectorAll(selector).forEach(el => {
+            if (el.innerHTML.toLowerCase().includes('lovable') || 
+                el.innerHTML.toLowerCase().includes('gpt') ||
+                el.textContent?.toLowerCase().includes('lovable') ||
+                el.textContent?.toLowerCase().includes('gpt')) {
+              el.remove();
+            }
+          });
+        });
+      };
+      
+      // Run toast removal
+      removeToastNotifications();
     };
 
     // Run immediately on component mount

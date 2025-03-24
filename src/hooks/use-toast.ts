@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -6,7 +7,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 5000 // Changed to 5 seconds to remove toasts faster
 
 type ToasterToast = ToastProps & {
   id: string
@@ -140,6 +141,19 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Filter out any Lovable-related content before creating toast
+  if (props.title && typeof props.title === 'string' && 
+      (props.title.toLowerCase().includes('lovable') || 
+       props.title.toLowerCase().includes('gpt'))) {
+    return { id: '', dismiss: () => {}, update: () => {} };
+  }
+  
+  if (props.description && typeof props.description === 'string' && 
+      (props.description.toLowerCase().includes('lovable') || 
+       props.description.toLowerCase().includes('gpt'))) {
+    return { id: '', dismiss: () => {}, update: () => {} };
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>
