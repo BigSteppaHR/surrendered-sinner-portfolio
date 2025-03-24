@@ -24,6 +24,8 @@ interface LoginFormProps {
 }
 
 const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPassword }: LoginFormProps) => {
+  const navigate = useNavigate();
+  
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -31,8 +33,6 @@ const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPass
       password: "",
     },
   });
-
-  const navigate = useNavigate();
 
   return (
     <Card className="border-0 bg-black/70 backdrop-blur-md shadow-xl">
