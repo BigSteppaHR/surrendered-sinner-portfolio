@@ -40,11 +40,14 @@ export default function Login() {
     setIsCheckingVerification(true);
     
     try {
+      // Check if the profile exists
       const { data, error } = await supabase
         .from('profiles')
         .select('email_confirmed')
         .eq('email', email)
         .maybeSingle();
+      
+      console.log("Profile verification check result:", { data, error });
       
       if (!error && data && data.email_confirmed) {
         console.log("Email already verified according to database check:", data);
@@ -68,12 +71,32 @@ export default function Login() {
   }, [isAuthenticated, profile, isInitialized, isLoading]);
 
   useEffect(() => {
-    // Only redirect if the user is authenticated and email is confirmed
-    if (isInitialized && isAuthenticated && profile?.email_confirmed) {
-      console.log("Login: User authenticated and email confirmed, redirecting to dashboard");
-      navigate("/dashboard");
+    // Check if we have a success message from verification page
+    if (location.state?.message) {
+      toast({
+        title: "Success",
+        description: location.state.message,
+      });
+      
+      // Clear the state message to prevent showing it again on page refresh
+      navigate(location.pathname, { replace: true });
     }
-  }, [isAuthenticated, profile, navigate, isInitialized]);
+  }, [location.state, navigate, toast]);
+
+  useEffect(() => {
+    // Only redirect if the user is authenticated and email is confirmed
+    if (isInitialized && isAuthenticated) {
+      if (profile?.email_confirmed) {
+        console.log("Login: User authenticated and email confirmed, redirecting to dashboard");
+        navigate("/dashboard");
+      } else if (profile && !showEmailVerification) {
+        // If authenticated but email not confirmed, show verification dialog
+        console.log("Login: User authenticated but email not confirmed, showing verification dialog");
+        setVerificationEmail(profile.email || "");
+        setShowEmailVerification(true);
+      }
+    }
+  }, [isAuthenticated, profile, navigate, isInitialized, showEmailVerification]);
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     if (!mountedRef.current) return;

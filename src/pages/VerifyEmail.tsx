@@ -64,34 +64,69 @@ const VerifyEmail = () => {
 
         console.log("Token is valid, updating profile");
 
-        // Get user profile by email
-        const { data: profile, error: profileError } = await supabase
+        // Check if user exists in profiles table
+        const { data: profileData, error: profileFetchError } = await supabase
           .from('profiles')
           .select('*')
           .eq('email', email)
           .maybeSingle();
 
-        if (profileError || !profile) {
-          console.error("Profile not found:", profileError || "No profile exists");
+        if (profileFetchError) {
+          console.error("Error fetching profile:", profileFetchError);
           setVerificationStatus('error');
-          setErrorMessage("User profile not found. Please contact support.");
+          setErrorMessage("Failed to verify user profile. Please contact support.");
           return;
         }
 
-        // Update the user's profile to mark email as confirmed
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ email_confirmed: true })
-          .eq('id', profile.id);
+        // If profile doesn't exist, we need to create it
+        if (!profileData) {
+          console.log("Profile not found, checking user in auth system");
+          
+          // First check if the user exists in auth system
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (!user) {
+            console.error("User not found in auth system");
+            setVerificationStatus('error');
+            setErrorMessage("User account not found. Please try signing up again.");
+            return;
+          }
+          
+          // Create the profile with the user ID
+          const { error: createProfileError } = await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: user.id, 
+                email: email,
+                email_confirmed: true 
+              }
+            ]);
+          
+          if (createProfileError) {
+            console.error("Failed to create profile:", createProfileError);
+            setVerificationStatus('error');
+            setErrorMessage("Failed to create user profile. Please contact support.");
+            return;
+          }
+          
+          console.log("Profile created successfully with email_confirmed=true");
+        } else {
+          // Update the user's profile to mark email as confirmed
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ email_confirmed: true })
+            .eq('email', email);
 
-        if (updateError) {
-          console.error("Profile update failed:", updateError);
-          setVerificationStatus('error');
-          setErrorMessage("Failed to verify email. Please try again.");
-          return;
+          if (updateError) {
+            console.error("Profile update failed:", updateError);
+            setVerificationStatus('error');
+            setErrorMessage("Failed to verify email. Please try again.");
+            return;
+          }
+          
+          console.log("Profile updated successfully with email_confirmed=true");
         }
-
-        console.log("Profile updated successfully, deleting token");
 
         // Delete the token after successful verification
         await supabase
@@ -146,6 +181,9 @@ const VerifyEmail = () => {
                 }, 2000);
               } else {
                 console.log("Auto sign-in successful, redirecting to dashboard");
+                // Refresh the profile to get the updated email_confirmed status
+                await refreshProfile();
+                
                 // Redirect to dashboard after successful sign-in
                 setTimeout(() => {
                   if (mountedRef.current) {

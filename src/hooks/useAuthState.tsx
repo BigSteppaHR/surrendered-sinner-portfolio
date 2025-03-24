@@ -15,16 +15,81 @@ export const useAuthState = () => {
     if (!currentUser) return null;
     
     try {
+      // Use the email to query the profile, as the ID might not match in some cases
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error.message);
+        
+        // If no profile exists for this user ID, try to create one
+        if (error.message.includes('multiple (or no) rows returned')) {
+          const email = currentUser.email;
+          if (email) {
+            console.log('No profile found, checking if one exists with this email');
+            
+            // First check if a profile exists with this email
+            const { data: emailProfileData, error: emailProfileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('email', email)
+              .maybeSingle();
+              
+            if (emailProfileError) {
+              console.error('Error checking email profile:', emailProfileError.message);
+              return null;
+            }
+            
+            if (emailProfileData) {
+              console.log('Found profile with matching email, updating its ID');
+              
+              // Update the existing profile with the correct user ID
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ id: currentUser.id })
+                .eq('email', email);
+                
+              if (updateError) {
+                console.error('Error updating profile ID:', updateError.message);
+                return null;
+              }
+              
+              return emailProfileData;
+            } else {
+              console.log('No profile found, creating new profile');
+              
+              // Create a new profile for this user
+              const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert([
+                  { 
+                    id: currentUser.id, 
+                    email: email,
+                    email_confirmed: false 
+                  }
+                ])
+                .select()
+                .single();
+                
+              if (createError) {
+                console.error('Error creating profile:', createError.message);
+                return null;
+              }
+              
+              return newProfile;
+            }
+          }
+        }
+        
+        return null;
+      }
+      
       return data;
     } catch (error: any) {
-      console.error('Error fetching profile:', error.message);
+      console.error('Exception fetching profile:', error.message);
       return null;
     }
   };

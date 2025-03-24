@@ -81,6 +81,8 @@ const EmailVerificationDialog = ({
         .eq('email', emailToCheck)
         .maybeSingle();
       
+      console.log("Database verification check:", { data, error, emailToCheck });
+      
       if (!error && data && data.email_confirmed) {
         console.log("Email already verified according to database check:", data);
         setIsEmailVerified(true);
