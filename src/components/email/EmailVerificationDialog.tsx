@@ -26,6 +26,7 @@ const EmailVerificationDialog = ({
   const mounted = useRef(true);
   const [isVisible, setIsVisible] = useState(false);
   const [email, setEmail] = useState("");
+  const [dialogDescription, setDialogDescription] = useState("");
   
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
 
@@ -34,25 +35,32 @@ const EmailVerificationDialog = ({
     const emailToUse = initialEmail || location.state?.email || user?.email || "";
     if (emailToUse) {
       setEmail(emailToUse);
+      // Update dialog description when email changes
+      setDialogDescription(`Please verify your email address ${emailToUse ? `(${emailToUse})` : ""} to continue using your account`);
     }
   }, [initialEmail, location.state?.email, user?.email]);
 
   // Handle visibility safely with a small delay
   useEffect(() => {
+    let visibilityTimer: NodeJS.Timeout;
+    
     // Only update visibility if mounted
     if (mounted.current) {
       if (isOpen) {
         // Small delay before showing to ensure proper rendering
-        const timer = setTimeout(() => {
+        visibilityTimer = setTimeout(() => {
           if (mounted.current) {
             setIsVisible(true);
           }
-        }, 50);
-        return () => clearTimeout(timer);
+        }, 100); // Slightly increased delay
       } else {
         setIsVisible(false);
       }
     }
+    
+    return () => {
+      if (visibilityTimer) clearTimeout(visibilityTimer);
+    };
   }, [isOpen]);
 
   // Handle back to login - redirects to login page when requested
@@ -63,13 +71,13 @@ const EmailVerificationDialog = ({
     }
   };
 
-  // Handle dialog close
+  // Handle dialog close with improved timing
   const handleDialogClose = () => {
     if (mounted.current) {
       setIsVisible(false);
       
       // Small delay before actually closing to ensure animations complete
-      setTimeout(() => {
+      const closeTimer = setTimeout(() => {
         if (mounted.current) {
           onClose();
           // Redirect to login page if redirectToLogin is true
@@ -77,7 +85,11 @@ const EmailVerificationDialog = ({
             navigate("/login");
           }
         }
-      }, 100);
+      }, 150); // Slightly increased delay
+      
+      return () => {
+        clearTimeout(closeTimer);
+      };
     }
   };
 
@@ -91,26 +103,29 @@ const EmailVerificationDialog = ({
 
   // If user has confirmed email, close dialog and redirect to dashboard
   useEffect(() => {
+    let redirectTimer: NodeJS.Timeout;
+    
     if (profile?.email_confirmed && mounted.current) {
       setIsVisible(false);
       
       // Small delay before redirecting
-      setTimeout(() => {
+      redirectTimer = setTimeout(() => {
         if (mounted.current) {
           onClose();
           navigate("/dashboard");
         }
-      }, 100);
+      }, 150); // Slightly increased delay
     }
+    
+    return () => {
+      if (redirectTimer) clearTimeout(redirectTimer);
+    };
   }, [profile, navigate, onClose]);
 
   // Don't render anything if not open
   if (!isOpen) {
     return null;
   }
-
-  // The verification dialog description
-  const dialogDescription = `Please verify your email address ${email ? `(${email})` : ""} to continue using your account`;
 
   return (
     <Dialog 
@@ -130,12 +145,15 @@ const EmailVerificationDialog = ({
           <X className="h-4 w-4 text-white" />
           <span className="sr-only">Close</span>
         </DialogClose>
+        
+        {/* Hidden description for accessibility */}
         <div 
           id="email-verification-description" 
           className="sr-only"
         >
           {dialogDescription}
         </div>
+        
         <EmailVerificationCard 
           email={email}
           isLoading={false}
