@@ -43,6 +43,11 @@ export const useAuthLogin = () => {
       }
 
       // Return navigation data for confirmed users
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
+      
       return { 
         error: null, 
         data: { 
