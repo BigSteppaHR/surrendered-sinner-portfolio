@@ -4,6 +4,12 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/hooks/useAuth';
 
+// Helper for conditional logging
+const isDev = import.meta.env.DEV;
+const logDebug = (message: string, ...args: any[]) => {
+  if (isDev) console.debug(`[Auth] ${message}`, ...args);
+};
+
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -18,7 +24,7 @@ export const useAuthState = () => {
     if (!currentUser) return null;
     
     try {
-      console.log('Refreshing profile data for user:', currentUser.id);
+      logDebug('Refreshing profile data for user:', currentUser.id);
       
       // Try to get profile directly first
       try {
@@ -29,7 +35,7 @@ export const useAuthState = () => {
           .maybeSingle();
         
         if (!error && data) {
-          console.log('Profile found:', data);
+          logDebug('Profile found:', data);
           return data;
         }
         
@@ -43,7 +49,7 @@ export const useAuthState = () => {
       // If we get here, either no profile exists or we hit an RLS error
       // Try to create a basic profile as fallback
       try {
-        console.log('Attempting to create basic profile for user:', currentUser.id);
+        logDebug('Attempting to create basic profile for user:', currentUser.id);
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .upsert({
@@ -66,7 +72,7 @@ export const useAuthState = () => {
           };
         }
         
-        console.log('Created basic profile successfully:', newProfile);
+        logDebug('Created basic profile successfully:', newProfile);
         return newProfile;
       } catch (e) {
         console.error('Exception creating basic profile:', e);
@@ -99,7 +105,7 @@ export const useAuthState = () => {
     
     const initializeAuth = async () => {
       try {
-        console.log('Initializing auth state...');
+        logDebug('Initializing auth state...');
         setIsLoading(true);
         
         // Clean up any previous subscription
@@ -109,7 +115,7 @@ export const useAuthState = () => {
         
         // Set up the auth state listener first
         const { data } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-          console.log('Auth state changed:', event, currentSession?.user?.email);
+          logDebug('Auth state changed:', event, currentSession?.user?.email);
           
           // Process synchronously to avoid race conditions
           setSession(currentSession);
@@ -120,7 +126,7 @@ export const useAuthState = () => {
             const profileData = await refreshProfileData(currentSession.user);
             if (profileData) {
               setProfile(profileData);
-              console.log('Profile updated after auth state change:', profileData);
+              logDebug('Profile updated after auth state change:', profileData);
             } else {
               console.warn('No profile data available after auth state change');
             }
@@ -146,7 +152,7 @@ export const useAuthState = () => {
           const profileData = await refreshProfileData(currentSession.user);
           if (profileData) {
             setProfile(profileData);
-            console.log('Profile loaded during initialization:', profileData);
+            logDebug('Profile loaded during initialization:', profileData);
           } else {
             console.warn('No profile data available during initialization');
           }

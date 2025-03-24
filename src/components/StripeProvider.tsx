@@ -10,6 +10,12 @@ let stripePromise: Promise<Stripe | null> | null = null;
 // Define the publishable key - using environment variable with fallback for development
 const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51NyDWJAfsLmHAfOzbscm6EMsc2zGIp3VCz7dXJwTNAgzyjU62h13qeUWI3j8zNpIImBrzLnRkKiLIi7AuxmfaXj600UBcmzWsn';
 
+// Helper for conditional logging
+const isDev = import.meta.env.DEV;
+const logDebug = (message: string, ...args: any[]) => {
+  if (isDev) console.debug(`[Stripe] ${message}`, ...args);
+};
+
 interface StripeProviderProps {
   children: React.ReactNode;
 }

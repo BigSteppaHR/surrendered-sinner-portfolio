@@ -4,6 +4,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
+// Helper for conditional logging
+const isDev = import.meta.env.DEV;
+const logDebug = (message: string, ...args: any[]) => {
+  if (isDev) console.debug(`[Dashboard] ${message}`, ...args);
+};
+
 // We no longer need to include auth-related paths here as they're now directly at root level
 const publicPages: string[] = [];
 
@@ -23,11 +29,11 @@ const DashboardLayout = () => {
     if (!authCheckStarted.current && !initialLoadComplete.current) {
       authCheckStarted.current = true;
       
-      console.log("DashboardLayout - Auth state:", { 
+      logDebug("Auth state:", { 
         isAuthenticated, 
         isInitialized, 
         isLoading,
-        profile: profile ? `${profile.id} (${profile.email})` : 'No profile'
+        hasProfile: !!profile
       });
       
       // Only set page as loaded after auth is initialized
@@ -64,26 +70,26 @@ const DashboardLayout = () => {
   
   // If loading timed out but we're not authenticated, redirect to login
   if (loadingTimeout && !isAuthenticated) {
-    console.log("DashboardLayout: Loading timed out, redirecting to login");
+    logDebug("Loading timed out, redirecting to login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
   // For dashboard routes, we require authentication
   if (!isAuthenticated) {
-    console.log("DashboardLayout: User not authenticated, redirecting to login");
+    logDebug("User not authenticated, redirecting to login");
     // Make sure to redirect to the root /login path, not /dashboard/login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
   // If authenticated admin, redirect to admin dashboard
   if (isAuthenticated && profile?.is_admin) {
-    console.log("DashboardLayout: User is admin, redirecting to admin dashboard");
+    logDebug("User is admin, redirecting to admin dashboard");
     return <Navigate to="/admin" replace />;
   }
   
   // If authenticated but email not confirmed, redirect to confirmation page
   if (isAuthenticated && profile && !profile.email_confirmed) {
-    console.log("DashboardLayout: Email not confirmed, redirecting to confirm page");
+    logDebug("Email not confirmed, redirecting to confirm page");
     return <Navigate to="/confirm-email" state={{ email: profile.email }} replace />;
   }
   

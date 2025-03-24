@@ -5,6 +5,12 @@ import { useAuthOperations } from '@/hooks/auth';
 import { AuthContextType } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
+// Helper for conditional logging
+const isDev = import.meta.env.DEV;
+const logDebug = (message: string, ...args: any[]) => {
+  if (isDev) console.debug(`[AuthProvider] ${message}`, ...args);
+};
+
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -27,12 +33,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       initializeAttempted.current = true;
       
       try {
-        console.log('Initializing auth provider...');
+        logDebug('Initializing auth provider...');
         
         // Set up the auth state listener first to catch any events during initialization
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
-            console.log('Auth state changed:', event, session ? 'Session active' : 'No session');
+            logDebug('Auth state changed:', event, session ? 'Session active' : 'No session');
             
             // Don't try to refresh profile during initialization to avoid loops
             if (session?.user && authLoaded.current && !isRefreshingProfile.current) {
@@ -58,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Get session to ensure we have the most up-to-date state
         const { data } = await supabase.auth.getSession();
-        console.log('Current session:', data.session ? 'Active' : 'None');
+        logDebug('Current session:', data.session ? 'Active' : 'None');
         
         // If session exists, refresh profile data
         if (data.session?.user) {
@@ -94,15 +100,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 // Check if we still have a session before attempting refresh
                 const { data: currentSession } = await supabase.auth.getSession();
                 if (currentSession.session) {
-                  console.log("Refreshing session at", new Date().toISOString());
+                  logDebug("Refreshing session at", new Date().toISOString());
                   const { data, error } = await supabase.auth.refreshSession();
                   if (error) {
                     console.error("Session refresh failed:", error);
                   } else if (data.session) {
-                    console.log("Session refreshed successfully at", new Date().toISOString());
+                    logDebug("Session refreshed successfully at", new Date().toISOString());
                   }
                 } else {
-                  console.log("No active session to refresh");
+                  logDebug("No active session to refresh");
                   // Clear the interval if there's no session
                   if (sessionRefreshInterval.current) {
                     clearInterval(sessionRefreshInterval.current);
@@ -115,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }, refreshInterval || 4 * 60 * 1000); // Fallback to 4 minutes if calculation fails
           
-          console.log(`Session refresh interval set for ${refreshInterval / 1000} seconds`);
+          logDebug(`Session refresh interval set for ${refreshInterval / 1000} seconds`);
         }
         
         return () => {
