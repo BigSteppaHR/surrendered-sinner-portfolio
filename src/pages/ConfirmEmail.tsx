@@ -16,6 +16,7 @@ const ConfirmEmail = () => {
   const { toast } = useToast();
   const { sendEmail, isLoading: isSendingEmail } = useEmail();
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Get email from location state or user object
   const email = location.state?.email || user?.email || "";
@@ -24,12 +25,16 @@ const ConfirmEmail = () => {
     // If user has confirmed email, redirect to dashboard
     if (profile?.email_confirmed) {
       navigate("/dashboard");
+      return;
     }
     
     // If no email in state or user is not logged in, redirect to auth
     if (!email && !user) {
       navigate("/auth");
+      return;
     }
+
+    setIsLoading(false);
   }, [profile, user, email, navigate]);
 
   useEffect(() => {
@@ -120,6 +125,15 @@ const ConfirmEmail = () => {
       });
     }
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black p-4">
