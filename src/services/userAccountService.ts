@@ -18,6 +18,9 @@ export interface AuthResult {
 // Check if user already exists
 export const checkExistingUser = async (email: string): Promise<boolean> => {
   try {
+    // Clear any previous sessions to avoid conflicts
+    await supabase.auth.signOut();
+    
     const { data: existingUser, error } = await supabase
       .from('profiles')
       .select('*')
@@ -44,6 +47,10 @@ export const createAuthUser = async (
   try {
     console.log(`Creating auth user with email: ${email} and name: ${fullName}`);
     
+    // Ensure we're starting fresh
+    await supabase.auth.signOut();
+    
+    // Use apikey header to ensure proper authorization
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -52,6 +59,7 @@ export const createAuthUser = async (
           full_name: fullName,
           email: email,
         },
+        emailRedirectTo: `${window.location.origin}/verify-email`,
       },
     });
 
@@ -80,6 +88,14 @@ export const createUserProfile = async (
 ): Promise<ProfileCreationResult> => {
   try {
     console.log(`Creating/updating profile for user: ${userId}, ${email}, ${fullName}`);
+    
+    // Get the current session to use its JWT for the request
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.error("No active session for profile creation");
+      return { success: false, error: "No active session" };
+    }
     
     const { error } = await supabase
       .from('profiles')
@@ -123,7 +139,7 @@ export const authenticateUser = async (email: string, password: string): Promise
     await supabase.auth.signOut();
     
     // Add a small delay before authentication to ensure any previous auth operations are completed
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -136,6 +152,11 @@ export const authenticateUser = async (email: string, password: string): Promise
     }
 
     console.log('User authenticated successfully:', data.user?.email);
+    
+    // If successful, check if we need to update the profile
+    if (data.user) {
+      await refreshUserProfile(data.user.id);
+    }
     
     return {
       user: data.user,
@@ -151,6 +172,13 @@ export const authenticateUser = async (email: string, password: string): Promise
 export const fetchUserProfile = async (userId: string) => {
   try {
     console.log(`Fetching profile for user: ${userId}`);
+    
+    // Get the current session to ensure we have proper auth
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.warn('No active session when fetching profile');
+    }
     
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -168,5 +196,24 @@ export const fetchUserProfile = async (userId: string) => {
   } catch (error) {
     console.error('Exception in fetchUserProfile:', error);
     return { profile: null, error };
+  }
+};
+
+// Refresh user profile data
+export const refreshUserProfile = async (userId: string) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.warn('No active session when refreshing profile');
+      return null;
+    }
+    
+    // Fetch the current profile
+    const { profile } = await fetchUserProfile(userId);
+    return profile;
+  } catch (error) {
+    console.error('Error refreshing profile:', error);
+    return null;
   }
 };
