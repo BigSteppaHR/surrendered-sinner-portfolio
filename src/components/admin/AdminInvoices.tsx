@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,6 +45,21 @@ type TicketType = {
   date: string;
   status: string;
   priority: string;
+};
+
+// Define type for the support ticket response from Supabase
+type TicketResponse = {
+  id: string;
+  subject: string;
+  type: string;
+  status: string;
+  created_at: string;
+  message: string;
+  user_id: string;
+  profiles: {
+    full_name: string;
+    email: string;
+  };
 };
 
 const AdminInvoices = () => {
@@ -124,7 +138,7 @@ const AdminInvoices = () => {
         
         if (data) {
           // Transform the data to match our ticket type
-          const formattedTickets = data.map(ticket => ({
+          const formattedTickets = data.map((ticket: TicketResponse) => ({
             id: ticket.id,
             customer: ticket.profiles?.full_name || 'Unknown User',
             email: ticket.profiles?.email || 'No email provided',
@@ -152,6 +166,7 @@ const AdminInvoices = () => {
     fetchInvoices();
     fetchTickets();
   }, [toast]);
+  
   
   const filteredInvoices = invoices.filter(invoice => 
     invoice.customer.toLowerCase().includes(searchInvoice.toLowerCase()) ||
@@ -617,8 +632,7 @@ const AdminInvoices = () => {
                     <div className="mt-4 pt-4 border-t border-[#353A48] flex justify-between">
                       <p className="text-sm text-gray-400">
                         <AlertCircle className="h-4 w-4 inline mr-1" />
-                        Ready to send this payment link to the client?
-                      </p>
+                        Ready to send this payment link to the client?</p>
                       <Button size="sm" onClick={handleSendInvoice}>
                         <Send className="h-4 w-4 mr-1" />
                         Send to Client
@@ -820,22 +834,4 @@ const AdminInvoices = () => {
                         </Button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="bg-[#252A38] border-[#353A48] h-full flex items-center justify-center text-gray-400">
-                  <CardContent className="text-center p-6">
-                    <MessageSquare className="h-10 w-10 mx-auto mb-4 opacity-50" />
-                    <p>Select a ticket to view details</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
-
-export default AdminInvoices;
+                  </CardContent

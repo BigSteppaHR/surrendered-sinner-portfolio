@@ -1,1066 +1,434 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import DashboardNav from "@/components/dashboard/DashboardNav";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subMonths, parseISO, differenceInDays } from "date-fns";
-import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from "recharts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, TrendingDown, TrendingUp, Award, Scale, Dumbbell, ImagePlus } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Dumbbell, Calendar, ArrowUp, ArrowDown } from "lucide-react";
 
-type WeightRecord = {
-  id: string;
-  user_id: string;
-  weight: number;
-  recorded_at: string;
-  notes: string | null;
-  image_url: string | null;
-};
-
-type LiftRecord = {
+// Define the types for our lift records
+interface LiftRecord {
   id: string;
   user_id: string;
   recorded_at: string;
-  squat: number | null;
-  bench: number | null;
-  deadlift: number | null;
-  notes: string | null;
-};
-
-type LiftData = {
-  date: string;
-  squat: number | null;
-  bench: number | null;
-  deadlift: number | null;
-};
+  squat: number;
+  bench: number;
+  deadlift: number;
+  bodyweight: number;
+  notes?: string;
+}
 
 const Progress = () => {
-  const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [weightRecords, setWeightRecords] = useState<WeightRecord[]>([]);
+  const [activeTab, setActiveTab] = useState("weights");
   const [liftRecords, setLiftRecords] = useState<LiftRecord[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [weight, setWeight] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showStats, setShowStats] = useState(false);
-  const [trackingMode, setTrackingMode] = useState<"weight" | "lifts">("weight");
-  const [chartMode, setChartMode] = useState<"weight" | "lifts">("weight");
-  const [squat, setSquat] = useState<string>("");
-  const [bench, setBench] = useState<string>("");
-  const [deadlift, setDeadlift] = useState<string>("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    squat: "",
+    bench: "",
+    deadlift: "",
+    bodyweight: "",
+    notes: ""
+  });
+  const { toast } = useToast();
+
   useEffect(() => {
-    if (!isInitialized) return;
-    
-    if (!isLoading && !isAuthenticated) {
-      navigate("/login", { replace: true });
-      return;
-    }
-    
-    if (isAuthenticated && profile) {
-      fetchWeightRecords();
-      fetchLiftRecords();
-    }
-  }, [isAuthenticated, isLoading, profile, isInitialized]);
+    const fetchLiftRecords = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from("lift_records")
+          .select("*")
+          .order("recorded_at", { ascending: false });
 
-  const fetchWeightRecords = async () => {
-    try {
-      setIsLoadingData(true);
-      
-      const sixMonthsAgo = subMonths(new Date(), 6).toISOString();
-      
-      const { data, error } = await supabase
-        .from('weight_records')
-        .select('*')
-        .eq('user_id', profile?.id)
-        .gte('recorded_at', sixMonthsAgo)
-        .order('recorded_at', { ascending: true });
-        
-      if (error) {
-        console.error("Error fetching weight records:", error);
-        return;
-      }
-      
-      if (data) {
-        setWeightRecords(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch weight records:", err);
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
-
-  const fetchLiftRecords = async () => {
-    try {
-      setIsLoadingData(true);
-      
-      const sixMonthsAgo = subMonths(new Date(), 6).toISOString();
-      
-      const { data, error } = await supabase
-        .from('performance_records')
-        .select('*')
-        .eq('user_id', profile?.id)
-        .gte('recorded_at', sixMonthsAgo)
-        .in('exercise_type', ['squat', 'bench', 'deadlift'])
-        .order('recorded_at', { ascending: true });
-        
-      if (error) {
-        console.error("Error fetching lift records:", error);
-        return;
-      }
-      
-      if (data) {
-        const liftsByDate = data.reduce((acc, record) => {
-          const date = record.recorded_at.split('T')[0];
-          if (!acc[date]) {
-            acc[date] = {
-              id: record.id,
-              user_id: record.user_id,
-              recorded_at: record.recorded_at,
-              squat: null,
-              bench: null,
-              deadlift: null,
-              notes: record.notes
-            };
-          }
-          
-          if (record.exercise_type === 'squat') acc[date].squat = record.weight;
-          if (record.exercise_type === 'bench') acc[date].bench = record.weight;
-          if (record.exercise_type === 'deadlift') acc[date].deadlift = record.weight;
-          
-          return acc;
-        }, {} as Record<string, LiftRecord>);
-        
-        const liftsArray = Object.values(liftsByDate);
-        setLiftRecords(liftsArray);
-      }
-    } catch (err) {
-      console.error("Failed to fetch lift records:", err);
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setPhotoFile(file);
-      
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmitWeight = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!profile?.id) return;
-    
-    const weightValue = parseFloat(weight);
-    if (isNaN(weightValue) || weightValue <= 0) {
-      toast({
-        title: "Invalid weight",
-        description: "Please enter a valid weight value",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      let imageUrl = null;
-      
-      if (photoFile) {
-        const fileName = `${profile.id}/${Date.now()}.${photoFile.name.split('.').pop()}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('profiles')
-          .upload(`weight-records/${fileName}`, photoFile);
-          
-        if (uploadError) throw uploadError;
-        
-        const { data: publicUrlData } = await supabase.storage
-          .from('profiles')
-          .getPublicUrl(`weight-records/${fileName}`);
-          
-        if (publicUrlData) {
-          imageUrl = publicUrlData.publicUrl;
+        if (error) {
+          throw error;
         }
+
+        if (data) {
+          // Type assertion to ensure the data matches our LiftRecord type
+          setLiftRecords(data as LiftRecord[]);
+        }
+      } catch (error: any) {
+        console.error("Error fetching lift records:", error.message);
+        toast({
+          title: "Failed to load lift records",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      const { data, error } = await supabase
-        .from('weight_records')
-        .insert({
-          user_id: profile.id,
-          weight: weightValue,
-          notes: notes || null,
-          image_url: imageUrl,
-          recorded_at: new Date().toISOString()
-        })
-        .select();
-        
-      if (error) {
-        throw error;
-      }
-      
-      toast({
-        title: "Weight record added",
-        description: "Your weight record has been successfully added"
-      });
-      
-      setWeight("");
-      setNotes("");
-      setPhotoFile(null);
-      setPhotoPreview(null);
-      
-      fetchWeightRecords();
-      
-    } catch (error: any) {
-      toast({
-        title: "Error adding weight record",
-        description: error.message || "Something went wrong",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    };
+
+    fetchLiftRecords();
+  }, [toast]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmitLifts = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!profile?.id) return;
-    
-    const squatValue = squat ? parseFloat(squat) : null;
-    const benchValue = bench ? parseFloat(bench) : null;
-    const deadliftValue = deadlift ? parseFloat(deadlift) : null;
-    
-    if (
-      (squatValue === null || isNaN(squatValue)) && 
-      (benchValue === null || isNaN(benchValue)) && 
-      (deadliftValue === null || isNaN(deadliftValue))
-    ) {
-      toast({
-        title: "Missing lift data",
-        description: "Please enter at least one lift value",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
     try {
-      const timestamp = new Date().toISOString();
-      const records = [];
-      
-      if (squatValue !== null && !isNaN(squatValue)) {
-        records.push({
-          user_id: profile.id,
-          exercise_type: 'squat',
-          weight: squatValue,
-          reps: 1,
-          notes: notes || null,
-          recorded_at: timestamp
-        });
-      }
-      
-      if (benchValue !== null && !isNaN(benchValue)) {
-        records.push({
-          user_id: profile.id,
-          exercise_type: 'bench',
-          weight: benchValue,
-          reps: 1,
-          notes: notes || null,
-          recorded_at: timestamp
-        });
-      }
-      
-      if (deadliftValue !== null && !isNaN(deadliftValue)) {
-        records.push({
-          user_id: profile.id,
-          exercise_type: 'deadlift',
-          weight: deadliftValue,
-          reps: 1,
-          notes: notes || null,
-          recorded_at: timestamp
-        });
-      }
+      // Convert form values to numbers
+      const numericFormData = {
+        squat: parseFloat(formData.squat) || 0,
+        bench: parseFloat(formData.bench) || 0,
+        deadlift: parseFloat(formData.deadlift) || 0,
+        bodyweight: parseFloat(formData.bodyweight) || 0,
+        notes: formData.notes.trim(),
+        recorded_at: new Date().toISOString()
+      };
       
       const { data, error } = await supabase
-        .from('performance_records')
-        .insert(records)
+        .from("lift_records")
+        .insert([numericFormData])
         .select();
         
-      if (error) {
-        throw error;
+      if (error) throw error;
+      
+      // Only update the state if we have valid data
+      if (data && data.length > 0) {
+        setLiftRecords([data[0] as LiftRecord, ...liftRecords]);
+        
+        // Reset the form
+        setFormData({
+          squat: "",
+          bench: "",
+          deadlift: "",
+          bodyweight: "",
+          notes: ""
+        });
+        
+        toast({
+          title: "Record added successfully",
+          description: "Your lift record has been saved.",
+        });
       }
-      
-      toast({
-        title: "Lift records added",
-        description: "Your lift records have been successfully added"
-      });
-      
-      setSquat("");
-      setBench("");
-      setDeadlift("");
-      setNotes("");
-      
-      fetchLiftRecords();
-      
     } catch (error: any) {
+      console.error("Error adding lift record:", error.message);
       toast({
-        title: "Error adding lift records",
-        description: error.message || "Something went wrong",
-        variant: "destructive"
+        title: "Failed to add record",
+        description: error.message,
+        variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const getFormattedWeightChartData = () => {
-    if (!weightRecords.length) {
-      const emptyData = [];
-      const today = new Date();
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(today.getDate() - (i * 7));
-        emptyData.push({
-          date: format(date, 'MMM dd'),
-          weight: null
-        });
-      }
-      return emptyData;
-    }
-    
-    return weightRecords.map(record => ({
-      date: format(parseISO(record.recorded_at), 'MMM dd'),
-      weight: record.weight,
-    }));
-  };
-
-  const getFormattedLiftChartData = (): LiftData[] => {
-    if (!liftRecords.length) {
-      const emptyData = [];
-      const today = new Date();
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(today.getDate() - (i * 7));
-        emptyData.push({
-          date: format(date, 'MMM dd'),
-          squat: null,
-          bench: null,
-          deadlift: null
-        });
-      }
-      return emptyData;
-    }
-    
-    return liftRecords.map(record => ({
-      date: format(parseISO(record.recorded_at), 'MMM dd'),
-      squat: record.squat,
-      bench: record.bench,
-      deadlift: record.deadlift,
-    }));
-  };
-
-  const getAverageWeeklyChange = () => {
-    if (weightRecords.length < 2) return 'N/A';
-    
-    const firstWeight = weightRecords[0].weight;
-    const lastWeight = weightRecords[weightRecords.length - 1].weight;
-    const firstDate = parseISO(weightRecords[0].recorded_at);
-    const lastDate = parseISO(weightRecords[weightRecords.length - 1].recorded_at);
-    
-    const totalDays = differenceInDays(lastDate, firstDate);
-    if (totalDays < 1) return 'N/A';
-    
-    const totalChange = lastWeight - firstWeight;
-    const weeklyChange = (totalChange / totalDays) * 7;
-    
-    return `${weeklyChange.toFixed(2)} lbs/week`;
-  };
-
-  const getMaxWeight = () => {
-    if (weightRecords.length === 0) return 'N/A';
-    
-    const maxWeight = Math.max(...weightRecords.map(record => record.weight));
-    return `${maxWeight.toFixed(1)} lbs`;
-  };
-
-  const getMinWeight = () => {
-    if (weightRecords.length === 0) return 'N/A';
-    
-    const minWeight = Math.min(...weightRecords.map(record => record.weight));
-    return `${minWeight.toFixed(1)} lbs`;
-  };
-
-  const getConsistencyScore = () => {
-    if (weightRecords.length === 0) return 'N/A';
-    
-    const firstRecord = parseISO(weightRecords[0].recorded_at);
-    const lastRecord = parseISO(weightRecords[weightRecords.length - 1].recorded_at);
-    const totalWeeks = Math.ceil(differenceInDays(lastRecord, firstRecord) / 7) + 1;
-    
-    if (totalWeeks <= 1) return '100%';
-    
-    const weekMap = new Set();
-    weightRecords.forEach(record => {
-      const date = parseISO(record.recorded_at);
-      const weekKey = `${date.getFullYear()}-W${Math.ceil(date.getDate() / 7)}`;
-      weekMap.add(weekKey);
-    });
-    
-    const weeksWithRecords = weekMap.size;
-    const consistencyScore = (weeksWithRecords / totalWeeks) * 100;
-    
-    return `${Math.round(consistencyScore)}%`;
-  };
-
-  const getMaxLift = (liftType: 'squat' | 'bench' | 'deadlift') => {
-    if (liftRecords.length === 0) return 'N/A';
-    
-    const liftValues = liftRecords
-      .map(record => record[liftType])
-      .filter(val => val !== null) as number[];
-    
-    if (liftValues.length === 0) return 'N/A';
-    
-    const maxLift = Math.max(...liftValues);
-    return `${maxLift.toFixed(1)} lbs`;
-  };
-
-  if (isLoading || !isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C]">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
+  const getChartData = () => {
+    // Sort records by date for chart display (oldest to newest)
+    const sortedRecords = [...liftRecords].sort((a, b) => 
+      new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
     );
-  }
-  
-  if (!isAuthenticated) {
-    return null;
-  }
-  
+    
+    return sortedRecords.map(record => ({
+      date: new Date(record.recorded_at).toLocaleDateString(),
+      Squat: record.squat,
+      Bench: record.bench,
+      Deadlift: record.deadlift,
+      Bodyweight: record.bodyweight
+    }));
+  };
+
+  const calculateProgress = (exercise: keyof LiftRecord) => {
+    if (liftRecords.length < 2) return { value: 0, isPositive: true };
+    
+    // Get the two most recent records
+    const current = liftRecords[0][exercise];
+    const previous = liftRecords[1][exercise];
+    
+    if (typeof current === 'number' && typeof previous === 'number') {
+      const diff = current - previous;
+      return {
+        value: Math.abs(diff),
+        isPositive: diff >= 0
+      };
+    }
+    
+    return { value: 0, isPositive: true };
+  };
+
+  const squatProgress = calculateProgress('squat');
+  const benchProgress = calculateProgress('bench');
+  const deadliftProgress = calculateProgress('deadlift');
+  const bodyweightProgress = calculateProgress('bodyweight');
+
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#1A1F2C] text-white">
-      <DashboardNav />
+    <div className="py-8 px-4 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Progress Tracking</h1>
       
-      <div className="flex-1 overflow-auto">
-        <div className="p-4 md:p-6 max-w-7xl mx-auto">
-          <div className="mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold">Progress Tracking</h1>
-            <p className="text-gray-400 mt-1">Monitor your fitness journey</p>
+      <Tabs 
+        defaultValue={activeTab} 
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
+        <TabsList className="bg-[#232634] w-full sm:w-auto">
+          <TabsTrigger value="weights" className="flex items-center gap-2">
+            <Dumbbell className="h-4 w-4" />
+            <span>Strength Progression</span>
+          </TabsTrigger>
+          <TabsTrigger value="measurements" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span>History</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="weights" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="py-4">
+                <CardTitle className="text-lg flex justify-between items-center">
+                  <span>Squat</span>
+                  {squatProgress.value > 0 && (
+                    <span className={`text-sm ${squatProgress.isPositive ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
+                      {squatProgress.isPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                      {squatProgress.value} lbs
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-gray-400">Latest max</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">
+                  {liftRecords.length > 0 ? `${liftRecords[0].squat} lbs` : "No data"}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="py-4">
+                <CardTitle className="text-lg flex justify-between items-center">
+                  <span>Bench</span>
+                  {benchProgress.value > 0 && (
+                    <span className={`text-sm ${benchProgress.isPositive ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
+                      {benchProgress.isPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                      {benchProgress.value} lbs
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-gray-400">Latest max</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">
+                  {liftRecords.length > 0 ? `${liftRecords[0].bench} lbs` : "No data"}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="py-4">
+                <CardTitle className="text-lg flex justify-between items-center">
+                  <span>Deadlift</span>
+                  {deadliftProgress.value > 0 && (
+                    <span className={`text-sm ${deadliftProgress.isPositive ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
+                      {deadliftProgress.isPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                      {deadliftProgress.value} lbs
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-gray-400">Latest max</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">
+                  {liftRecords.length > 0 ? `${liftRecords[0].deadlift} lbs` : "No data"}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="py-4">
+                <CardTitle className="text-lg flex justify-between items-center">
+                  <span>Bodyweight</span>
+                  {bodyweightProgress.value > 0 && (
+                    <span className={`text-sm ${bodyweightProgress.isPositive ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
+                      {bodyweightProgress.isPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                      {bodyweightProgress.value} lbs
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-gray-400">Current</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">
+                  {liftRecords.length > 0 ? `${liftRecords[0].bodyweight} lbs` : "No data"}
+                </p>
+              </CardContent>
+            </Card>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-            <div className="lg:col-span-2">
-              <Card className="bg-gray-900 border-gray-800">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle>Progress Chart</CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Track your progress over time
-                    </CardDescription>
-                  </div>
-                  <Tabs 
-                    defaultValue="weight" 
-                    value={chartMode}
-                    onValueChange={(value) => setChartMode(value as "weight" | "lifts")}
-                    className="w-auto"
-                  >
-                    <TabsList className="grid grid-cols-2 w-[200px]">
-                      <TabsTrigger value="weight">Weight</TabsTrigger>
-                      <TabsTrigger value="lifts">Lifts</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingData ? (
-                    <div className="h-[300px] flex items-center justify-center">
-                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-                    </div>
-                  ) : chartMode === "weight" ? (
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={getFormattedWeightChartData()}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                          <XAxis dataKey="date" stroke="#666" />
-                          <YAxis stroke="#666" />
-                          <Tooltip contentStyle={{ background: '#222', borderColor: '#444' }} />
-                          <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="weight" 
-                            name="Body Weight (lbs)"
-                            stroke="#9b87f5" 
-                            activeDot={{ r: 8 }}
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={getFormattedLiftChartData()}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                          <XAxis dataKey="date" stroke="#666" />
-                          <YAxis stroke="#666" />
-                          <Tooltip contentStyle={{ background: '#222', borderColor: '#444' }} />
-                          <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="squat" 
-                            name="Squat (lbs)"
-                            stroke="#ff2d2d" 
-                            activeDot={{ r: 8 }}
-                            strokeWidth={2}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="bench" 
-                            name="Bench (lbs)"
-                            stroke="#3b82f6" 
-                            activeDot={{ r: 8 }}
-                            strokeWidth={2}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="deadlift" 
-                            name="Deadlift (lbs)"
-                            stroke="#22c55e" 
-                            activeDot={{ r: 8 }}
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gray-900 border-gray-800 mt-4 md:mt-6">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Advanced Statistics</CardTitle>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-8 w-8 p-0" 
-                      onClick={() => setShowStats(!showStats)}
+          <Card>
+            <CardHeader>
+              <CardTitle>Strength Progress Chart</CardTitle>
+              <CardDescription>View your progress over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] md:h-[400px]">
+                {liftRecords.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={getChartData()}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
-                      <ChevronDown className={`h-4 w-4 transition-transform ${showStats ? 'rotate-180' : ''}`} />
-                      <span className="sr-only">Toggle stats</span>
-                    </Button>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip contentStyle={{ backgroundColor: '#1e1e2e', border: 'none' }} />
+                      <Legend />
+                      <Line type="monotone" dataKey="Squat" stroke="#9b87f5" strokeWidth={2} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="Bench" stroke="#f5a287" strokeWidth={2} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="Deadlift" stroke="#87f5e0" strokeWidth={2} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="Bodyweight" stroke="#f587e8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-400">
+                    No data available. Add your lift records to see the chart.
                   </div>
-                  <CardDescription className="text-gray-400">
-                    Detailed analysis of your progress
-                  </CardDescription>
-                </CardHeader>
-                {showStats && (
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <TrendingDown className="h-4 w-4 text-green-500" />
-                            <span className="text-sm text-gray-400">Total Change</span>
-                          </div>
-                          <div className="text-lg font-semibold">{getWeightChange()}</div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <TrendingUp className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm text-gray-400">Weekly Change</span>
-                          </div>
-                          <div className="text-lg font-semibold">{getAverageWeeklyChange()}</div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Scale className="h-4 w-4 text-violet-500" />
-                            <span className="text-sm text-gray-400">Heaviest</span>
-                          </div>
-                          <div className="text-lg font-semibold">{getMaxWeight()}</div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Scale className="h-4 w-4 text-emerald-500" />
-                            <span className="text-sm text-gray-400">Lightest</span>
-                          </div>
-                          <div className="text-lg font-semibold">{getMinWeight()}</div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Award className="h-4 w-4 text-yellow-500" />
-                            <span className="text-sm text-gray-400">Consistency</span>
-                          </div>
-                          <div className="text-lg font-semibold">{getConsistencyScore()}</div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Dumbbell className="h-4 w-4 text-red-500" />
-                            <span className="text-sm text-gray-400">Best Squat</span>
-                          </div>
-                          <div className="text-lg font-semibold">{getMaxLift('squat')}</div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Dumbbell className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm text-gray-400">Best Bench</span>
-                          </div>
-                          <div className="text-lg font-semibold">{getMaxLift('bench')}</div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Dumbbell className="h-4 w-4 text-green-500" />
-                            <span className="text-sm text-gray-400">Best Deadlift</span>
-                          </div>
-                          <div className="text-lg font-semibold">{getMaxLift('deadlift')}</div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CardContent>
                 )}
-              </Card>
-
-              <Card className="bg-gray-900 border-gray-800 mt-4 md:mt-6">
-                <CardHeader>
-                  <div className="flex flex-row items-center justify-between">
-                    <CardTitle>Record Progress</CardTitle>
-                    <Tabs 
-                      defaultValue="weight" 
-                      value={trackingMode}
-                      onValueChange={(value) => setTrackingMode(value as "weight" | "lifts")}
-                      className="w-auto"
-                    >
-                      <TabsList className="grid grid-cols-2 w-[200px]">
-                        <TabsTrigger value="weight">Weight</TabsTrigger>
-                        <TabsTrigger value="lifts">Lifts</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New Record</CardTitle>
+              <CardDescription>Log your latest lift numbers</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="squat">Squat (lbs)</Label>
+                    <Input
+                      id="squat"
+                      name="squat"
+                      type="number"
+                      placeholder="Enter weight"
+                      value={formData.squat}
+                      onChange={handleInputChange}
+                    />
                   </div>
-                  <CardDescription className="text-gray-400">
-                    Record your current progress metrics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {trackingMode === "weight" ? (
-                    <form onSubmit={handleSubmitWeight} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="weight">Current Weight (lbs)</Label>
-                          <Input
-                            id="weight"
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            placeholder="Enter your weight"
-                            value={weight}
-                            onChange={(e) => setWeight(e.target.value)}
-                            className="bg-gray-800 border-gray-700"
-                            required
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="photo">Photo (optional)</Label>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => document.getElementById('photo-upload')?.click()}
-                              className="w-full bg-gray-800 border-gray-700 hover:bg-gray-700"
-                            >
-                              <ImagePlus className="h-4 w-4 mr-2" />
-                              Add Photo
-                            </Button>
-                            <input
-                              id="photo-upload"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleFileChange}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {photoPreview && (
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-400 mb-2">Photo Preview:</p>
-                          <div className="w-32 h-32 relative rounded-md overflow-hidden">
-                            <img 
-                              src={photoPreview} 
-                              alt="Preview" 
-                              className="object-cover w-full h-full" 
-                            />
-                            <button 
-                              type="button"
-                              className="absolute top-2 right-2 bg-black/50 p-1 rounded-full hover:bg-black/70"
-                              onClick={() => {
-                                setPhotoFile(null);
-                                setPhotoPreview(null);
-                              }}
-                            >
-                              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="notes">Notes (optional)</Label>
-                        <Textarea
-                          id="notes"
-                          placeholder="Any additional notes about this weigh-in"
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          className="bg-gray-800 border-gray-700 min-h-[100px]"
-                        />
-                      </div>
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-[#9b87f5] hover:bg-[#8a76e4]"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <span className="flex items-center">
-                            <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
-                            Submitting...
-                          </span>
-                        ) : "Submit Weight Record"}
-                      </Button>
-                    </form>
-                  ) : (
-                    <form onSubmit={handleSubmitLifts} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="squat">Squat (lbs)</Label>
-                          <Input
-                            id="squat"
-                            type="number"
-                            step="5"
-                            min="0"
-                            placeholder="Enter squat weight"
-                            value={squat}
-                            onChange={(e) => setSquat(e.target.value)}
-                            className="bg-gray-800 border-gray-700"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="bench">Bench Press (lbs)</Label>
-                          <Input
-                            id="bench"
-                            type="number"
-                            step="5"
-                            min="0"
-                            placeholder="Enter bench weight"
-                            value={bench}
-                            onChange={(e) => setBench(e.target.value)}
-                            className="bg-gray-800 border-gray-700"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="deadlift">Deadlift (lbs)</Label>
-                          <Input
-                            id="deadlift"
-                            type="number"
-                            step="5"
-                            min="0"
-                            placeholder="Enter deadlift weight"
-                            value={deadlift}
-                            onChange={(e) => setDeadlift(e.target.value)}
-                            className="bg-gray-800 border-gray-700"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gray-800/50 p-3 rounded-md border border-gray-700 text-sm text-gray-400">
-                        <p>Leave fields blank for lifts you haven't performed. You must enter at least one lift.</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="notes">Notes (optional)</Label>
-                        <Textarea
-                          id="notes"
-                          placeholder="Any additional notes about these lifts"
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          className="bg-gray-800 border-gray-700 min-h-[100px]"
-                        />
-                      </div>
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-[#9b87f5] hover:bg-[#8a76e4]"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <span className="flex items-center">
-                            <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
-                            Submitting...
-                          </span>
-                        ) : "Submit Lift Records"}
-                      </Button>
-                    </form>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="space-y-4 md:space-y-6">
-              <Card className="bg-gray-900 border-gray-800">
-                <CardHeader>
-                  <CardTitle>Stats Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between pb-2 border-b border-gray-800">
-                      <span className="text-gray-400">Current Weight</span>
-                      <span className="font-semibold">
-                        {weightRecords.length > 0 
-                          ? `${weightRecords[weightRecords.length - 1].weight} lbs` 
-                          : 'No data'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between pb-2 border-b border-gray-800">
-                      <span className="text-gray-400">Starting Weight</span>
-                      <span className="font-semibold">
-                        {weightRecords.length > 0 
-                          ? `${weightRecords[0].weight} lbs` 
-                          : 'No data'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between pb-2 border-b border-gray-800">
-                      <span className="text-gray-400">Weight Change</span>
-                      <span className={`font-semibold ${getWeightChangeStyling()}`}>
-                        {getWeightChange()}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between pb-2 border-b border-gray-800">
-                      <span className="text-gray-400">Best Squat</span>
-                      <span className="font-semibold text-red-500">
-                        {getMaxLift('squat')}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between pb-2 border-b border-gray-800">
-                      <span className="text-gray-400">Best Bench</span>
-                      <span className="font-semibold text-blue-500">
-                        {getMaxLift('bench')}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between pb-2 border-b border-gray-800">
-                      <span className="text-gray-400">Best Deadlift</span>
-                      <span className="font-semibold text-green-500">
-                        {getMaxLift('deadlift')}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Total Records</span>
-                      <span className="font-semibold">{weightRecords.length + liftRecords.length}</span>
-                    </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bench">Bench Press (lbs)</Label>
+                    <Input
+                      id="bench"
+                      name="bench"
+                      type="number"
+                      placeholder="Enter weight"
+                      value={formData.bench}
+                      onChange={handleInputChange}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gray-900 border-gray-800">
-                <CardHeader>
-                  <CardTitle>Achievements</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Your fitness milestones
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {weightRecords.length > 0 || liftRecords.length > 0 ? (
-                    <div className="space-y-4">
-                      {weightRecords.length > 0 && (
-                        <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
-                          <div className="bg-[#9b87f5] p-2 rounded-full mr-3">
-                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="font-medium">First Weigh-in</p>
-                            <p className="text-xs text-gray-400">Started tracking your progress</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {liftRecords.length > 0 && (
-                        <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
-                          <div className="bg-[#9b87f5] p-2 rounded-full mr-3">
-                            <Dumbbell className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-medium">Strength Tracker</p>
-                            <p className="text-xs text-gray-400">Started tracking your lifts</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {weightRecords.length >= 5 && (
-                        <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
-                          <div className="bg-[#9b87f5] p-2 rounded-full mr-3">
-                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="font-medium">Consistent Tracker</p>
-                            <p className="text-xs text-gray-400">5+ weight entries recorded</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {getWeightChange() !== 'N/A' && 
-                       parseFloat(getWeightChange().replace(/[^\d.-]/g, '')) < 0 && (
-                        <div className="p-3 rounded-lg bg-green-500/20 flex items-center">
-                          <div className="bg-green-500 p-2 rounded-full mr-3">
-                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="font-medium">Weight Loss Achievement</p>
-                            <p className="text-xs text-gray-400">Successfully lost weight</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {weightRecords.length >= 10 && (
-                        <div className="p-3 rounded-lg bg-blue-500/20 flex items-center">
-                          <div className="bg-blue-500 p-2 rounded-full mr-3">
-                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="font-medium">Dedicated Tracker</p>
-                            <p className="text-xs text-gray-400">10+ weight entries recorded</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {parseFloat(getMaxLift('squat').replace(/[^\d.-]/g, '')) > 200 && (
-                        <div className="p-3 rounded-lg bg-red-500/20 flex items-center">
-                          <div className="bg-red-500 p-2 rounded-full mr-3">
-                            <Dumbbell className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-medium">200+ lbs Squat</p>
-                            <p className="text-xs text-gray-400">Achieved a 200+ lbs squat</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {parseFloat(getMaxLift('bench').replace(/[^\d.-]/g, '')) > 200 && (
-                        <div className="p-3 rounded-lg bg-blue-500/20 flex items-center">
-                          <div className="bg-blue-500 p-2 rounded-full mr-3">
-                            <Dumbbell className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-medium">200+ lbs Bench</p>
-                            <p className="text-xs text-gray-400">Achieved a 200+ lbs bench press</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {parseFloat(getMaxLift('deadlift').replace(/[^\d.-]/g, '')) > 300 && (
-                        <div className="p-3 rounded-lg bg-green-500/20 flex items-center">
-                          <div className="bg-green-500 p-2 rounded-full mr-3">
-                            <Dumbbell className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-medium">300+ lbs Deadlift</p>
-                            <p className="text-xs text-gray-400">Achieved a 300+ lbs deadlift</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <p className="text-gray-400">No achievements yet</p>
-                      <p className="text-sm text-gray-500 mt-1">Record your weight and lifts to unlock achievements</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="deadlift">Deadlift (lbs)</Label>
+                    <Input
+                      id="deadlift"
+                      name="deadlift"
+                      type="number"
+                      placeholder="Enter weight"
+                      value={formData.deadlift}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bodyweight">Bodyweight (lbs)</Label>
+                    <Input
+                      id="bodyweight"
+                      name="bodyweight"
+                      type="number"
+                      placeholder="Enter weight"
+                      value={formData.bodyweight}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes (optional)</Label>
+                  <Input
+                    id="notes"
+                    name="notes"
+                    placeholder="Add any notes about your lifts"
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                
+                <Button type="submit" className="bg-[#9b87f5] hover:bg-[#8a74f5]">
+                  Save Record
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="measurements" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lift History</CardTitle>
+              <CardDescription>View your recorded lifts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin h-8 w-8 border-4 border-[#9b87f5] border-t-transparent rounded-full"></div>
+                </div>
+              ) : liftRecords.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#333]">
+                        <th className="py-3 text-left">Date</th>
+                        <th className="py-3 text-left">Squat (lbs)</th>
+                        <th className="py-3 text-left">Bench (lbs)</th>
+                        <th className="py-3 text-left">Deadlift (lbs)</th>
+                        <th className="py-3 text-left">Bodyweight (lbs)</th>
+                        <th className="py-3 text-left">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {liftRecords.map((record) => (
+                        <tr key={record.id} className="border-b border-[#333] hover:bg-[#232634]">
+                          <td className="py-3">{new Date(record.recorded_at).toLocaleDateString()}</td>
+                          <td className="py-3">{record.squat}</td>
+                          <td className="py-3">{record.bench}</td>
+                          <td className="py-3">{record.deadlift}</td>
+                          <td className="py-3">{record.bodyweight}</td>
+                          <td className="py-3">{record.notes || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  No lift records available. Start adding your lifts to track progress.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-  
-  function getWeightChange() {
-    if (weightRecords.length < 2) return 'N/A';
-    
-    const firstWeight = weightRecords[0].weight;
-    const currentWeight = weightRecords[weightRecords.length - 1].weight;
-    const diff = currentWeight - firstWeight;
-    
-    return `${diff > 0 ? '+' : ''}${diff.toFixed(1)} lbs`;
-  }
-  
-  function getWeightChangeStyling() {
-    if (weightRecords.length < 2) return '';
-    
-    const firstWeight = weightRecords[0].weight;
-    const currentWeight = weightRecords[weightRecords.length - 1].weight;
-    const diff = currentWeight - firstWeight;
-    
-    return diff < 0 ? 'text-green-500' : diff > 0 ? 'text-red-500' : 'text-gray-400';
-  }
 };
 
 export default Progress;
