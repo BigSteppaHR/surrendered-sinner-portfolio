@@ -5,11 +5,13 @@ import { Loader2 } from 'lucide-react';
 interface CalendlySchedulerProps {
   url?: string;
   className?: string;
+  onEventScheduled?: () => void;
 }
 
 const CalendlyScheduler: React.FC<CalendlySchedulerProps> = ({
   url = "https://calendly.com/surrenderedsinnerfitness",
   className = "min-h-[650px] w-full border border-gray-800 rounded-lg",
+  onEventScheduled
 }) => {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,16 +22,26 @@ const CalendlyScheduler: React.FC<CalendlySchedulerProps> = ({
     script.async = true;
     document.body.appendChild(script);
 
-    // Add event listener to detect when Calendly is loaded
+    // Add event listener for Calendly events
+    window.addEventListener('message', (e) => {
+      if (e.data.event === 'calendly.event_scheduled') {
+        onEventScheduled?.();
+      }
+    });
+
     script.onload = () => {
-      setTimeout(() => setIsLoading(false), 1000); // Give it a second to initialize
+      setTimeout(() => setIsLoading(false), 1000);
     };
 
     return () => {
-      // Clean up
       document.body.removeChild(script);
+      window.removeEventListener('message', (e) => {
+        if (e.data.event === 'calendly.event_scheduled') {
+          onEventScheduled?.();
+        }
+      });
     };
-  }, []);
+  }, [onEventScheduled]);
 
   return (
     <div className={className}>

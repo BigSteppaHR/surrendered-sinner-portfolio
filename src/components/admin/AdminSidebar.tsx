@@ -1,4 +1,3 @@
-
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -15,14 +14,14 @@ import {
   FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarProvider } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useAuthLogout } from "@/hooks/auth/useAuthLogout";
 
 const AdminSidebar = () => {
-  const { collapsed, setCollapsed } = useSidebar();
+  const [collapsed, setCollapsed] = useState(false);
   const { profile } = useAuth();
   const { logout } = useAuthLogout();
   const location = useLocation();
