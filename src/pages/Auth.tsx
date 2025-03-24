@@ -1,23 +1,29 @@
 
-import { useState } from "react";
-import { Navigate, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Navigate, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogIn, UserPlus, Lock, Mail, User } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { LogIn, UserPlus, Lock, Mail, User, ArrowLeft, KeyRound } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
-  const { isAuthenticated, login, signup, isLoading } = useAuth();
+  const { isAuthenticated, login, signup, resetPassword, updatePassword, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
   const from = (location.state as any)?.from?.pathname || "/dashboard";
   
+  const [activeTab, setActiveTab] = useState("login");
   const [isLoginLoading, setIsLoginLoading] = useState(false);
   const [isSignupLoading, setIsSignupLoading] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -27,6 +33,28 @@ const Auth = () => {
   const [signupFullName, setSignupFullName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  
+  // Reset password state
+  const [resetEmail, setResetEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Handle URL parameters for verification and password reset
+  useEffect(() => {
+    const verify = searchParams.get("verify");
+    const reset = searchParams.get("reset");
+    
+    if (verify === "success") {
+      toast({
+        title: "Email verified",
+        description: "Your email has been verified. You can now log in.",
+      });
+    }
+    
+    if (reset === "true") {
+      setActiveTab("updatePassword");
+    }
+  }, [searchParams, toast]);
   
   if (isAuthenticated && !isLoading) {
     return <Navigate to={from} replace />;
@@ -58,6 +86,45 @@ const Auth = () => {
     }
   };
   
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetLoading(true);
+    
+    try {
+      await resetPassword(resetEmail);
+      setResetEmail("");
+      setActiveTab("login");
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+  
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Passwords do not match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsUpdatingPassword(true);
+    
+    try {
+      const { error } = await updatePassword(newPassword);
+      if (!error) {
+        setNewPassword("");
+        setConfirmPassword("");
+        setActiveTab("login");
+      }
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -76,8 +143,8 @@ const Auth = () => {
           <p className="text-gray-400 mt-2">Elite fitness coaching</p>
         </div>
         
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid grid-cols-2 w-full mb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-3 w-full mb-6">
             <TabsTrigger value="login" className="flex items-center gap-2">
               <LogIn className="h-4 w-4" />
               Login
@@ -85,6 +152,10 @@ const Auth = () => {
             <TabsTrigger value="signup" className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Sign Up
+            </TabsTrigger>
+            <TabsTrigger value="reset" className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              Reset
             </TabsTrigger>
           </TabsList>
           
@@ -117,6 +188,14 @@ const Auth = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password">Password</Label>
+                      <Button 
+                        type="button" 
+                        variant="link" 
+                        className="px-0 text-xs text-gray-400"
+                        onClick={() => setActiveTab("reset")}
+                      >
+                        Forgot password?
+                      </Button>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
@@ -161,6 +240,13 @@ const Auth = () => {
               </CardHeader>
               <form onSubmit={handleSignup}>
                 <CardContent className="space-y-4">
+                  <Alert className="bg-gray-800 border-gray-700 text-gray-300">
+                    <AlertTitle>Verification Required</AlertTitle>
+                    <AlertDescription>
+                      After signing up, you'll need to verify your email before logging in.
+                    </AlertDescription>
+                  </Alert>
+                  
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
                     <div className="relative">
@@ -220,6 +306,122 @@ const Auth = () => {
                       <span className="flex items-center gap-2">
                         <UserPlus className="h-4 w-4" />
                         Create Account
+                      </span>
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="reset">
+            <Card className="bg-gray-900 text-white border-gray-800">
+              <CardHeader>
+                <CardTitle>Reset Password</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Enter your email to receive a password reset link
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleResetPassword}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="resetEmail">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                      <Input
+                        id="resetEmail"
+                        type="email"
+                        placeholder="your@email.com"
+                        className="pl-10 bg-gray-800 border-gray-700"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                
+                <CardFooter className="flex flex-col space-y-2">
+                  <Button type="submit" className="w-full" disabled={isResetLoading}>
+                    {isResetLoading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Sending Reset Link...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        Send Reset Link
+                      </span>
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full mt-2 border-gray-700 text-gray-300"
+                    onClick={() => setActiveTab("login")}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Login
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="updatePassword">
+            <Card className="bg-gray-900 text-white border-gray-800">
+              <CardHeader>
+                <CardTitle>Set New Password</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Enter your new password below
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleUpdatePassword}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        className="pl-10 bg-gray-800 border-gray-700"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        className="pl-10 bg-gray-800 border-gray-700"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                
+                <CardFooter>
+                  <Button type="submit" className="w-full" disabled={isUpdatingPassword}>
+                    {isUpdatingPassword ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Updating Password...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <KeyRound className="h-4 w-4" />
+                        Update Password
                       </span>
                     )}
                   </Button>
