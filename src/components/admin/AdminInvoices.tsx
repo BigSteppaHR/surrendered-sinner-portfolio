@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,9 +57,9 @@ type TicketResponse = {
   message: string;
   user_id: string;
   profiles: {
-    full_name: string;
-    email: string;
-  };
+    full_name: string | null;
+    email: string | null;
+  } | null;
 };
 
 const AdminInvoices = () => {
@@ -80,7 +79,6 @@ const AdminInvoices = () => {
   const [linkCopied, setLinkCopied] = useState(false);
   const { toast } = useToast();
   
-  // New invoice state
   const [newInvoice, setNewInvoice] = useState({
     customer: "",
     email: "",
@@ -89,7 +87,6 @@ const AdminInvoices = () => {
     dueDate: ""
   });
   
-  // Fetch invoices from Stripe
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
@@ -138,11 +135,10 @@ const AdminInvoices = () => {
         if (error) throw error;
         
         if (data) {
-          // Transform the data to match our ticket type
-          const formattedTickets = data.map((ticket: TicketResponse) => ({
+          const formattedTickets = data.map((ticket: any) => ({
             id: ticket.id,
-            customer: ticket.profiles?.full_name || 'Unknown User',
-            email: ticket.profiles?.email || 'No email provided',
+            customer: ticket.profiles?.[0]?.full_name || 'Unknown User',
+            email: ticket.profiles?.[0]?.email || 'No email provided',
             subject: ticket.subject,
             date: new Date(ticket.created_at).toISOString().split('T')[0],
             status: ticket.status,
@@ -167,7 +163,6 @@ const AdminInvoices = () => {
     fetchInvoices();
     fetchTickets();
   }, [toast]);
-  
   
   const filteredInvoices = invoices.filter(invoice => 
     invoice.customer.toLowerCase().includes(searchInvoice.toLowerCase()) ||
@@ -273,7 +268,6 @@ const AdminInvoices = () => {
   };
 
   const handleSendInvoice = async () => {
-    // In a real app, this would send an email with the payment link
     toast({
       title: "Invoice Sent",
       description: `Payment link has been sent to ${newInvoice.email}`,
@@ -300,44 +294,30 @@ const AdminInvoices = () => {
     }
 
     try {
-      // In a real application, we would save the reply to the database
-      // and potentially send an email notification
+      const { error } = await supabase
+        .from('support_tickets')
+        .update({ status: ticketStatus.toLowerCase() })
+        .eq('id', selectedTicket.id);
+        
+      if (error) throw error;
       
       toast({
-        title: "Reply Sent",
-        description: `Your reply to ticket ${selectedTicket.id} has been sent.`,
+        title: "Status Updated",
+        description: `Ticket status changed to ${ticketStatus}.`,
       });
       
-      setTicketReply("");
+      setTickets(tickets.map(ticket => 
+        ticket.id === selectedTicket.id 
+          ? { ...ticket, status: ticketStatus } 
+          : ticket
+      ));
       
-      if (ticketStatus) {
-        // Update ticket status
-        const { error } = await supabase
-          .from('support_tickets')
-          .update({ status: ticketStatus.toLowerCase() })
-          .eq('id', selectedTicket.id);
-          
-        if (error) throw error;
-        
-        toast({
-          title: "Status Updated",
-          description: `Ticket status changed to ${ticketStatus}.`,
-        });
-        
-        // Update local ticket data
-        setTickets(tickets.map(ticket => 
-          ticket.id === selectedTicket.id 
-            ? { ...ticket, status: ticketStatus } 
-            : ticket
-        ));
-        
-        setSelectedTicket({
-          ...selectedTicket,
-          status: ticketStatus
-        });
-        
-        setTicketStatus("");
-      }
+      setSelectedTicket({
+        ...selectedTicket,
+        status: ticketStatus
+      });
+      
+      setTicketStatus("");
     } catch (err: any) {
       console.error("Error sending reply:", err);
       toast({
