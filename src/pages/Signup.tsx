@@ -13,21 +13,22 @@ import { EyeIcon, EyeOffIcon, AlertCircleIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const signupSchema = z.object({
-  fullName: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string()
+  password: z
+    .string()
     .min(8, { message: "Password must be at least 8 characters" })
     .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
     .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
     .regex(/[0-9]/, { message: "Password must contain at least one number" }),
+  fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
+  message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
 export default function Signup() {
-  const { signup, isAuthenticated, isLoading, isInitialized } = useAuth();
+  const { signup, isAuthenticated, profile, isInitialized } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,18 +38,18 @@ export default function Signup() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isInitialized && isAuthenticated) {
+    if (isInitialized && isAuthenticated && profile?.email_confirmed) {
       navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, navigate, isInitialized]);
+  }, [isAuthenticated, profile, navigate, isInitialized]);
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      fullName: "",
       email: "",
       password: "",
       confirmPassword: "",
+      fullName: "",
     },
   });
 
@@ -77,7 +78,7 @@ export default function Signup() {
   };
 
   // Show loading state while checking auth
-  if (!isInitialized || (isLoading && !isSubmitting)) {
+  if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -85,8 +86,8 @@ export default function Signup() {
     );
   }
 
-  // Don't render if already authenticated (will redirect)
-  if (isAuthenticated) {
+  // Don't render if already authenticated and about to redirect
+  if (isAuthenticated && profile?.email_confirmed) {
     return null;
   }
 
@@ -102,7 +103,7 @@ export default function Signup() {
 
         <Card className="bg-gray-900 text-white border-gray-800">
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl">Create an Account</CardTitle>
+            <CardTitle className="text-2xl">Create Account</CardTitle>
             <CardDescription className="text-gray-400">
               Enter your details to create an account
             </CardDescription>
@@ -125,7 +126,7 @@ export default function Signup() {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your full name" {...field} />
+                        <Input type="text" placeholder="Enter your full name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -156,7 +157,7 @@ export default function Signup() {
                         <div className="relative">
                           <Input
                             type={showPassword ? "text" : "password"}
-                            placeholder="Create a password"
+                            placeholder="Enter your password"
                             {...field}
                           />
                           <span
@@ -213,7 +214,7 @@ export default function Signup() {
                       Creating Account...
                     </span>
                   ) : (
-                    "Sign Up"
+                    "Create Account"
                   )}
                 </Button>
               </form>
