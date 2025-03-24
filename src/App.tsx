@@ -92,34 +92,43 @@ const AuthNavigation = () => {
   ) : null;
 };
 
+// Routes component that uses the AuthNavigation but is already inside AuthProvider
+const AppRoutes = () => {
+  return (
+    <>
+      <AuthNavigation />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/schedule" element={<Schedule />} />
+        <Route path="/payment" element={<Payment />} />
+        <Route path="/payment-portal" element={<PaymentPortal />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        {/* Redirect /confirm-email to /login for backward compatibility */}
+        <Route path="/confirm-email" element={<Navigate to="/login" replace />} />
+        {/* Redirect /auth to /login for backward compatibility */}
+        <Route path="/auth" element={<Navigate to="/login" replace />} />
+        <Route path="/admin/*" element={<AdminDashboard />} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  );
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <BrowserRouter>
+          <RemoveBadge />
           <AuthProvider>
-            <RemoveBadge />
-            <AuthNavigation />
             <StripeProvider>
               <TooltipProvider>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/schedule" element={<Schedule />} />
-                  <Route path="/payment" element={<Payment />} />
-                  <Route path="/payment-portal" element={<PaymentPortal />} />
-                  <Route path="/verify-email" element={<VerifyEmail />} />
-                  {/* Redirect /confirm-email to /login for backward compatibility */}
-                  <Route path="/confirm-email" element={<Navigate to="/login" replace />} />
-                  {/* Redirect /auth to /login for backward compatibility */}
-                  <Route path="/auth" element={<Navigate to="/login" replace />} />
-                  <Route path="/admin/*" element={<AdminDashboard />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <AppRoutes />
                 {/* Place Toaster components after the Routes */}
                 <Toaster />
                 <Sonner />
