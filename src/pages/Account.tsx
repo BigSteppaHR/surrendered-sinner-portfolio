@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2, Save, Mail, UserCheck, Check, Image, X, Camera as CameraIcon } from "lucide-react";
+import { Camera, Loader2, Save, Mail, UserCheck, Check, Image as ImageIcon, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -240,6 +240,27 @@ const Account = () => {
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `${profile.id}/${fileName}`;
       
+      // Check if the bucket exists first, if not create it
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      
+      if (bucketsError) {
+        throw bucketsError;
+      }
+      
+      // Check if the profile-pictures bucket exists
+      const profileBucketExists = buckets.some(bucket => bucket.name === 'profile-pictures');
+      
+      if (!profileBucketExists) {
+        // Create the bucket
+        const { error: createBucketError } = await supabase.storage.createBucket('profile-pictures', {
+          public: true
+        });
+        
+        if (createBucketError) {
+          throw createBucketError;
+        }
+      }
+      
       // Upload the file
       const { error: uploadError } = await supabase.storage
         .from('profile-pictures')
@@ -280,40 +301,11 @@ const Account = () => {
     } catch (error: any) {
       console.error("Avatar upload error:", error);
       
-      // Check for storage bucket not found error
-      if (error.message?.includes('bucket not found')) {
-        // Try to create the bucket
-        try {
-          const response = await fetch('/api/create-storage-bucket', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            toast({
-              title: "Storage configured",
-              description: "Please try uploading your profile picture again",
-            });
-          } else {
-            throw new Error("Failed to create storage bucket");
-          }
-        } catch (bucketError) {
-          toast({
-            title: "Storage configuration failed",
-            description: "Please contact support to enable profile pictures",
-            variant: "destructive",
-          });
-        }
-      } else {
-        toast({
-          title: "Error uploading avatar",
-          description: error.message || "An error occurred while uploading your avatar",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error uploading avatar",
+        description: error.message || "An error occurred while uploading your avatar",
+        variant: "destructive",
+      });
     } finally {
       setIsUploading(false);
     }
@@ -373,19 +365,14 @@ const Account = () => {
                           {profile?.full_name ? getInitials(profile.full_name) : "U"}
                         </AvatarFallback>
                       </Avatar>
-                      <button 
-                        type="button"
-                        onClick={() => setShowProfilePictureDialog(true)} 
-                        className="absolute bottom-0 right-0 bg-sinner-red rounded-full p-2 cursor-pointer border-2 border-gray-900 hover:bg-red-700 transition-colors"
-                      >
-                        {isUploading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Camera className="h-4 w-4" />
-                        )}
-                      </button>
                     </div>
-                    <p className="text-sm text-gray-400">Click the camera icon to update your profile picture</p>
+                    <button 
+                      type="button"
+                      onClick={() => setShowProfilePictureDialog(true)} 
+                      className="text-sm text-[#9b87f5] hover:underline transition-colors"
+                    >
+                      Change profile photo
+                    </button>
                   </div>
                   
                   <div className="space-y-4">
@@ -512,9 +499,9 @@ const Account = () => {
                 
                 <Button
                   onClick={handleCameraCapture}
-                  className="bg-sinner-red hover:bg-red-700 flex items-center"
+                  className="bg-[#9b87f5] hover:bg-[#8a76e4] flex items-center"
                 >
-                  <CameraIcon className="mr-2 h-4 w-4" />
+                  <Camera className="mr-2 h-4 w-4" />
                   Take Photo
                 </Button>
               </div>
@@ -531,7 +518,7 @@ const Account = () => {
                   input.click();
                 }}
               >
-                <Image className="h-8 w-8 mb-2" />
+                <ImageIcon className="h-8 w-8 mb-2" />
                 <span>Upload Image</span>
                 <span className="text-xs text-gray-400">JPG, PNG, GIF (max 5MB)</span>
               </Button>
@@ -540,7 +527,7 @@ const Account = () => {
                 className="flex-1 h-32 flex flex-col items-center justify-center space-y-2 bg-gray-800 hover:bg-gray-700"
                 onClick={startCamera}
               >
-                <CameraIcon className="h-8 w-8 mb-2" />
+                <Camera className="h-8 w-8 mb-2" />
                 <span>Take Photo</span>
                 <span className="text-xs text-gray-400">Use your device camera</span>
               </Button>
