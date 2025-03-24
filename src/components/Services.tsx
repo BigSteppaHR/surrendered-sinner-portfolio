@@ -12,7 +12,7 @@ const Services: React.FC = () => {
       description: "Personalized training sessions tailored to your specific goals, fitness level, and preferences.",
       features: ["Customized workout plans", "Form correction & technique", "Progress tracking", "Flexible scheduling"],
       highlighted: true,
-      price: "$30",
+      price: "$75",
       duration: "per session"
     },
     {
@@ -21,7 +21,7 @@ const Services: React.FC = () => {
       description: "Comprehensive meal planning designed around your fitness goals and dietary preferences.",
       features: ["Calorie & macro calculations", "Custom meal suggestions", "Grocery shopping lists", "Supplement guidance"],
       highlighted: false,
-      price: "$150",
+      price: "$250",
       duration: "one-time"
     },
     {
@@ -30,7 +30,7 @@ const Services: React.FC = () => {
       description: "Structured training programs tailored to your goals, whether building muscle, strength, or athletic performance.",
       features: ["Periodized training cycles", "Exercise progressions", "Video technique guides", "Weekly adjustments"],
       highlighted: false,
-      price: "$125",
+      price: "$225",
       duration: "one-time"
     },
     {
@@ -39,7 +39,7 @@ const Services: React.FC = () => {
       description: "The ultimate transformation package combining personalized lifting program and nutrition guidance.",
       features: ["Custom lifting program", "Detailed nutrition plan", "Email support", "Two bi-weekly check-ins included"],
       highlighted: false,
-      price: "$225",
+      price: "$475",
       duration: "one-time + $25/month for ongoing check-ins"
     }
   ];
