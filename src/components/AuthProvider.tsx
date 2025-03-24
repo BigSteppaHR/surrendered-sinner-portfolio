@@ -137,11 +137,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Create the verification URL - direct API call, not a page redirect
-      const verificationApiUrl = `${window.location.origin}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+      const BASE_URL = window.location.origin;
+      const verificationApiUrl = `${BASE_URL}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+
+      console.log("Generated verification URL:", verificationApiUrl);
       
       // Send the verification email using our custom function
       try {
-        await sendEmail({
+        const emailResult = await sendEmail({
           to: email,
           subject: "Welcome to Surrendered Sinner - Please Verify Your Email",
           html: `
@@ -170,10 +173,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           `,
         });
         
-        console.log('Verification email sent successfully to:', email);
-      } catch (emailError) {
+        console.log('Verification email sent successfully to:', email, emailResult);
+        
+        if (!emailResult.success) {
+          console.error('Email sending failed with response:', emailResult);
+          toast({
+            title: "Warning",
+            description: "Account created but verification email could not be sent. Please contact support.",
+            variant: "destructive",
+          });
+        }
+      } catch (emailError: any) {
         console.error('Error sending verification email:', emailError);
-        // Continue even if sending email fails, we'll show a message to the user
+        toast({
+          title: "Warning",
+          description: "Account created but verification email could not be sent. Please contact support.",
+          variant: "destructive",
+        });
       }
       
       toast({

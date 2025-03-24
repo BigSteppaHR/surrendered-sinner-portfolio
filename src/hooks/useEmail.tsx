@@ -27,6 +27,7 @@ export const useEmail = () => {
 
     setIsLoading(true);
     try {
+      console.log("Sending email to:", to, "with subject:", subject);
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           to,
@@ -47,12 +48,14 @@ export const useEmail = () => {
         return { success: false, error };
       }
 
+      console.log("Email send response:", data);
+      
       toast({
         title: "Email sent",
         description: "Your email has been sent successfully",
       });
       return { success: true, data };
-    } catch (err) {
+    } catch (err: any) {
       console.error('Exception sending email:', err);
       toast({
         title: "Failed to send email",
