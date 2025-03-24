@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface StripeCheckoutProps {
   amount: number;
@@ -23,10 +24,12 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState(customerEmail);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
 
   // Update email state when customerEmail prop changes
   useEffect(() => {
@@ -38,14 +41,38 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   // Create PaymentIntent on component mount or when amount changes
   useEffect(() => {
     const createPaymentIntent = async () => {
+      if (!amount || amount <= 0) return;
+      
       try {
         setLoading(true);
+        
+        // First create a record in our database
+        const { data: paymentRecord, error: dbError } = await supabase
+          .from('payments')
+          .insert({
+            user_id: user?.id || null,
+            amount: amount,
+            currency: 'usd',
+            status: 'pending',
+            metadata: { description }
+          })
+          .select()
+          .single();
+          
+        if (dbError) throw new Error(`Database error: ${dbError.message}`);
+        if (!paymentRecord) throw new Error('Could not create payment record');
+        
+        setPaymentId(paymentRecord.id);
+        
+        // Then create a payment intent via our edge function
         const { data, error } = await supabase.functions.invoke('stripe-helper', {
           body: { 
             action: 'createPaymentIntent',
             params: { 
               amount: amount,
-              currency: 'usd'
+              currency: 'usd',
+              payment_id: paymentRecord.id,
+              description: description
             }
           }
         });
@@ -56,12 +83,14 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
         if (data?.client_secret) {
           setClientSecret(data.client_secret);
+        } else {
+          throw new Error('No client secret received from the server');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error creating payment intent:', error);
         toast({
           title: "Payment Setup Failed",
-          description: "There was an error setting up the payment. Please try again.",
+          description: error.message || "There was an error setting up the payment. Please try again.",
           variant: "destructive",
         });
       } finally {
@@ -72,12 +101,12 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     if (amount > 0) {
       createPaymentIntent();
     }
-  }, [amount, toast]);
+  }, [amount, toast, user, description]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || !clientSecret || !paymentId) {
       return;
     }
 
@@ -87,34 +116,67 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     setLoading(true);
 
     try {
-      // For a real implementation, use the client secret to confirm payment
-      // If we have a client secret, we would use it like this:
-      // const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(
-      //   clientSecret,
-      //   {
-      //     payment_method: {
-      //       card: cardElement,
-      //       billing_details: { name, email }
-      //     }
-      //   }
-      // );
+      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card: cardElement,
+            billing_details: { name, email }
+          }
+        }
+      );
 
-      // For this demo, we'll simulate a successful payment
-      toast({
-        title: "Test Payment Processed",
-        description: "This is a demo payment and no actual charge was made.",
-      });
-      
-      if (onSuccess) {
-        onSuccess(`test-payment-${Date.now()}`);
+      if (confirmError) {
+        throw new Error(confirmError.message);
       }
-    } catch (error) {
+
+      if (paymentIntent.status === 'succeeded') {
+        // Update payment status in our database
+        const { error: updateError } = await supabase.functions.invoke('stripe-helper', {
+          body: { 
+            action: 'updatePaymentStatus',
+            params: { 
+              payment_id: paymentId,
+              status: paymentIntent.status,
+              payment_intent_id: paymentIntent.id,
+              payment_method: 'card'
+            }
+          }
+        });
+
+        if (updateError) throw new Error(`Failed to update payment: ${updateError.message}`);
+
+        toast({
+          title: "Payment Successful",
+          description: "Your payment has been processed successfully.",
+        });
+        
+        if (onSuccess) {
+          onSuccess(paymentId);
+        }
+      } else {
+        throw new Error(`Payment status: ${paymentIntent.status}`);
+      }
+    } catch (error: any) {
       console.error('Payment error:', error);
       toast({
         title: "Payment Failed",
-        description: "There was an error processing your payment. Please try again.",
+        description: error.message || "There was an error processing your payment. Please try again.",
         variant: "destructive",
       });
+      
+      // Update the payment status to failed
+      if (paymentId) {
+        await supabase.functions.invoke('stripe-helper', {
+          body: { 
+            action: 'updatePaymentStatus',
+            params: { 
+              payment_id: paymentId,
+              status: 'failed'
+            }
+          }
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -172,7 +234,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       <div className="pt-2">
         <Button 
           type="submit" 
-          disabled={!stripe || loading} 
+          disabled={!stripe || !clientSecret || loading} 
           className="w-full"
         >
           {loading ? "Processing..." : `Pay $${(amount / 100).toFixed(2)}`}
@@ -181,7 +243,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       
       <p className="text-xs text-gray-400 text-center">
         {description}<br />
-        <span className="block mt-1">This is a test payment. No actual charge will be made.</span>
+        <span className="block mt-1">Secure payment powered by Stripe</span>
       </p>
     </form>
   );

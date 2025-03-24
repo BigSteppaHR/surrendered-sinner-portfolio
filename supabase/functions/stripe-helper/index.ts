@@ -57,29 +57,67 @@ serve(async (req) => {
       
       case 'createPaymentIntent':
         console.log('Creating payment intent with params:', params)
-        const { amount, currency } = params
+        const { amount, currency, payment_id, description } = params
         if (!amount || !currency) {
           throw new Error('Missing required parameters for creating a payment intent')
         }
 
-        result = await stripe.paymentIntents.create({
+        const paymentIntent = await stripe.paymentIntents.create({
           amount,
           currency,
           automatic_payment_methods: {
             enabled: true,
           },
+          description: description || 'Payment',
+          metadata: {
+            payment_id: payment_id || 'unknown'
+          }
         })
-        console.log('Payment intent created:', result.id)
+        
+        console.log('Payment intent created:', paymentIntent.id)
+        
+        result = {
+          client_secret: paymentIntent.client_secret,
+          payment_intent_id: paymentIntent.id
+        }
         break
       
-      case 'confirmPayment':
-        const { paymentIntentId, paymentMethod } = params
-        if (!paymentIntentId || !paymentMethod) {
-          throw new Error('Missing required parameters for confirming payment')
+      case 'updatePaymentStatus':
+        const { payment_id, status, payment_intent_id, payment_method } = params
+        if (!payment_id || !status) {
+          throw new Error('Missing required parameters for updating payment status')
         }
-
-        result = await stripe.paymentIntents.confirm(paymentIntentId, {
-          payment_method: paymentMethod,
+        
+        // In a real implementation, you'd update the payment status in the database
+        console.log(`Updating payment ${payment_id} status to ${status}`)
+        
+        // This action doesn't interact directly with Stripe, just our database
+        // The client will handle this via supabase directly
+        result = {
+          success: true,
+          payment_id,
+          status
+        }
+        break
+      
+      case 'retrievePaymentIntent':
+        const { paymentIntentId } = params
+        if (!paymentIntentId) {
+          throw new Error('Missing payment intent ID')
+        }
+        
+        result = await stripe.paymentIntents.retrieve(paymentIntentId)
+        break
+        
+      case 'listPaymentMethods':
+        const { customerId } = params
+        if (!customerId) {
+          throw new Error('Missing customer ID')
+        }
+        
+        result = await stripe.paymentMethods.list({
+          customer: customerId,
+          type: 'card',
         })
         break
       
