@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -22,14 +21,12 @@ export default function Login() {
   const navigate = useNavigate();
   const mountedRef = useRef(true);
 
-  // Setup cleanup on unmount
   useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isInitialized && isAuthenticated && profile?.email_confirmed) {
       navigate("/dashboard");
@@ -45,7 +42,6 @@ export default function Login() {
       
       if (result.error) {
         console.log("Login error:", result.error);
-        // Special handling for unconfirmed emails
         if (result.error.code === "email_not_confirmed" && result.data?.showVerification) {
           console.log("Email not confirmed, showing verification dialog for:", values.email);
           setVerificationEmail(values.email);
@@ -68,7 +64,6 @@ export default function Login() {
     setShowEmailVerification(false);
   };
 
-  // Display a simplified loading state while auth is initializing
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -96,6 +91,7 @@ export default function Login() {
         isOpen={showEmailVerification}
         onClose={handleCloseVerification}
         initialEmail={verificationEmail}
+        redirectToLogin={false}
       />
     </div>
   );

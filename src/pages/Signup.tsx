@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
@@ -40,14 +39,12 @@ export default function Signup() {
   const { toast } = useToast();
   const mountedRef = useRef(true);
 
-  // Setup cleanup on unmount
   useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isInitialized && isAuthenticated && profile?.email_confirmed) {
       navigate("/dashboard");
@@ -77,13 +74,8 @@ export default function Signup() {
         setSignupError(result.error.message || "There was a problem creating your account");
       } else if (result.data?.showVerification) {
         console.log("Showing verification dialog for:", values.email);
-        // Store email for verification dialog
         setSignupEmail(values.email);
-        
-        // Show verification dialog
         setShowEmailVerification(true);
-        
-        // Reset form
         form.reset();
       }
     } catch (error) {
@@ -99,12 +91,9 @@ export default function Signup() {
   const handleCloseVerification = () => {
     if (mountedRef.current) {
       setShowEmailVerification(false);
-      // Navigate to login page after closing the verification dialog
-      navigate("/login");
     }
   };
 
-  // Show loading state while checking auth
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -113,7 +102,6 @@ export default function Signup() {
     );
   }
 
-  // Don't render if already authenticated and about to redirect
   if (isAuthenticated && profile?.email_confirmed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -295,6 +283,7 @@ export default function Signup() {
           isOpen={showEmailVerification}
           onClose={handleCloseVerification}
           initialEmail={signupEmail}
+          redirectToLogin={true}
         />
       )}
     </div>

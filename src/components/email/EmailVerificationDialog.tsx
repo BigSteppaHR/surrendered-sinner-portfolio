@@ -11,9 +11,15 @@ interface EmailVerificationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialEmail?: string;
+  redirectToLogin?: boolean;
 }
 
-const EmailVerificationDialog = ({ isOpen, onClose, initialEmail = "" }: EmailVerificationDialogProps) => {
+const EmailVerificationDialog = ({ 
+  isOpen, 
+  onClose, 
+  initialEmail = "",
+  redirectToLogin = true 
+}: EmailVerificationDialogProps) => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,11 +30,22 @@ const EmailVerificationDialog = ({ isOpen, onClose, initialEmail = "" }: EmailVe
   
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
 
-  // Handle back to login - just closes the dialog when on auth page
+  // Handle back to login - redirects to login page when requested
   const handleBackToLogin = () => {
     if (mounted.current) {
       onClose();
       navigate("/login");
+    }
+  };
+
+  // Handle dialog close
+  const handleDialogClose = () => {
+    if (mounted.current) {
+      onClose();
+      // Redirect to login page if redirectToLogin is true
+      if (redirectToLogin) {
+        navigate("/login");
+      }
     }
   };
 
@@ -53,7 +70,7 @@ const EmailVerificationDialog = ({ isOpen, onClose, initialEmail = "" }: EmailVe
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => open === false && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => open === false && handleDialogClose()}>
       <DialogContent 
         className="p-0 bg-transparent border-none shadow-none max-w-md mx-auto" 
         aria-describedby="email-verification-description"
