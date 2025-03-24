@@ -13,6 +13,7 @@ import DashboardNav from "@/components/dashboard/DashboardNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { 
   Star, Calendar, TrendingUp, Dumbbell, Target, Medal, Clock, 
   Zap, Trophy, Heart, FlameIcon, ActivityIcon, BarChart2
@@ -81,16 +82,16 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-gray-900 to-sinner-red/30 text-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-[#1A1F2C] to-[#2A2F3C] text-white">
       <DashboardNav />
       
       <div className="flex-1 overflow-auto">
         <div className="p-6 max-w-7xl mx-auto">
           {/* Welcome section with animated gradient border */}
-          <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-red-500 after:via-purple-500 after:to-red-500 after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-gray-900/80 backdrop-blur-sm">
+          <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-[#9b87f5] after:via-purple-500 after:to-[#9b87f5] after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-[#252A38]/90 backdrop-blur-sm">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-purple-500">
+                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#9b87f5] to-purple-400">
                   Welcome Back, {profile?.full_name || 'Athlete'}!
                 </h1>
                 <p className="text-gray-400 mt-1">Track your progress and stay connected with your coach</p>
@@ -110,16 +111,16 @@ const Dashboard = () => {
               color="from-green-500/20 to-green-700/20"
             />
             <StatCard 
-              icon={<TrendingUp className="h-5 w-5 text-blue-400" />} 
+              icon={<TrendingUp className="h-5 w-5 text-[#9b87f5]" />} 
               title="Weight Change" 
               value="-2.5 lbs"
-              color="from-blue-500/20 to-blue-700/20"
+              color="from-[#9b87f5]/20 to-purple-700/20"
             />
             <StatCard 
-              icon={<Dumbbell className="h-5 w-5 text-purple-400" />} 
+              icon={<Dumbbell className="h-5 w-5 text-[#7E69AB]" />} 
               title="Workouts" 
               value="16 Completed"
-              color="from-purple-500/20 to-purple-700/20"
+              color="from-[#7E69AB]/20 to-[#6E59A5]/20"
             />
             <StatCard 
               icon={<Target className="h-5 w-5 text-red-400" />} 
@@ -144,7 +145,7 @@ const Dashboard = () => {
                   value="↑ 8%" 
                   description="Bench press max increased"
                   icon={<ActivityIcon className="h-5 w-5" />}
-                  color="from-blue-500/20 to-indigo-700/20"
+                  color="from-[#9b87f5]/20 to-[#7E69AB]/20"
                 />
               </div>
               
@@ -160,7 +161,7 @@ const Dashboard = () => {
               <ScheduleSession />
 
               {/* Achievement Card */}
-              <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-800 overflow-hidden relative">
+              <Card className="bg-[#252A38] border-[#353A48] overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-yellow-500/20 to-orange-600/20 rounded-bl-full"></div>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -187,6 +188,34 @@ const Dashboard = () => {
                     date="2 weeks ago"
                     icon={<Trophy className="h-3 w-3 text-yellow-500" />} 
                   />
+                  
+                  {/* Goal Progress */}
+                  <div className="mt-4 pt-4 border-t border-gray-700">
+                    <h4 className="text-sm font-semibold mb-2">Goal Progress</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span>Weight Loss</span>
+                          <span>75%</span>
+                        </div>
+                        <Progress value={75} className="h-2" indicatorClassName="bg-[#9b87f5]" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span>Strength</span>
+                          <span>60%</span>
+                        </div>
+                        <Progress value={60} className="h-2" indicatorClassName="bg-[#7E69AB]" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span>Cardio</span>
+                          <span>45%</span>
+                        </div>
+                        <Progress value={45} className="h-2" indicatorClassName="bg-green-500" />
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -197,13 +226,13 @@ const Dashboard = () => {
             <ActionButton 
               text="Schedule Session"
               icon={<Calendar className="h-5 w-5" />}
-              color="bg-gradient-to-br from-blue-600 to-blue-800"
+              color="bg-gradient-to-br from-[#9b87f5] to-[#7E69AB]"
               onClick={() => navigate('/schedule')}
             />
             <ActionButton 
               text="View Workouts"
               icon={<Dumbbell className="h-5 w-5" />}
-              color="bg-gradient-to-br from-purple-600 to-purple-800"
+              color="bg-gradient-to-br from-[#7E69AB] to-[#6E59A5]"
               onClick={() => navigate('/workouts')}
             />
             <ActionButton 

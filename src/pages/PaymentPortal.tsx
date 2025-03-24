@@ -77,11 +77,11 @@ const PaymentPortal = () => {
       
       <Navbar />
       
-      <main className="flex-1 bg-gradient-to-b from-sinner-dark-gray to-black noise-bg py-16">
+      <main className="flex-1 bg-gradient-to-b from-[#1A1F2C] to-[#252A38] noise-bg py-16">
         <div className="container mx-auto px-4 max-w-3xl">
           <h1 className="text-3xl md:text-4xl font-bold text-center mb-8">Payment Portal</h1>
           
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-[#252A38] border-[#353A48]">
             <CardHeader>
               <CardTitle>Create Payment</CardTitle>
               <CardDescription className="text-gray-400">
@@ -90,7 +90,7 @@ const PaymentPortal = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="quick-pay" className="space-y-6">
-                <TabsList className="bg-gray-800">
+                <TabsList className="bg-[#1A1F2C]">
                   <TabsTrigger value="quick-pay">Quick Payment</TabsTrigger>
                   <TabsTrigger value="invoice">Invoice</TabsTrigger>
                 </TabsList>
@@ -107,7 +107,7 @@ const PaymentPortal = () => {
                         placeholder="0.00"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="bg-gray-800 border-gray-700"
+                        className="bg-[#1A1F2C] border-[#353A48]"
                         required
                       />
                     </div>
@@ -120,7 +120,7 @@ const PaymentPortal = () => {
                         placeholder="customer@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="bg-gray-800 border-gray-700"
+                        className="bg-[#1A1F2C] border-[#353A48]"
                       />
                     </div>
                     
@@ -131,13 +131,13 @@ const PaymentPortal = () => {
                         placeholder="Personal training session"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        className="bg-gray-800 border-gray-700"
+                        className="bg-[#1A1F2C] border-[#353A48]"
                       />
                     </div>
                     
                     <Button 
                       type="submit" 
-                      className="w-full mt-4"
+                      className="w-full mt-4 bg-[#9b87f5] hover:bg-[#7E69AB]"
                       disabled={isCreatingPayment}
                     >
                       {isCreatingPayment ? "Creating..." : "Create Payment Link"}
@@ -154,7 +154,7 @@ const PaymentPortal = () => {
                         placeholder="INV-12345"
                         value={invoiceNumber}
                         onChange={(e) => setInvoiceNumber(e.target.value)}
-                        className="bg-gray-800 border-gray-700"
+                        className="bg-[#1A1F2C] border-[#353A48]"
                       />
                     </div>
                     
@@ -168,7 +168,7 @@ const PaymentPortal = () => {
                         placeholder="0.00"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="bg-gray-800 border-gray-700"
+                        className="bg-[#1A1F2C] border-[#353A48]"
                         required
                       />
                     </div>
@@ -181,7 +181,7 @@ const PaymentPortal = () => {
                         placeholder="customer@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="bg-gray-800 border-gray-700"
+                        className="bg-[#1A1F2C] border-[#353A48]"
                       />
                     </div>
                     
@@ -192,13 +192,13 @@ const PaymentPortal = () => {
                         placeholder="Service details, dates, etc."
                         value={invoiceDetails}
                         onChange={(e) => setInvoiceDetails(e.target.value)}
-                        className="bg-gray-800 border-gray-700 min-h-24"
+                        className="bg-[#1A1F2C] border-[#353A48] min-h-24"
                       />
                     </div>
                     
                     <Button 
                       type="submit" 
-                      className="w-full mt-4"
+                      className="w-full mt-4 bg-[#9b87f5] hover:bg-[#7E69AB]"
                       disabled={isCreatingPayment}
                     >
                       {isCreatingPayment ? "Creating..." : "Create Invoice Payment"}

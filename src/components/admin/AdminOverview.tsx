@@ -72,7 +72,7 @@ const AdminOverview = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-[#252A38] border-[#353A48]">
           <CardHeader>
             <CardTitle>Site Traffic</CardTitle>
             <CardDescription className="text-gray-400">Website visits over time</CardDescription>
@@ -96,7 +96,7 @@ const AdminOverview = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-[#252A38] border-[#353A48]">
           <CardHeader>
             <CardTitle>Revenue Overview</CardTitle>
             <CardDescription className="text-gray-400">Monthly revenue statistics</CardDescription>
@@ -128,14 +128,14 @@ interface StatCardProps {
 
 const StatCard = ({ title, value, change, icon, positive }: StatCardProps) => {
   return (
-    <Card className="bg-gray-900 border-gray-800">
+    <Card className="bg-[#252A38] border-[#353A48]">
       <CardContent className="p-6">
         <div className="flex justify-between items-start">
           <div>
             <p className="text-sm font-medium text-gray-400">{title}</p>
             <h3 className="text-2xl font-bold mt-1">{value}</h3>
           </div>
-          <div className="p-2 bg-gray-800 rounded-lg">
+          <div className="p-2 bg-[#1A1F2C] rounded-lg">
             {icon}
           </div>
         </div>

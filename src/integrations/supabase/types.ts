@@ -164,9 +164,12 @@ export type Database = {
           avatar_url: string | null
           email: string | null
           email_confirmed: boolean | null
+          email_verified_at: string | null
           full_name: string | null
           id: string
           is_admin: boolean | null
+          password_reset_sent_at: string | null
+          password_reset_token: string | null
           profile_picture_url: string | null
           updated_at: string | null
           username: string | null
@@ -175,9 +178,12 @@ export type Database = {
           avatar_url?: string | null
           email?: string | null
           email_confirmed?: boolean | null
+          email_verified_at?: string | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          password_reset_sent_at?: string | null
+          password_reset_token?: string | null
           profile_picture_url?: string | null
           updated_at?: string | null
           username?: string | null
@@ -186,9 +192,12 @@ export type Database = {
           avatar_url?: string | null
           email?: string | null
           email_confirmed?: boolean | null
+          email_verified_at?: string | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          password_reset_sent_at?: string | null
+          password_reset_token?: string | null
           profile_picture_url?: string | null
           updated_at?: string | null
           username?: string | null
@@ -334,6 +343,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_profiles: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          id: number
+          user_id: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: never
+          user_id?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: never
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_sessions: {
         Row: {
@@ -526,6 +559,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_user_is_verified: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       get_quote_of_the_day: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -537,14 +574,7 @@ export type Database = {
       get_user_profile:
         | {
             Args: Record<PropertyKey, never>
-            Returns: {
-              id: string
-              email: string
-              full_name: string
-              is_admin: boolean
-              email_confirmed: boolean
-              avatar_url: string
-            }[]
+            Returns: Json
           }
         | {
             Args: {
@@ -554,6 +584,17 @@ export type Database = {
               id: number
               username: string
               email: string
+            }[]
+          }
+        | {
+            Args: {
+              user_id: string
+            }
+            Returns: {
+              id: number
+              display_name: string
+              bio: string
+              created_at: string
             }[]
           }
       is_admin:
@@ -575,6 +616,12 @@ export type Database = {
         | {
             Args: {
               user_email: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              user_id: number
             }
             Returns: boolean
           }
