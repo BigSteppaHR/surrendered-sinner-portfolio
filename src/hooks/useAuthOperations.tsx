@@ -2,10 +2,12 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEmail } from '@/hooks/useEmail';
+import { useNavigate } from 'react-router-dom';
 
 export const useAuthOperations = () => {
   const { toast } = useToast();
   const { sendEmail } = useEmail();
+  const navigate = useNavigate();
 
   const refreshProfile = async (user: User | null) => {
     if (!user) return null;
@@ -172,6 +174,8 @@ export const useAuthOperations = () => {
         title: "Account created",
         description: "Please check your email to verify your account",
       });
+      
+      navigate("/confirm-email", { state: { email } });
       
       return { error: null, data: { user: data.user, session: data.session, emailSent: true } };
     } catch (error: any) {

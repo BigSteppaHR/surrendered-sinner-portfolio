@@ -15,6 +15,7 @@ import Schedule from "./pages/Schedule";
 import Payment from "./pages/Payment";
 import Auth from "./pages/Auth";
 import VerifyEmail from "./pages/VerifyEmail";
+import ConfirmEmail from "./pages/ConfirmEmail";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => {
                   <Route path="/schedule" element={<Schedule />} />
                   <Route path="/payment" element={<Payment />} />
                   <Route path="/api/verify-email" element={<VerifyEmail />} />
+                  <Route path="/confirm-email" element={<ConfirmEmail />} />
                   <Route path="/admin/*" element={<AdminDashboard />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />

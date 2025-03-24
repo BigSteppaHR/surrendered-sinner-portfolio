@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
-  const { isAuthenticated, login, signup, resetPassword, updatePassword, isLoading } = useAuth();
+  const { isAuthenticated, login, signup, resetPassword, updatePassword, isLoading, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -143,7 +143,14 @@ const Auth = () => {
     checkAuthStatus();
   }, [toast]);
   
-  if (isAuthenticated && !isLoading) {
+  useEffect(() => {
+    if (isAuthenticated && profile && !profile.email_confirmed && !isLoading) {
+      navigate("/confirm-email", { state: { email: profile.email } });
+      return;
+    }
+  }, [isAuthenticated, profile, isLoading, navigate]);
+  
+  if (isAuthenticated && (!profile || profile.email_confirmed) && !isLoading) {
     return <Navigate to={from} replace />;
   }
   
