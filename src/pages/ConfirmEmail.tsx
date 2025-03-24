@@ -69,26 +69,42 @@ const ConfirmEmail = () => {
   }, [resendCooldown]);
 
   const handleResendEmail = async () => {
-    if (resendCooldown > 0 || !email) return;
+    if (resendCooldown > 0 || !email) {
+      console.log("Resend blocked due to cooldown or missing email", { resendCooldown, email });
+      return;
+    }
     
     try {
+      console.log("Starting email resend process for:", email);
+      
       // Generate a new verification token
       const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      console.log("Generated new verification token");
       
       // Delete any existing tokens for this email
-      await supabase
+      const { error: deleteError } = await supabase
         .from('verification_tokens')
         .delete()
         .eq('user_email', email);
+        
+      if (deleteError) {
+        console.error("Error deleting existing tokens:", deleteError);
+        throw new Error("Failed to prepare for email verification");
+      }
       
       // Store the new token in Supabase
-      await supabase
+      const { error: insertError } = await supabase
         .from('verification_tokens')
         .insert({ 
           user_email: email, 
           token: verificationToken, 
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
         });
+        
+      if (insertError) {
+        console.error("Error storing verification token:", insertError);
+        throw new Error("Failed to create verification token");
+      }
       
       const BASE_URL = window.location.origin;
       const verificationApiUrl = `${BASE_URL}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
@@ -121,6 +137,8 @@ const ConfirmEmail = () => {
           </div>
         `,
       });
+      
+      console.log("Email send result:", emailResult);
       
       if (emailResult.success) {
         toast({

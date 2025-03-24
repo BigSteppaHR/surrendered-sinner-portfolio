@@ -21,6 +21,7 @@ const VerifyEmail = () => {
         const email = searchParams.get('email');
 
         if (!token || !email) {
+          console.error("Missing verification parameters", { token, email });
           setVerificationStatus('error');
           setErrorMessage("Missing verification parameters");
           return;
@@ -45,10 +46,13 @@ const VerifyEmail = () => {
 
         // Check if token is expired
         if (new Date(tokenData.expires_at) < new Date()) {
+          console.error("Token expired:", tokenData.expires_at);
           setVerificationStatus('error');
           setErrorMessage("Verification token has expired");
           return;
         }
+
+        console.log("Token is valid, updating profile");
 
         // Update the user's profile to mark email as confirmed
         const { error: updateError } = await supabase
@@ -63,6 +67,8 @@ const VerifyEmail = () => {
           return;
         }
 
+        console.log("Profile updated successfully, deleting token");
+
         // Delete the token after successful verification
         await supabase
           .from('verification_tokens')
@@ -72,6 +78,7 @@ const VerifyEmail = () => {
         // Update the auth context by refreshing the profile
         await refreshProfile();
 
+        console.log("Email verification completed successfully");
         setVerificationStatus('success');
       } catch (error) {
         console.error("Email verification error:", error);
