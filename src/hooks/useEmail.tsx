@@ -43,8 +43,6 @@ export const useEmail = () => {
 
         console.log("Email send response:", response);
         
-        // Even if there's an error in the function, we will still receive a successful response
-        // because the function is designed to always return 200
         toast({
           title: "Email sent",
           description: "Verification email has been sent successfully",
@@ -52,7 +50,6 @@ export const useEmail = () => {
         
         return { success: true, data: response.data };
       } catch (supabaseError: any) {
-        // Only reaches here if there's a network error or function invocation fails completely
         console.warn('Supabase function call failed:', supabaseError);
         
         // For development environments or when email service is down, we simulate success
