@@ -25,10 +25,10 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated - use conditional checking
   useEffect(() => {
     if (isInitialized && isAuthenticated && profile?.email_confirmed) {
-      navigate("/dashboard", { replace: true });
+      navigate("/dashboard");
     }
   }, [isAuthenticated, profile, navigate, isInitialized]);
 
@@ -48,12 +48,8 @@ export default function Login() {
       
       if (result.error) {
         setLoginError(result.error.message || "Login failed. Please try again.");
-      } else if (result.data?.redirectTo === "/dashboard") {
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
-        navigate("/dashboard", { replace: true });
+      } else if (result.data?.redirectTo) {
+        // No immediate redirection - will be handled by the useEffect
       }
     } finally {
       setIsSubmitting(false);
@@ -71,7 +67,11 @@ export default function Login() {
 
   // Skip rendering login page if already authenticated and about to redirect
   if (isAuthenticated && profile?.email_confirmed) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
   }
 
   return (

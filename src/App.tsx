@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
 import { useEffect } from "react";
 import StripeProvider from "./components/StripeProvider";
@@ -21,17 +21,41 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import { useAuth } from "./hooks/useAuth";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Create a navigation handler component that will be inside Router context
 const AuthNavigation = () => {
   const { isInitialized } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   
   useEffect(() => {
+    // Safety measure - avoid manipulating history during render
+    if (location.state && location.state._suppressRouteNavigation) {
+      return;
+    }
+    
     // Clear any state that might cause UI issues when navigating
-    window.history.replaceState({}, document.title, location.pathname);
-  }, [location.pathname]);
+    const cleanHistory = () => {
+      window.history.replaceState(
+        { _suppressRouteNavigation: true }, 
+        document.title, 
+        location.pathname
+      );
+    };
+    
+    // Small delay to let React finish its work
+    const timer = setTimeout(cleanHistory, 50);
+    return () => clearTimeout(timer);
+    
+  }, [location.pathname, location.state]);
   
   // Only return a component when auth is initialized
   return isInitialized ? null : (
