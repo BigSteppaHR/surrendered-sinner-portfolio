@@ -28,6 +28,12 @@ const About: React.FC = () => {
     }
   ];
 
+  const certifications = [
+    { name: "NASM Certified Personal Trainer", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
+    { name: "ISSA Nutritionist", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
+    { name: "CrossFit Level 2 Trainer", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" }
+  ];
+
   return (
     <section id="about" className="section-padding bg-gradient-to-b from-black to-sinner-dark-gray noise-bg">
       <div className="container-custom">
@@ -58,10 +64,10 @@ const About: React.FC = () => {
               text="At Surrendered Sinner Fitness, we believe in pushing beyond perceived limits and breaking through mental barriers that hold you back." 
               className="text-lg mb-4 text-white/80"
             />
-            <p className="text-lg mb-6 text-white/80">
+            <p className="text-lg mb-4 text-white/80">
               We combine cutting-edge training methodologies with battle-tested principles to forge not just stronger bodies, but unbreakable mindsets.
             </p>
-            <div className="space-y-4">
+            <div className="space-y-4 mb-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0 bg-sinner-red/20 p-2 rounded-lg mr-3">
                   <Dumbbell className="h-5 w-5 text-sinner-red" />
@@ -92,7 +98,7 @@ const About: React.FC = () => {
             </div>
             
             {/* Added CTA button */}
-            <div className="mt-8">
+            <div className="mt-6">
               <a href="#contact" className="btn-primary pulse-glow inline-flex">
                 Book Free Consultation
               </a>
@@ -100,7 +106,26 @@ const About: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* New Certifications Section */}
+        <div className="mt-16 mb-16">
+          <h3 className="text-2xl font-bold mb-6 text-center">Our <span className="text-sinner-red">Certifications</span></h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {certifications.map((cert, index) => (
+              <GlassCard 
+                key={index} 
+                className="p-6 flex flex-col items-center text-center hover:border-sinner-red/50"
+                hoverEffect={true}
+              >
+                <div className="mb-4 w-16 h-16 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
+                  <img src={cert.logo} alt={cert.name} className="w-12 h-12 object-contain" />
+                </div>
+                <h4 className="font-semibold">{cert.name}</h4>
+              </GlassCard>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
             <div key={index} className="group" data-aos="fade-up" data-aos-delay={index * 100}>
               <GlassCard 

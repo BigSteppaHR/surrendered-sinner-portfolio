@@ -37,10 +37,10 @@ const Services: React.FC = () => {
       title: "Complete Package",
       icon: CalendarClock,
       description: "The ultimate transformation package combining personalized lifting program and nutrition guidance.",
-      features: ["Custom lifting program", "Detailed nutrition plan", "Email support", "Bi-weekly check-ins"],
+      features: ["Custom lifting program", "Detailed nutrition plan", "Email support", "Two bi-weekly check-ins included"],
       highlighted: false,
       price: "$225",
-      duration: "one-time"
+      duration: "one-time + $25/month for ongoing check-ins"
     }
   ];
 
