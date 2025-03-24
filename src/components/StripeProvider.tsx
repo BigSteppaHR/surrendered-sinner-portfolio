@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { useToast } from '@/hooks/use-toast';
 
-// Initialize with a fallback, but we'll check for a valid key at runtime
-let stripePromise: ReturnType<typeof loadStripe> | null = null;
+// Initialize with a null value, we'll assign the promise directly
+let stripePromise: Promise<Stripe | null> | null = null;
 
 interface StripeProviderProps {
   children: React.ReactNode;
@@ -28,10 +28,10 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           // In development, we'll use a placeholder key that will show Stripe elements but not process payments
           // This helps developers see the UI without needing real Stripe credentials
           const testKey = 'pk_test_51NyDWJAfsLmHAfOzbscm6EMsc2zGIp3VCz7dXJwTNAgzyjU62h13qeUWI3j8zNpIImBrzLnRkKiLIi7AuxmfaXj600UBcmzWsn';
-          stripePromise = await loadStripe(testKey);
+          stripePromise = loadStripe(testKey);
         } else {
           // Use the real key
-          stripePromise = await loadStripe(stripePublishableKey);
+          stripePromise = loadStripe(stripePublishableKey);
         }
         
         setIsStripeLoaded(true);
