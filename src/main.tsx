@@ -6,7 +6,7 @@ import RemoveBadge from './components/RemoveBadge.tsx'
 
 createRoot(document.getElementById("root")!).render(
   <>
-    <App />
     <RemoveBadge />
+    <App />
   </>
 );
