@@ -136,8 +136,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error storing verification token:', tokenError);
       }
       
-      // Create the verification URL
-      const verificationUrl = `${window.location.origin}/auth?verify=${verificationToken}&email=${encodeURIComponent(email)}`;
+      // Create the verification URL - direct API call, not a page redirect
+      const verificationApiUrl = `${window.location.origin}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
       
       // Send the verification email using our custom function
       try {
@@ -151,14 +151,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               <p>Thank you for signing up for Surrendered Sinner. We're excited to have you join our elite fitness coaching platform.</p>
               <p>Before you can access your account, please verify your email address by clicking the link below:</p>
               <p style="text-align: center;">
-                <a href="${verificationUrl}" 
+                <a href="${verificationApiUrl}" 
                    style="background-color: #e32400; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
                   Verify My Email
                 </a>
               </p>
               <p>If the button above doesn't work, you can copy and paste the following URL into your browser:</p>
               <p style="word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">
-                ${verificationUrl}
+                ${verificationApiUrl}
               </p>
               <p>This link will expire in 24 hours.</p>
               <p>If you did not sign up for this account, please ignore this email.</p>
@@ -182,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       return { error: null, data: { user: data.user, session: data.session, emailSent: true } };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signup error:', error.message);
       toast({
         title: "Signup failed",
