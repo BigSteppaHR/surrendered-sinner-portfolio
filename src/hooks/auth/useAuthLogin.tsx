@@ -49,6 +49,17 @@ export const useAuthLogin = () => {
 
       if (error) {
         console.error('Authentication error:', error);
+        
+        // Handle specific auth errors
+        if (error.message?.includes('Invalid login credentials')) {
+          return { 
+            error: { 
+              message: "Invalid email or password. Please try again." 
+            }, 
+            data: null 
+          };
+        }
+        
         throw error;
       }
 

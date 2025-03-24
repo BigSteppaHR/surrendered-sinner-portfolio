@@ -25,11 +25,17 @@ const EmailVerificationDialog = ({
   const location = useLocation();
   const mounted = useRef(true);
   const [isVisible, setIsVisible] = useState(false);
-  
-  // Get email from props, location state or user object
-  const email = initialEmail || location.state?.email || user?.email || "";
+  const [email, setEmail] = useState("");
   
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
+
+  // Update email whenever props or state changes
+  useEffect(() => {
+    const emailToUse = initialEmail || location.state?.email || user?.email || "";
+    if (emailToUse) {
+      setEmail(emailToUse);
+    }
+  }, [initialEmail, location.state?.email, user?.email]);
 
   // Handle visibility safely with a small delay
   useEffect(() => {

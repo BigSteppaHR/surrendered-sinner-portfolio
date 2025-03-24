@@ -7,6 +7,7 @@ import LoginHeader from "@/components/auth/LoginHeader";
 import LoginForm from "@/components/auth/LoginForm";
 import LoginFooter from "@/components/auth/LoginFooter";
 import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
+import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -21,12 +22,18 @@ export default function Login() {
   const [verificationEmail, setVerificationEmail] = useState("");
   const navigate = useNavigate();
   const mountedRef = useRef(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
   }, []);
+
+  // Debug logs
+  useEffect(() => {
+    console.log("Login page - Auth state:", { isAuthenticated, profile, isInitialized, isLoading });
+  }, [isAuthenticated, profile, isInitialized, isLoading]);
 
   useEffect(() => {
     // Only redirect if the user is authenticated and email is confirmed
@@ -39,14 +46,16 @@ export default function Login() {
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     if (!mountedRef.current) return;
     
+    console.log("Login form submitted with:", values.email);
     setIsSubmitting(true);
     setLoginError(null);
     
     try {
-      console.log("Attempting login with email:", values.email);
       const result = await login(values.email, values.password);
       
       if (!mountedRef.current) return;
+      
+      console.log("Login result:", result);
       
       if (result.error) {
         console.log("Login error:", result.error);
@@ -55,15 +64,32 @@ export default function Login() {
           setVerificationEmail(values.email);
           setShowEmailVerification(true);
         } else {
-          setLoginError(result.error.message || "Login failed. Please try again.");
+          const errorMessage = result.error.message || "Login failed. Please try again.";
+          setLoginError(errorMessage);
+          toast({
+            title: "Login failed",
+            description: errorMessage,
+            variant: "destructive",
+          });
         }
-      } 
+      } else if (result.data?.user) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+      }
       // No need to navigate here as the useEffect will handle it
-    } catch (error) {
+    } catch (error: any) {
       if (!mountedRef.current) return;
       
       console.error("Login error:", error);
-      setLoginError("An unexpected error occurred. Please try again.");
+      const errorMessage = "An unexpected error occurred. Please try again.";
+      setLoginError(errorMessage);
+      toast({
+        title: "Login failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       if (mountedRef.current) {
         setIsSubmitting(false);
@@ -100,7 +126,7 @@ export default function Login() {
         <LoginFooter />
       </div>
 
-      {mountedRef.current && (
+      {showEmailVerification && (
         <EmailVerificationDialog 
           isOpen={showEmailVerification}
           onClose={handleCloseVerification}

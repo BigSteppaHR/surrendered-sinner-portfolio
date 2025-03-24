@@ -119,8 +119,11 @@ export const authenticateUser = async (email: string, password: string): Promise
   try {
     console.log('Attempting to authenticate user:', email);
     
+    // Reset any previous auth state to avoid conflicts
+    await supabase.auth.signOut();
+    
     // Add a small delay before authentication to ensure any previous auth operations are completed
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
