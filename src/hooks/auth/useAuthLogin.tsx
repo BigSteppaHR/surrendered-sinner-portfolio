@@ -39,6 +39,7 @@ export const useAuthLogin = () => {
     }
   };
 
+  // This refreshProfile function should return the Profile object to match the type definition
   const refreshProfile = async () => {
     const { data: session } = await supabase.auth.getSession();
     
