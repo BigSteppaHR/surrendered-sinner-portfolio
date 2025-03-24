@@ -1,40 +1,11 @@
 
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/hooks/useAuth';
+import { authenticateUser, fetchUserProfile } from '@/services/userAccountService';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAuthLogin = () => {
   const { toast } = useToast();
-
-  // Authenticate user with email and password
-  const authenticateUser = async (email: string, password: string) => {
-    console.log('Attempting to authenticate user:', email);
-    return supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-  };
-
-  // Fetch user profile by user ID
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error.message);
-        return { profile: null, error };
-      }
-
-      return { profile, error: null };
-    } catch (error: any) {
-      console.error('Exception in fetchUserProfile:', error.message);
-      return { profile: null, error };
-    }
-  };
 
   // Handle email verification check
   const handleEmailVerification = async (email: string) => {
@@ -70,14 +41,14 @@ export const useAuthLogin = () => {
       console.log('Attempting login for:', email);
       
       // Step 1: Authenticate the user
-      const { data, error } = await authenticateUser(email, password);
+      const { user, session, error } = await authenticateUser(email, password);
 
       if (error) {
         throw error;
       }
 
       // Step 2: Fetch user profile to check email confirmation status
-      const { profile, error: profileError } = await fetchUserProfile(data.user.id);
+      const { profile, error: profileError } = await fetchUserProfile(user.id);
 
       if (profileError) {
         console.error('Error fetching profile:', profileError.message);
@@ -90,7 +61,8 @@ export const useAuthLogin = () => {
         return { 
           error: null, 
           data: { 
-            ...data, 
+            user,
+            session, 
             redirectTo: '/dashboard',
             profile: null
           } 
@@ -109,7 +81,8 @@ export const useAuthLogin = () => {
       return { 
         error: null, 
         data: { 
-          ...data, 
+          user,
+          session, 
           redirectTo: '/dashboard',
           profile: profile
         } 

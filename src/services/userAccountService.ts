@@ -102,3 +102,47 @@ export const signOutUser = async (): Promise<void> => {
     console.error("Error signing out user:", error);
   }
 };
+
+// Authenticate user with email and password
+export const authenticateUser = async (email: string, password: string): Promise<AuthResult> => {
+  try {
+    console.log('Attempting to authenticate user:', email);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return { error };
+    }
+
+    return {
+      user: data.user,
+      session: data.session
+    };
+  } catch (error) {
+    console.error('Error authenticating user:', error);
+    return { error };
+  }
+};
+
+// Fetch user profile by ID
+export const fetchUserProfile = async (userId: string) => {
+  try {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error.message);
+      return { profile: null, error };
+    }
+
+    return { profile, error: null };
+  } catch (error) {
+    console.error('Exception in fetchUserProfile:', error);
+    return { profile: null, error };
+  }
+};
