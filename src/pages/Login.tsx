@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -10,9 +9,6 @@ import EmailVerificationDialog from "@/components/email/EmailVerificationDialog"
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedBackground from "@/components/auth/AnimatedBackground";
-
-// Lazy load components to improve initial loading performance
-const EmailVerificationDialogLazy = lazy(() => import("@/components/email/EmailVerificationDialog"));
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -32,14 +28,12 @@ export default function Login() {
   const redirectAttemptedRef = useRef(false);
   const { toast } = useToast();
 
-  // Component cleanup
   useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
-  // Debug logs
   useEffect(() => {
     console.log("Login page - Auth state:", { 
       isAuthenticated, 
@@ -50,21 +44,18 @@ export default function Login() {
     });
   }, [isAuthenticated, profile, isInitialized, isLoading]);
 
-  // Memoized email verification check function to improve performance
   const checkEmailVerification = async (email: string): Promise<boolean> => {
     if (!email) return false;
     
     setIsCheckingVerification(true);
     
     try {
-      // Check if the profile exists - use cached result if available
       const { data, error } = await supabase
         .from('profiles')
         .select('email_confirmed')
         .eq('email', email)
         .maybeSingle();
       
-      // Add a timeout manually instead of using abortSignal
       const timeoutId = setTimeout(() => {
         if (mountedRef.current) {
           setIsCheckingVerification(false);
@@ -91,7 +82,6 @@ export default function Login() {
     }
   };
 
-  // Check for verification success message
   useEffect(() => {
     if (location.state?.message) {
       toast({
@@ -99,14 +89,11 @@ export default function Login() {
         description: location.state.message,
       });
       
-      // Clear the state message to prevent showing it again on page refresh
       navigate(location.pathname, { replace: true });
     }
   }, [location.state, navigate, toast]);
 
-  // Auto-redirect to dashboard if authenticated
   useEffect(() => {
-    // Only redirect if the user is authenticated and initialization is complete
     if (isInitialized && isAuthenticated && !redirectAttemptedRef.current) {
       redirectAttemptedRef.current = true;
       console.log("Login: User authenticated, checking profile for redirect:", profile);
@@ -115,7 +102,6 @@ export default function Login() {
         console.log("Login: User authenticated and email confirmed, redirecting to dashboard");
         navigate("/dashboard", { replace: true });
       } else if (profile && !showEmailVerification) {
-        // If authenticated but email not confirmed, show verification dialog
         console.log("Login: User authenticated but email not confirmed, showing verification dialog");
         setVerificationEmail(profile.email || "");
         setShowEmailVerification(true);
@@ -123,7 +109,6 @@ export default function Login() {
     }
   }, [isAuthenticated, profile, navigate, isInitialized, showEmailVerification]);
 
-  // Optimized form submission handler
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     if (!mountedRef.current) return;
     
@@ -141,17 +126,14 @@ export default function Login() {
       if (result.error) {
         console.log("Login error:", result.error);
         if (result.error.code === "email_not_confirmed" && result.data?.showVerification) {
-          // Check if email is already verified in the database
           const isVerified = await checkEmailVerification(values.email);
           
           if (isVerified) {
-            // If verified but auth state doesn't know it yet, refresh and try login again
             toast({
               title: "Email already verified",
               description: "Your email is already verified. Attempting to sign you in...",
             });
             
-            // Try signing in again
             const retryResult = await login(values.email, values.password);
             
             if (retryResult.error) {
@@ -163,7 +145,6 @@ export default function Login() {
               });
             }
           } else {
-            // Email not verified, show verification dialog
             console.log("Email not confirmed, showing verification dialog for:", values.email);
             setVerificationEmail(values.email);
             setShowEmailVerification(true);
@@ -178,7 +159,6 @@ export default function Login() {
           });
         }
       } else if (result.data?.user) {
-        // Reset the redirect attempted flag to ensure we try to redirect again
         redirectAttemptedRef.current = false;
         
         toast({
@@ -186,7 +166,6 @@ export default function Login() {
           description: "Welcome back!",
         });
         
-        // Try an explicit redirect here if the user is confirmed
         if (result.data.profile?.email_confirmed) {
           navigate("/dashboard", { replace: true });
         }

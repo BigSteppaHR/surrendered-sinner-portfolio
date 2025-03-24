@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EyeIcon, EyeOffIcon, AlertCircleIcon } from "lucide-react";
 import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
+import AnimatedBackground from "@/components/auth/AnimatedBackground";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -124,248 +125,253 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">
-            SURRENDERED<span className="text-red-600">SINNER</span>
-          </h1>
-          <p className="text-gray-400 mt-2">Elite fitness coaching</p>
+    <AnimatedBackground>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-white">
+              SURRENDERED<span className="text-red-600">SINNER</span>
+            </h1>
+            <p className="text-gray-400 mt-2">Elite fitness coaching</p>
+          </div>
+
+          <Card className="bg-gray-900 text-white border-gray-800">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-2xl">
+                {activeTab === "login" ? "Login" : "Create Account"}
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                {activeTab === "login"
+                  ? "Enter your email and password to login"
+                  : "Enter your details to create an account"}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Login</TabsTrigger>
+                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="login" className="mt-6">
+                  <Form {...loginForm}>
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                      <FormField
+                        control={loginForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Enter your email" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type={showPassword ? "text" : "password"}
+                                  placeholder="Enter your password"
+                                  {...field}
+                                />
+                                <span
+                                  className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                >
+                                  {showPassword ? (
+                                    <EyeOffIcon className="h-4 w-4 text-gray-500" />
+                                  ) : (
+                                    <EyeIcon className="h-4 w-4 text-gray-500" />
+                                  )}
+                                </span>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Button disabled={isLoading} type="submit" className="w-full">
+                        {isLoading ? (
+                          <span className="flex items-center gap-2">
+                            <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            Logging In...
+                          </span>
+                        ) : (
+                          "Login"
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </TabsContent>
+
+                <TabsContent value="signup" className="mt-6">
+                  <Form {...signupForm}>
+                    <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
+                      <FormField
+                        control={signupForm.control}
+                        name="fullName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                              <Input type="text" placeholder="Enter your full name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={signupForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Enter your email" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={signupForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type={showPassword ? "text" : "password"}
+                                  placeholder="Enter your password"
+                                  {...field}
+                                />
+                                <span
+                                  className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                >
+                                  {showPassword ? (
+                                    <EyeOffIcon className="h-4 w-4 text-gray-500" />
+                                  ) : (
+                                    <EyeIcon className="h-4 w-4 text-gray-500" />
+                                  )}
+                                </span>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={signupForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Confirm Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type={showConfirmPassword ? "text" : "password"}
+                                  placeholder="Confirm your password"
+                                  {...field}
+                                />
+                                <span
+                                  className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
+                                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                >
+                                  {showConfirmPassword ? (
+                                    <EyeOffIcon className="h-4 w-4 text-gray-500" />
+                                  ) : (
+                                    <EyeIcon className="h-4 w-4 text-gray-500" />
+                                  )}
+                                </span>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Button disabled={isLoading} type="submit" className="w-full">
+                        {isLoading ? (
+                          <span className="flex items-center gap-2">
+                            <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            Creating Account...
+                          </span>
+                        ) : (
+                          "Create Account"
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+
+            <CardFooter className="text-center">
+              {activeTab === "login" ? (
+                <p className="text-sm text-gray-400">
+                  Don't have an account?{" "}
+                  <button
+                    className="text-sinner-red hover:underline font-semibold"
+                    onClick={() => setActiveTab("signup")}
+                  >
+                    Sign up
+                  </button>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400">
+                  Already have an account?{" "}
+                  <button
+                    className="text-sinner-red hover:underline font-semibold"
+                    onClick={() => setActiveTab("login")}
+                  >
+                    Login
+                  </button>
+                </p>
+              )}
+            </CardFooter>
+          </Card>
+
+          <div className="mt-6 text-center text-gray-500">
+            <p className="text-xs">
+              <AlertCircleIcon className="inline-block h-4 w-4 mr-1 align-middle" />
+              By signing up, you agree to our{" "}
+              <a href="#" className="text-sinner-red hover:underline">
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a href="#" className="text-sinner-red hover:underline">
+                Privacy Policy
+              </a>
+              .
+            </p>
+          </div>
         </div>
 
-        <Card className="bg-gray-900 text-white border-gray-800">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-2xl">
-              {activeTab === "login" ? "Login" : "Create Account"}
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              {activeTab === "login"
-                ? "Enter your email and password to login"
-                : "Enter your details to create an account"}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="login" className="mt-6">
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    <FormField
-                      control={loginForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="Enter your email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Enter your password"
-                                {...field}
-                              />
-                              <span
-                                className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                                onClick={() => setShowPassword(!showPassword)}
-                              >
-                                {showPassword ? (
-                                  <EyeOffIcon className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <EyeIcon className="h-4 w-4 text-gray-500" />
-                                )}
-                              </span>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button disabled={isLoading} type="submit" className="w-full">
-                      {isLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                          Logging In...
-                        </span>
-                      ) : (
-                        "Login"
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-
-              <TabsContent value="signup" className="mt-6">
-                <Form {...signupForm}>
-                  <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
-                    <FormField
-                      control={signupForm.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input type="text" placeholder="Enter your full name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={signupForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="Enter your email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={signupForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Enter your password"
-                                {...field}
-                              />
-                              <span
-                                className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                                onClick={() => setShowPassword(!showPassword)}
-                              >
-                                {showPassword ? (
-                                  <EyeOffIcon className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <EyeIcon className="h-4 w-4 text-gray-500" />
-                                )}
-                              </span>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={signupForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showConfirmPassword ? "text" : "password"}
-                                placeholder="Confirm your password"
-                                {...field}
-                              />
-                              <span
-                                className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              >
-                                {showConfirmPassword ? (
-                                  <EyeOffIcon className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <EyeIcon className="h-4 w-4 text-gray-500" />
-                                )}
-                              </span>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button disabled={isLoading} type="submit" className="w-full">
-                      {isLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                          Creating Account...
-                        </span>
-                      ) : (
-                        "Create Account"
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-
-          <CardFooter className="text-center">
-            {activeTab === "login" ? (
-              <p className="text-sm text-gray-400">
-                Don't have an account?{" "}
-                <button
-                  className="text-sinner-red hover:underline font-semibold"
-                  onClick={() => setActiveTab("signup")}
-                >
-                  Sign up
-                </button>
-              </p>
-            ) : (
-              <p className="text-sm text-gray-400">
-                Already have an account?{" "}
-                <button
-                  className="text-sinner-red hover:underline font-semibold"
-                  onClick={() => setActiveTab("login")}
-                >
-                  Login
-                </button>
-              </p>
-            )}
-          </CardFooter>
-        </Card>
-
-        <div className="mt-6 text-center text-gray-500">
-          <p className="text-xs">
-            <AlertCircleIcon className="inline-block h-4 w-4 mr-1 align-middle" />
-            By signing up, you agree to our{" "}
-            <a href="#" className="text-sinner-red hover:underline">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="#" className="text-sinner-red hover:underline">
-              Privacy Policy
-            </a>
-            .
-          </p>
-        </div>
+        {showVerificationDialog && (
+          <EmailVerificationDialog
+            isOpen={showVerificationDialog}
+            onClose={handleCloseVerification}
+            initialEmail={verificationEmail}
+            redirectToLogin={false}
+          />
+        )}
       </div>
-      
-      <EmailVerificationDialog 
-        isOpen={showVerificationDialog} 
-        onClose={handleCloseVerification} 
-        initialEmail={verificationEmail}
-      />
-    </div>
+    </AnimatedBackground>
   );
 }
