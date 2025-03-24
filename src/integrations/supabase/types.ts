@@ -281,7 +281,9 @@ export type Database = {
           email_verified_at: string | null
           full_name: string | null
           id: string
+          is_active: boolean | null
           is_admin: boolean | null
+          last_login_at: string | null
           password_reset_sent_at: string | null
           password_reset_token: string | null
           profile_picture_url: string | null
@@ -295,7 +297,9 @@ export type Database = {
           email_verified_at?: string | null
           full_name?: string | null
           id: string
+          is_active?: boolean | null
           is_admin?: boolean | null
+          last_login_at?: string | null
           password_reset_sent_at?: string | null
           password_reset_token?: string | null
           profile_picture_url?: string | null
@@ -309,7 +313,9 @@ export type Database = {
           email_verified_at?: string | null
           full_name?: string | null
           id?: string
+          is_active?: boolean | null
           is_admin?: boolean | null
+          last_login_at?: string | null
           password_reset_sent_at?: string | null
           password_reset_token?: string | null
           profile_picture_url?: string | null
@@ -833,6 +839,27 @@ export type Database = {
               created_at: string
             }[]
           }
+      get_visible_profiles: {
+        Args: {
+          viewing_user_id: string
+        }
+        Returns: {
+          avatar_url: string | null
+          email: string | null
+          email_confirmed: boolean | null
+          email_verified_at: string | null
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          is_admin: boolean | null
+          last_login_at: string | null
+          password_reset_sent_at: string | null
+          password_reset_token: string | null
+          profile_picture_url: string | null
+          updated_at: string | null
+          username: string | null
+        }[]
+      }
       is_admin:
         | {
             Args: Record<PropertyKey, never>

@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import ProfilePhotoUploader from "@/components/account/ProfilePhotoUploader";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import DashboardNav from "@/components/dashboard/DashboardNav";
+import ChangePasswordForm from "@/components/account/ChangePasswordForm";
 
 const Account = () => {
   const { profile, refreshProfile } = useAuth();
@@ -82,117 +84,115 @@ const Account = () => {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold">Account Settings</h1>
-        <p className="text-gray-400 mt-1">Manage your profile and preferences</p>
-      </div>
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#000000]">
+      <DashboardNav />
       
-      <div className="grid grid-cols-1 gap-6">
-        <Card className="bg-[#111111] border-[#333333]">
-          <CardHeader>
-            <CardTitle>Profile Photo</CardTitle>
-            <CardDescription className="text-gray-400">
-              Upload or take a new profile photo
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            {isLoadingProfile ? (
-              <div className="h-24 flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-[#ea384c]" />
-              </div>
-            ) : (
-              <ProfilePhotoUploader 
-                userId={profile?.id || ""}
-                currentAvatarUrl={avatarUrl}
-                onPhotoUploaded={handlePhotoUploaded}
-              />
-            )}
-          </CardContent>
-        </Card>
+      <div className="flex-1 p-6 max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Account Settings</h1>
+          <p className="text-gray-400 mt-1">Manage your profile and preferences</p>
+        </div>
         
-        <Card className="bg-[#111111] border-[#333333]">
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription className="text-gray-400">
-              Update your personal details
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingProfile ? (
-              <div className="h-32 flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-[#ea384c]" />
-              </div>
-            ) : (
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    disabled
-                    className="bg-[#0a0a0a] border-[#333333] opacity-70"
-                  />
-                  <p className="text-xs text-gray-500">Email address cannot be changed</p>
+        <div className="grid grid-cols-1 gap-6">
+          <Card className="bg-[#111111] border-[#333333]">
+            <CardHeader>
+              <CardTitle>Profile Photo</CardTitle>
+              <CardDescription className="text-gray-400">
+                Upload or take a new profile photo
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              {isLoadingProfile ? (
+                <div className="h-24 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#ea384c]" />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="bg-[#0a0a0a] border-[#333333]"
-                  />
+              ) : (
+                <ProfilePhotoUploader 
+                  userId={profile?.id || ""}
+                  currentAvatarUrl={avatarUrl}
+                  onPhotoUploaded={handlePhotoUploaded}
+                />
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-[#111111] border-[#333333]">
+            <CardHeader>
+              <CardTitle>Personal Information</CardTitle>
+              <CardDescription className="text-gray-400">
+                Update your personal details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingProfile ? (
+                <div className="h-32 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#ea384c]" />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="bg-[#0a0a0a] border-[#333333]"
-                  />
-                </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full md:w-auto bg-[#ea384c] hover:bg-[#d32d3f]"
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <span className="flex items-center">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </span>
-                  ) : "Save Changes"}
-                </Button>
-              </form>
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-[#111111] border-[#333333]">
-          <CardHeader>
-            <CardTitle>Security</CardTitle>
-            <CardDescription className="text-gray-400">
-              Manage your account security
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full md:w-auto"
-            >
-              Change Password
-            </Button>
-          </CardContent>
-        </Card>
+              ) : (
+                <form onSubmit={handleSaveProfile} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      disabled
+                      className="bg-[#0a0a0a] border-[#333333] opacity-70"
+                    />
+                    <p className="text-xs text-gray-500">Email address cannot be changed</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <Input
+                      id="fullName"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="bg-[#0a0a0a] border-[#333333]"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="bg-[#0a0a0a] border-[#333333]"
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full md:w-auto bg-[#ea384c] hover:bg-[#d32d3f]"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <span className="flex items-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </span>
+                    ) : "Save Changes"}
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-[#111111] border-[#333333]">
+            <CardHeader>
+              <CardTitle>Security</CardTitle>
+              <CardDescription className="text-gray-400">
+                Manage your account security
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChangePasswordForm />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
