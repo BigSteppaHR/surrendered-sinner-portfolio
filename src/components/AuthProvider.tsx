@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const sessionRefreshInterval = useRef<number | null>(null);
   const authLoaded = useRef(false);
   const isRefreshingProfile = useRef(false);
+  const pendingTimeouts = useRef<NodeJS.Timeout[]>([]);
 
   // Setup supabase client and initialize session
   useEffect(() => {
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               // Set a debounce to avoid rapid refresh calls
               isRefreshingProfile.current = true;
               
-              // Create a timeout but DON'T return it from this async function
+              // Create a timeout but don't return it - instead store it for cleanup
               const timeoutId = setTimeout(async () => {
                 try {
                   await authState.refreshProfile();
@@ -49,7 +50,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
               }, 300);
               
-              // Setup cleanup in the parent useEffect, not here
+              // Store timeout for later cleanup
+              pendingTimeouts.current.push(timeoutId);
             }
           }
         );
@@ -126,17 +128,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Hold timeout IDs to clear them if the component unmounts
-    const timeoutIds: NodeJS.Timeout[] = [];
-
-    const cleanupTimeouts = () => {
-      timeoutIds.forEach(id => clearTimeout(id));
-    };
-
     initializeAuth();
 
+    // Clean up all pending timeouts and intervals when unmounting
     return () => {
-      cleanupTimeouts();
+      // Clear all pending timeouts
+      pendingTimeouts.current.forEach(timeoutId => {
+        clearTimeout(timeoutId);
+      });
+      pendingTimeouts.current = [];
+      
+      // Clear session refresh interval
       if (sessionRefreshInterval.current) {
         clearInterval(sessionRefreshInterval.current);
         sessionRefreshInterval.current = null;
