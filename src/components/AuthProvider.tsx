@@ -50,18 +50,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           clearInterval(sessionRefreshInterval.current);
         }
         
-        sessionRefreshInterval.current = window.setInterval(async () => {
-          try {
-            // Only attempt to refresh if there's a session
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              await supabase.auth.refreshSession();
-              console.log("Session refreshed at", new Date().toISOString());
+        // Only set up refreshing if there's an active session
+        if (data.session) {
+          // Calculate refresh time - refresh when 80% of the session lifetime has passed
+          // Default Supabase JWT lifetime is 1 hour (3600 seconds)
+          const refreshInterval = Math.floor(3600 * 0.8) * 1000; // 80% of session lifetime in ms
+          
+          sessionRefreshInterval.current = window.setInterval(async () => {
+            try {
+              // Check if we still have a session before attempting refresh
+              const { data: currentSession } = await supabase.auth.getSession();
+              if (currentSession.session) {
+                const { data, error } = await supabase.auth.refreshSession();
+                if (error) {
+                  console.error("Session refresh failed:", error);
+                } else if (data.session) {
+                  console.log("Session refreshed successfully at", new Date().toISOString());
+                }
+              } else {
+                console.log("No active session to refresh");
+                // Clear the interval if there's no session
+                if (sessionRefreshInterval.current) {
+                  clearInterval(sessionRefreshInterval.current);
+                  sessionRefreshInterval.current = null;
+                }
+              }
+            } catch (err) {
+              console.error("Error in refresh interval:", err);
             }
-          } catch (err) {
-            console.error("Error in refresh interval:", err);
-          }
-        }, 4 * 60 * 1000); // Refresh every 4 minutes
+          }, refreshInterval || 4 * 60 * 1000); // Fallback to 4 minutes if calculation fails
+          
+          console.log(`Session refresh interval set for ${refreshInterval / 1000} seconds`);
+        }
         
         return () => {
           subscription.unsubscribe();
