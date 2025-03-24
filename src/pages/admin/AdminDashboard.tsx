@@ -6,32 +6,28 @@ import AdminOverview from "@/components/admin/AdminOverview";
 import AdminPayments from "@/components/admin/AdminPayments";
 import AdminInvoices from "@/components/admin/AdminInvoices";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
-import AdminLogin from "@/components/admin/AdminLogin";
-import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const AdminDashboard = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
   const location = useLocation();
 
-  useEffect(() => {
-    // Check if admin is authenticated from localStorage
-    const adminAuth = localStorage.getItem("admin-auth");
-    if (adminAuth === "authenticated") {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C]">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
-  const handleLogin = (username: string, password: string) => {
-    // In a real app, this would be a secure authentication process
-    // For demo purposes, we'll use a simple credential check
-    if (username === "barnold" && password === "test123") {
-      localStorage.setItem("admin-auth", "authenticated");
-      setIsAuthenticated(true);
-    }
-  };
-
+  // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <AdminLogin onLogin={handleLogin} />;
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // Redirect to dashboard if authenticated but not admin
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (

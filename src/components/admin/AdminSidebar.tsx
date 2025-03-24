@@ -1,5 +1,5 @@
 
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -23,11 +23,15 @@ import {
   SidebarFooter
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const AdminSidebar = () => {
-  const handleLogout = () => {
-    localStorage.removeItem("admin-auth");
-    window.location.reload();
+  const { logout, profile } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
   };
 
   const menuItems = [
@@ -58,7 +62,10 @@ const AdminSidebar = () => {
       <SidebarHeader className="p-4 flex items-center justify-between border-b border-gray-800">
         <div className="flex items-center gap-2">
           <User className="h-6 w-6 text-primary" />
-          <h2 className="text-lg font-semibold">Admin Panel</h2>
+          <div>
+            <h2 className="text-lg font-semibold">Admin Panel</h2>
+            <p className="text-xs text-gray-400">{profile?.full_name || 'Administrator'}</p>
+          </div>
         </div>
         <SidebarTrigger>
           <Menu className="h-5 w-5" />
