@@ -26,6 +26,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState(customerEmail);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   // Update email state when customerEmail prop changes
   useEffect(() => {
@@ -33,6 +34,45 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       setEmail(customerEmail);
     }
   }, [customerEmail]);
+
+  // Create PaymentIntent on component mount or when amount changes
+  useEffect(() => {
+    const createPaymentIntent = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.functions.invoke('stripe-helper', {
+          body: { 
+            action: 'createPaymentIntent',
+            params: { 
+              amount: amount,
+              currency: 'usd'
+            }
+          }
+        });
+
+        if (error) {
+          throw new Error(`Payment initialization failed: ${error.message}`);
+        }
+
+        if (data?.client_secret) {
+          setClientSecret(data.client_secret);
+        }
+      } catch (error) {
+        console.error('Error creating payment intent:', error);
+        toast({
+          title: "Payment Setup Failed",
+          description: "There was an error setting up the payment. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (amount > 0) {
+      createPaymentIntent();
+    }
+  }, [amount, toast]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -47,24 +87,10 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     setLoading(true);
 
     try {
-      // Create a payment intent using our Supabase edge function
-      const { data, error } = await supabase.functions.invoke('stripe-helper', {
-        body: { 
-          action: 'createPaymentIntent',
-          params: { 
-            amount: amount,
-            currency: 'usd'
-          }
-        }
-      });
-
-      if (error) {
-        throw new Error(`Payment initialization failed: ${error.message}`);
-      }
-
       // For a real implementation, use the client secret to confirm payment
+      // If we have a client secret, we would use it like this:
       // const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(
-      //   data.client_secret,
+      //   clientSecret,
       //   {
       //     payment_method: {
       //       card: cardElement,

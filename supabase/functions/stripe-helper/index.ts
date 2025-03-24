@@ -2,14 +2,14 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import Stripe from 'https://esm.sh/stripe@13.3.0'
 
-// Set up proper CORS headers that allow requests from codecove.dev
+// Set up proper CORS headers that allow requests from your domain
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*', // Allow all origins including codecove.dev
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json; charset=utf-8', // Add UTF-8 charset
-  'X-Content-Type-Options': 'nosniff', // Prevent MIME-sniffing
-  'Cache-Control': 'private, max-age=3600' // Better caching directive
+  'Content-Type': 'application/json; charset=utf-8',
+  'X-Content-Type-Options': 'nosniff',
+  'Cache-Control': 'private, max-age=3600'
 }
 
 serve(async (req) => {
@@ -29,7 +29,7 @@ serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2023-10-16' // Use a current API version
+      apiVersion: '2023-10-16'
     })
 
     let result
@@ -55,8 +55,37 @@ serve(async (req) => {
         })
         break
       
+      case 'createPaymentIntent':
+        console.log('Creating payment intent with params:', params)
+        const { amount, currency } = params
+        if (!amount || !currency) {
+          throw new Error('Missing required parameters for creating a payment intent')
+        }
+
+        result = await stripe.paymentIntents.create({
+          amount,
+          currency,
+          automatic_payment_methods: {
+            enabled: true,
+          },
+        })
+        console.log('Payment intent created:', result.id)
+        break
+      
+      case 'confirmPayment':
+        const { paymentIntentId, paymentMethod } = params
+        if (!paymentIntentId || !paymentMethod) {
+          throw new Error('Missing required parameters for confirming payment')
+        }
+
+        result = await stripe.paymentIntents.confirm(paymentIntentId, {
+          payment_method: paymentMethod,
+        })
+        break
+      
       // Handle dashboard data request for admin
       case 'get-dashboard-data':
+        console.log('Fetching dashboard data')
         // For development, return mock data instead of actual Stripe API calls
         result = {
           stats: [
@@ -112,22 +141,6 @@ serve(async (req) => {
             { name: 'Custom Plan', value: 10, color: '#5C4A9F' }
           ]
         }
-        break
-      
-      // Handle other actions
-      case 'createPaymentIntent':
-        const { amount, currency } = params
-        if (!amount || !currency) {
-          throw new Error('Missing required parameters for creating a payment intent')
-        }
-
-        result = await stripe.paymentIntents.create({
-          amount,
-          currency,
-          automatic_payment_methods: {
-            enabled: true,
-          },
-        })
         break
       
       case 'handleStripeWebhook':
