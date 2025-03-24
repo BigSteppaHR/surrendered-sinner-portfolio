@@ -30,7 +30,10 @@ export const useEmail = () => {
       console.log("Sending email to:", to, "with subject:", subject);
       
       // Add detection of current domain to help with CORS debugging
-      const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'unknown';
+      const currentDomain = typeof window !== 'undefined' ? 
+        `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}` : 
+        'unknown';
+        
       console.log("Current domain:", currentDomain);
       
       // Call Supabase function with enhanced error handling
@@ -43,6 +46,7 @@ export const useEmail = () => {
             html,
             from,
             domain: currentDomain, // Pass domain info to help with CORS debugging
+            origin: window.location.origin, // Include complete origin for CORS
           },
         });
 

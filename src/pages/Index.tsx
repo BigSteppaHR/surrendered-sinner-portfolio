@@ -39,12 +39,19 @@ const Index = () => {
   // Determine if we're on codecove.dev
   const isCodecove = typeof window !== 'undefined' && 
     (window.location.hostname === 'codecove.dev' || 
-     window.location.hostname.endsWith('.codecove.dev'));
+     window.location.hostname.includes('codecove.dev') ||
+     window.location.hostname === 'localhost' ||
+     window.location.hostname.includes('localhost'));
+
+  // Determine the canonical URL safely
+  const canonicalUrl = isCodecove 
+    ? 'https://codecove.dev'
+    : 'https://surrenderedsinnerfitness.com';
 
   return (
     <div className="flex flex-col min-h-screen">
       <SEO 
-        canonical={isCodecove ? 'https://codecove.dev' : 'https://surrenderedsinnerfitness.com'}
+        canonical={canonicalUrl}
       />
       
       <Navbar />

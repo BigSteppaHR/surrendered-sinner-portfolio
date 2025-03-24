@@ -14,37 +14,43 @@ const DashboardLayout = () => {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const { toast } = useToast();
   const initialLoadComplete = useRef(false);
+  const authCheckStarted = useRef(false);
   
   const isPublicPage = publicPages.includes(location.pathname);
   
+  // Set a shorter timeout for auth check to prevent showing loader indefinitely
   useEffect(() => {
-    console.log("DashboardLayout - Auth state:", { 
-      isAuthenticated, 
-      isInitialized, 
-      isLoading,
-      profile: profile ? `${profile.id} (${profile.email})` : 'No profile'
-    });
-    
-    // Only set page as loaded after auth is initialized
-    if (isInitialized && !initialLoadComplete.current) {
-      setIsPageLoaded(true);
-      initialLoadComplete.current = true;
-    }
-    
-    // Set a timeout to prevent infinite loading
-    const timer = setTimeout(() => {
-      setLoadingTimeout(true);
+    if (!authCheckStarted.current && !initialLoadComplete.current) {
+      authCheckStarted.current = true;
       
-      if (!isAuthenticated && !isLoading) {
-        toast({
-          title: "Session expired",
-          description: "Your session has expired. Please log in again.",
-          variant: "destructive"
-        });
+      console.log("DashboardLayout - Auth state:", { 
+        isAuthenticated, 
+        isInitialized, 
+        isLoading,
+        profile: profile ? `${profile.id} (${profile.email})` : 'No profile'
+      });
+      
+      // Only set page as loaded after auth is initialized
+      if (isInitialized) {
+        setIsPageLoaded(true);
+        initialLoadComplete.current = true;
       }
-    }, 5000); // 5 seconds timeout
-    
-    return () => clearTimeout(timer);
+      
+      // Set a timeout to prevent infinite loading
+      const timer = setTimeout(() => {
+        setLoadingTimeout(true);
+        
+        if (!isAuthenticated && !isLoading) {
+          toast({
+            title: "Session expired",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive"
+          });
+        }
+      }, 3000); // Shorter 3 second timeout
+      
+      return () => clearTimeout(timer);
+    }
   }, [isInitialized, isAuthenticated, profile, isLoading, toast]);
   
   // Show loading state while checking auth, but with a timeout

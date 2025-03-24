@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const initializeAttempted = useRef(false);
   const sessionRefreshInterval = useRef<number | null>(null);
   const authLoaded = useRef(false);
+  const isRefreshingProfile = useRef(false);
 
   // Setup supabase client and initialize session
   useEffect(() => {
@@ -33,12 +34,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log('Auth state changed:', event, session ? 'Session active' : 'No session');
             
             // Don't try to refresh profile during initialization to avoid loops
-            if (session?.user && authLoaded.current) {
-              try {
-                await authState.refreshProfile();
-              } catch (error) {
-                console.error("Error refreshing profile:", error);
-              }
+            if (session?.user && authLoaded.current && !isRefreshingProfile.current) {
+              // Set a debounce to avoid rapid refresh calls
+              const timeout = setTimeout(async () => {
+                try {
+                  isRefreshingProfile.current = true;
+                  await authState.refreshProfile();
+                  isRefreshingProfile.current = false;
+                } catch (error) {
+                  console.error("Error refreshing profile:", error);
+                  isRefreshingProfile.current = false;
+                }
+              }, 300);
+              
+              return () => clearTimeout(timeout);
             }
           }
         );
@@ -50,9 +59,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // If session exists, refresh profile data
         if (data.session?.user) {
           try {
+            isRefreshingProfile.current = true;
             await authState.refreshProfile();
+            isRefreshingProfile.current = false;
           } catch (error) {
             console.error("Error refreshing initial profile:", error);
+            isRefreshingProfile.current = false;
           }
         }
         
