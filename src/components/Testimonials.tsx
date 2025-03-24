@@ -2,8 +2,10 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import GlassCard from './GlassCard';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Testimonials: React.FC = () => {
+  const isMobile = useIsMobile();
   const testimonials = [
     {
       name: "Mike T.",
@@ -48,9 +50,9 @@ const Testimonials: React.FC = () => {
   return (
     <section id="testimonials" className="section-padding bg-gradient-to-b from-black to-sinner-dark-gray noise-bg">
       <div className="container-custom">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6"><span className="text-sinner-red">SUCCESS</span> STORIES</h2>
-          <p className="text-lg text-white/80">
+        <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 md:mb-6"><span className="text-sinner-red">SUCCESS</span> STORIES</h2>
+          <p className="text-base md:text-lg text-white/80">
             Real results from real people who trusted our process and pushed beyond their limits.
           </p>
         </div>
@@ -63,33 +65,36 @@ const Testimonials: React.FC = () => {
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
               >
                 {testimonials.map((testimonial, index) => (
-                  <div key={index} className="w-full flex-shrink-0 px-4">
+                  <div key={index} className="w-full flex-shrink-0 px-0 sm:px-4">
                     <GlassCard className="p-0 overflow-hidden">
                       <div className="flex flex-col md:flex-row">
-                        <div className="md:w-2/5">
+                        {/* Mobile-optimized image */}
+                        <div className={`${isMobile ? 'h-60' : 'md:w-2/5'}`}>
                           <img 
                             src={testimonial.image} 
                             alt={testimonial.name} 
-                            className="w-full h-full object-cover aspect-square"
+                            className={`w-full h-full object-cover ${isMobile ? 'aspect-[3/2]' : 'aspect-square'}`}
                           />
                         </div>
-                        <div className="md:w-3/5 p-8 flex flex-col justify-between">
+                        <div className={`${isMobile ? 'p-5' : 'md:w-3/5 p-8'} flex flex-col justify-between`}>
                           <div>
                             <div className="flex justify-between items-start mb-4">
-                              <Quote className="w-10 h-10 text-sinner-red opacity-50" />
+                              <Quote className="w-8 h-8 md:w-10 md:h-10 text-sinner-red opacity-50" />
                               <div className="flex">
                                 {[...Array(testimonial.rating)].map((_, i) => (
-                                  <svg key={i} className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <svg key={i} className="w-4 h-4 md:w-5 md:h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                   </svg>
                                 ))}
                               </div>
                             </div>
-                            <p className="text-lg mb-6 italic text-white/90">{testimonial.quote}</p>
+                            <p className={`${isMobile ? 'text-base' : 'text-lg'} mb-6 italic text-white/90`}>
+                              {testimonial.quote}
+                            </p>
                           </div>
                           <div>
-                            <h4 className="font-bold text-xl">{testimonial.name}</h4>
-                            <p className="text-white/70">{testimonial.role}</p>
+                            <h4 className="font-bold text-lg md:text-xl">{testimonial.name}</h4>
+                            <p className="text-sm md:text-base text-white/70">{testimonial.role}</p>
                           </div>
                         </div>
                       </div>
@@ -99,29 +104,31 @@ const Testimonials: React.FC = () => {
               </div>
             </div>
             
+            {/* Improved mobile navigation buttons */}
             <button 
               onClick={prevTestimonial} 
-              className="absolute top-1/2 -left-4 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors focus:outline-none z-10"
+              className={`absolute top-1/2 ${isMobile ? 'left-0' : '-left-4'} transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors focus:outline-none z-10`}
               aria-label="Previous testimonial"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
             </button>
             
             <button 
               onClick={nextTestimonial} 
-              className="absolute top-1/2 -right-4 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors focus:outline-none z-10"
+              className={`absolute top-1/2 ${isMobile ? 'right-0' : '-right-4'} transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors focus:outline-none z-10`}
               aria-label="Next testimonial"
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
             </button>
           </div>
           
-          <div className="flex justify-center mt-6 space-x-2">
+          {/* Improved indicator dots for mobile */}
+          <div className="flex justify-center mt-4 md:mt-6 space-x-2">
             {testimonials.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`w-3 h-3 rounded-full transition-colors ${
+                className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full transition-colors ${
                   index === currentIndex ? 'bg-sinner-red' : 'bg-white/30'
                 }`}
                 aria-label={`Go to testimonial ${index + 1}`}
@@ -130,12 +137,13 @@ const Testimonials: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-20 text-center">
-          <h3 className="text-2xl font-bold mb-2">Ready to Write Your Success Story?</h3>
-          <p className="text-white/80 mb-6 max-w-2xl mx-auto">
+        {/* Mobile optimized CTA section */}
+        <div className="mt-12 md:mt-20 text-center">
+          <h3 className="text-xl md:text-2xl font-bold mb-2">Ready to Write Your Success Story?</h3>
+          <p className="text-sm md:text-base text-white/80 mb-6 max-w-2xl mx-auto">
             Join the ranks of those who've transformed their bodies and mindsets through our proven programs.
           </p>
-          <a href="#contact" className="btn-primary pulse-glow inline-flex">
+          <a href="#contact" className="btn-primary pulse-glow inline-flex text-sm md:text-base">
             Start Your Journey
           </a>
         </div>
