@@ -1,13 +1,11 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { useEmail } from '@/hooks/useEmail';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAuthSignup = () => {
   const { toast } = useToast();
   const { sendEmail } = useEmail();
-  const navigate = useNavigate();
 
   const signup = async (email: string, password: string, fullName: string) => {
     try {
@@ -122,9 +120,17 @@ export const useAuthSignup = () => {
         description: "Please check your email to verify your account",
       });
       
-      navigate("/confirm-email", { state: { email } });
-      
-      return { error: null, data: { user: data.user, session: data.session, emailSent: true } };
+      // Return data with a redirectTo property instead of directly navigating
+      return { 
+        error: null, 
+        data: { 
+          user: data.user, 
+          session: data.session, 
+          emailSent: true,
+          redirectTo: "/confirm-email",
+          redirectState: { email }
+        } 
+      };
     } catch (error: any) {
       console.error('Signup error:', error.message);
       toast({

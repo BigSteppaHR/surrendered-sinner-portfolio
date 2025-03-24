@@ -8,7 +8,7 @@ export const useAuthLogout = () => {
   const logout = async () => {
     try {
       await supabase.auth.signOut();
-      return { success: true };
+      return { success: true, redirectTo: '/' };
     } catch (error: any) {
       console.error('Logout error:', error.message);
       toast({
