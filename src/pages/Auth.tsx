@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -10,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EyeIcon, EyeOffIcon, AlertCircleIcon } from "lucide-react";
+import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -37,18 +39,33 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    // Show verification dialog if redirected from confirm-email
+    if (location.pathname === "/auth" && location.state?.email) {
+      setVerificationEmail(location.state.email);
+      setShowVerificationDialog(true);
+    }
+    
+    // Also check for redirectState from login or signup
+    if (location.state?.redirectState?.email) {
+      setVerificationEmail(location.state.redirectState.email);
+      setShowVerificationDialog(true);
+    }
+    
     if (isAuthenticated) {
       if (profile && !profile.email_confirmed) {
-        navigate("/confirm-email", { state: { email: profile.email } });
+        setVerificationEmail(profile.email || "");
+        setShowVerificationDialog(true);
       } else {
         navigate("/dashboard");
       }
     }
-  }, [isAuthenticated, profile, navigate]);
+  }, [isAuthenticated, profile, navigate, location]);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -74,7 +91,10 @@ export default function Auth() {
       const result = await login(values.email, values.password);
       
       if (!result.error && result.data) {
-        if (result.data.redirectTo) {
+        if (result.data.redirectTo === "/confirm-email") {
+          setVerificationEmail(values.email);
+          setShowVerificationDialog(true);
+        } else if (result.data.redirectTo) {
           navigate(result.data.redirectTo, { 
             state: result.data.redirectState,
             replace: true
@@ -91,18 +111,27 @@ export default function Auth() {
     try {
       const result = await signup(values.email, values.password, values.fullName);
       
-      if (!result.error && result.data && result.data.redirectTo) {
-        navigate(result.data.redirectTo, { 
-          state: result.data.redirectState,
-          replace: true
-        });
+      if (!result.error && result.data) {
+        if (result.data.redirectTo === "/confirm-email") {
+          setVerificationEmail(values.email);
+          setShowVerificationDialog(true);
+        } else if (result.data.redirectTo) {
+          navigate(result.data.redirectTo, { 
+            state: result.data.redirectState,
+            replace: true
+          });
+        }
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isAuthenticated) {
+  const handleCloseVerification = () => {
+    setShowVerificationDialog(false);
+  };
+
+  if (isAuthenticated && profile?.email_confirmed) {
     return null;
   }
 
@@ -343,6 +372,12 @@ export default function Auth() {
           </p>
         </div>
       </div>
+      
+      <EmailVerificationDialog 
+        isOpen={showVerificationDialog} 
+        onClose={handleCloseVerification} 
+        initialEmail={verificationEmail}
+      />
     </div>
   );
 }

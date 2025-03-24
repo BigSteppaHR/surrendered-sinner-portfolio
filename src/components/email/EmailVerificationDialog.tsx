@@ -22,19 +22,21 @@ const EmailVerificationDialog = ({ isOpen, onClose, initialEmail = "" }: EmailVe
   
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
 
-  // Handle back to login - closes the dialog and navigates if needed
+  // Handle back to login - just closes the dialog when on auth page
   const handleBackToLogin = () => {
     onClose();
-    navigate("/auth");
   };
 
   // If user has confirmed email, close dialog and redirect to dashboard
   React.useEffect(() => {
     if (profile?.email_confirmed) {
       onClose();
-      navigate("/dashboard");
+      // Only navigate if not already on /auth
+      if (location.pathname !== "/auth") {
+        navigate("/dashboard");
+      }
     }
-  }, [profile, navigate, onClose]);
+  }, [profile, navigate, onClose, location.pathname]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
