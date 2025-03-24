@@ -32,6 +32,7 @@ const EmailVerificationDialog = ({
   const [dialogDescription, setDialogDescription] = useState("");
   const descriptionId = "email-verification-description";
   const verificationCheckAttempted = useRef(false);
+  const checkingInProgress = useRef(false);
 
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
 
@@ -46,12 +47,12 @@ const EmailVerificationDialog = ({
       setDialogDescription(`Please verify your email address ${emailToUse ? `(${emailToUse})` : ""} to continue using your account`);
       
       // Don't check verification automatically on every re-render
-      if (!verificationCheckAttempted.current) {
+      if (!verificationCheckAttempted.current && isOpen) {
         verificationCheckAttempted.current = true;
         checkEmailVerification(emailToUse);
       }
     }
-  }, [initialEmail, location.state?.email, user?.email]);
+  }, [initialEmail, location.state?.email, user?.email, isOpen]);
 
   // Close dialog helper function
   const closeDialog = () => {
@@ -68,8 +69,9 @@ const EmailVerificationDialog = ({
 
   // Check if email is already verified in the database
   const checkEmailVerification = async (emailToCheck: string) => {
-    if (!emailToCheck) return;
+    if (!emailToCheck || checkingInProgress.current) return;
     
+    checkingInProgress.current = true;
     setIsCheckingVerification(true);
     
     try {
@@ -79,6 +81,7 @@ const EmailVerificationDialog = ({
         setIsEmailVerified(true);
         setIsCheckingVerification(false);
         closeDialog();
+        checkingInProgress.current = false;
         return;
       }
       
@@ -91,6 +94,7 @@ const EmailVerificationDialog = ({
         setIsEmailVerified(true);
         setIsCheckingVerification(false);
         closeDialog();
+        checkingInProgress.current = false;
         return;
       }
       
@@ -122,6 +126,7 @@ const EmailVerificationDialog = ({
       if (mounted.current) {
         setIsCheckingVerification(false);
       }
+      checkingInProgress.current = false;
     }
   };
 
@@ -201,16 +206,16 @@ const EmailVerificationDialog = ({
     };
   }, [profile, navigate, onClose]);
 
-  // Regular check for verified status to catch updates
+  // Regular check for verified status with debouncing to catch updates but prevent too frequent checks
   useEffect(() => {
     if (!isOpen || !email) return;
     
-    // Check verification status periodically
+    // Check verification status periodically with a much longer interval
     const intervalId = setInterval(() => {
-      if (mounted.current && isOpen && email) {
+      if (mounted.current && isOpen && email && !checkingInProgress.current) {
         checkEmailVerification(email);
       }
-    }, 5000); // Check every 5 seconds
+    }, 15000); // Check every 15 seconds to reduce server load
     
     return () => clearInterval(intervalId);
   }, [isOpen, email]);

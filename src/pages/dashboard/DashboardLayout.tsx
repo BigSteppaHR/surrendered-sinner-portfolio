@@ -10,6 +10,7 @@ const DashboardLayout = () => {
   const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
   const location = useLocation();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   
   const isPublicPage = publicPages.includes(location.pathname);
   
@@ -20,15 +21,28 @@ const DashboardLayout = () => {
     if (isInitialized) {
       setIsPageLoaded(true);
     }
+    
+    // Set a timeout to prevent infinite loading
+    const timer = setTimeout(() => {
+      setLoadingTimeout(true);
+    }, 5000); // 5 seconds timeout
+    
+    return () => clearTimeout(timer);
   }, [isInitialized, isAuthenticated, profile]);
   
-  // Show loading state while checking auth
-  if (isLoading || !isInitialized || !isPageLoaded) {
+  // Show loading state while checking auth, but with a timeout
+  if ((isLoading || !isInitialized || !isPageLoaded) && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
         <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
       </div>
     );
+  }
+  
+  // If loading timed out but we're not authenticated, redirect to login
+  if (loadingTimeout && !isAuthenticated) {
+    console.log("DashboardLayout: Loading timed out, redirecting to login");
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
   // For dashboard routes, we require authentication
