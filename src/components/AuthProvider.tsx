@@ -12,9 +12,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const authOperations = useAuthOperations();
 
   // Combine state and operations
+  // Use the refreshProfile from authState which has the correct signature
   const value: AuthContextType = {
     ...authState,
     ...authOperations,
+    // Override with the refreshProfile from authState
+    refreshProfile: authState.refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

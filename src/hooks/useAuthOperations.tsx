@@ -1,10 +1,7 @@
-
-import { useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEmail } from '@/hooks/useEmail';
-import { Profile } from '@/hooks/useAuth';
 
 export const useAuthOperations = () => {
   const { toast } = useToast();
@@ -36,7 +33,6 @@ export const useAuthOperations = () => {
       });
       
       if (error) {
-        // Check for specific email provider disabled error
         if (error.message.includes("Email logins are disabled")) {
           toast({
             title: "Email authentication disabled",
@@ -66,7 +62,6 @@ export const useAuthOperations = () => {
 
   const signup = async (email: string, password: string, fullName: string) => {
     try {
-      // First check if the user already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
         .select('*')
@@ -82,7 +77,6 @@ export const useAuthOperations = () => {
         return { error: { message: "Account already exists" }, data: null };
       }
 
-      // Create the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -94,7 +88,6 @@ export const useAuthOperations = () => {
       });
       
       if (error) {
-        // Check for specific email provider disabled error
         if (error.message.includes("Email signups are disabled")) {
           toast({
             title: "Email authentication disabled",
@@ -107,10 +100,8 @@ export const useAuthOperations = () => {
         throw error;
       }
       
-      // Generate a verification token
       const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
-      // Store the verification token in the verification_tokens table
       const { error: tokenError } = await supabase
         .from('verification_tokens')
         .insert({ 
@@ -123,13 +114,11 @@ export const useAuthOperations = () => {
         console.error('Error storing verification token:', tokenError);
       }
       
-      // Create the verification URL - direct API call, not a page redirect
       const BASE_URL = window.location.origin;
       const verificationApiUrl = `${BASE_URL}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
       console.log("Generated verification URL:", verificationApiUrl);
       
-      // Send the verification email using our custom function
       try {
         const emailResult = await sendEmail({
           to: email,

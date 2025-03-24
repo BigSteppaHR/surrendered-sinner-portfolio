@@ -3,22 +3,29 @@ import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/hooks/useAuth';
-import { useAuthOperations } from '@/hooks/useAuthOperations';
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { refreshProfile } = useAuthOperations();
 
   // Handle profile updates
-  const updateProfile = async (currentUser: User | null) => {
-    if (currentUser) {
-      const profileData = await refreshProfile(currentUser);
-      setProfile(profileData);
-    } else {
-      setProfile(null);
+  const refreshProfileData = async (currentUser: User | null) => {
+    if (!currentUser) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.error('Error fetching profile:', error.message);
+      return null;
     }
   };
 
@@ -33,6 +40,15 @@ export const useAuthState = () => {
         setProfile(null);
       }
     });
+
+    const updateProfile = async (currentUser: User | null) => {
+      if (currentUser) {
+        const profileData = await refreshProfileData(currentUser);
+        setProfile(profileData);
+      } else {
+        setProfile(null);
+      }
+    };
 
     const initializeAuth = async () => {
       setIsLoading(true);
@@ -58,8 +74,12 @@ export const useAuthState = () => {
     };
   }, []);
 
-  const refreshUserProfile = async () => {
-    await updateProfile(user);
+  // This public refreshProfile function matches the expected signature in AuthContextType
+  const refreshProfile = async () => {
+    if (user) {
+      const profileData = await refreshProfileData(user);
+      setProfile(profileData);
+    }
   };
 
   return {
@@ -69,6 +89,6 @@ export const useAuthState = () => {
     isLoading,
     isAuthenticated: !!user,
     isAdmin: !!profile?.is_admin,
-    refreshProfile: refreshUserProfile,
+    refreshProfile,
   };
 };
