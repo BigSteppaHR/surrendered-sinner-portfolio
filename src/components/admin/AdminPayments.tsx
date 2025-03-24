@@ -1,11 +1,11 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CreditCard, DollarSign, CalendarClock, AlertCircle } from "lucide-react";
+import { CreditCard, DollarSign, CalendarClock, AlertCircle, ExternalLink } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Link } from "react-router-dom";
 
 const plans = [
   {
@@ -46,14 +46,21 @@ const AdminPayments = () => {
 
   const handleUpdateStripeKey = () => {
     setStripeKey(stripeKeyInput);
-    // In a real app, you would securely store this key with proper encryption
-    localStorage.setItem("stripe-key-hint", "configured"); // Just a hint, not the actual key
+    localStorage.setItem("stripe-key-hint", "configured");
     alert("Stripe key updated successfully!");
   };
-  
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Payments</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Payments</h1>
+        <Link to="/payment-portal">
+          <Button variant="outline" className="flex items-center gap-2">
+            <ExternalLink className="h-4 w-4" />
+            Open Payment Portal
+          </Button>
+        </Link>
+      </div>
       
       <Tabs defaultValue="plans">
         <TabsList className="bg-gray-800">

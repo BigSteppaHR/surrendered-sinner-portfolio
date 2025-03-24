@@ -13,6 +13,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import Dashboard from "./pages/Dashboard";
 import Schedule from "./pages/Schedule";
 import Payment from "./pages/Payment";
+import PaymentPortal from "./pages/PaymentPortal";
 import Auth from "./pages/Auth";
 import VerifyEmail from "./pages/VerifyEmail";
 import ConfirmEmail from "./pages/ConfirmEmail";
@@ -56,6 +57,7 @@ const App = () => {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/schedule" element={<Schedule />} />
                   <Route path="/payment" element={<Payment />} />
+                  <Route path="/payment-portal" element={<PaymentPortal />} />
                   <Route path="/api/verify-email" element={<VerifyEmail />} />
                   <Route path="/confirm-email" element={<ConfirmEmail />} />
                   <Route path="/admin/*" element={<AdminDashboard />} />

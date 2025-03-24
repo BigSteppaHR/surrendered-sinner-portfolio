@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -17,6 +17,7 @@ const Payment = () => {
   const productName = searchParams.get('product') || 'Fitness Program';
   const amountInCents = parseInt(searchParams.get('amount') || '19900');
   const description = searchParams.get('description') || 'One-time payment for fitness services';
+  const customerEmail = searchParams.get('email') || '';
   
   const handlePaymentSuccess = (paymentId: string) => {
     console.log("Payment successful:", paymentId);
@@ -73,6 +74,7 @@ const Payment = () => {
                   <StripeCheckout 
                     amount={amountInCents} 
                     description={description}
+                    customerEmail={customerEmail}
                     onSuccess={handlePaymentSuccess}
                   />
                 </StripeProvider>

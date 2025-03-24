@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -9,12 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 interface StripeCheckoutProps {
   amount: number;
   description: string;
+  customerEmail?: string;
   onSuccess?: (paymentId: string) => void;
 }
 
 const StripeCheckout: React.FC<StripeCheckoutProps> = ({ 
   amount, 
   description, 
+  customerEmail = '',
   onSuccess
 }) => {
   const stripe = useStripe();
@@ -22,7 +24,14 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(customerEmail);
+
+  // Update email state when customerEmail prop changes
+  useEffect(() => {
+    if (customerEmail) {
+      setEmail(customerEmail);
+    }
+  }, [customerEmail]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
