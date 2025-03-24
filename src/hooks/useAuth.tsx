@@ -29,7 +29,7 @@ export type AuthContextType = {
       emailSent?: boolean
     } | null 
   }>;
-  logout: () => Promise<void>;
+  logout: () => Promise<void | { success: boolean }>;
   refreshProfile: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: any | null }>;
