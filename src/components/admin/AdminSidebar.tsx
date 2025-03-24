@@ -7,7 +7,8 @@ import {
   BarChart3, 
   LogOut,
   User,
-  Menu
+  Menu,
+  Calendar
 } from "lucide-react";
 import { 
   Sidebar, 
@@ -39,6 +40,11 @@ const AdminSidebar = () => {
       icon: LayoutDashboard,
       label: "Overview",
       path: "/admin/overview"
+    },
+    {
+      icon: Calendar,
+      label: "Sessions",
+      path: "/admin/sessions"
     },
     {
       icon: CreditCard,

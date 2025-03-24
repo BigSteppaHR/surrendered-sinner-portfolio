@@ -6,6 +6,7 @@ import AdminOverview from "@/components/admin/AdminOverview";
 import AdminPayments from "@/components/admin/AdminPayments";
 import AdminInvoices from "@/components/admin/AdminInvoices";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
+import AdminSessions from "@/components/admin/AdminSessions";
 import { useAuth } from "@/hooks/useAuth";
 
 const AdminDashboard = () => {
@@ -38,6 +39,7 @@ const AdminDashboard = () => {
           <Routes>
             <Route path="/" element={<Navigate to="/admin/overview" replace />} />
             <Route path="/overview" element={<AdminOverview />} />
+            <Route path="/sessions" element={<AdminSessions />} />
             <Route path="/payments" element={<AdminPayments />} />
             <Route path="/invoices" element={<AdminInvoices />} />
             <Route path="/analytics" element={<AdminAnalytics />} />
