@@ -46,8 +46,8 @@ const Payment = () => {
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-              <TabsTrigger value="subscription">Subscription</TabsTrigger>
-              <TabsTrigger value="funds">Add Funds</TabsTrigger>
+              <TabsTrigger value="subscription" className="text-white bg-[#333] hover:bg-[#444]">Subscription</TabsTrigger>
+              <TabsTrigger value="funds" className="text-white bg-[#333] hover:bg-[#444]">Add Funds</TabsTrigger>
             </TabsList>
             
             <TabsContent value="subscription" className="space-y-4">
