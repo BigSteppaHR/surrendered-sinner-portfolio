@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
@@ -14,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import AnimatedBackground from "@/components/auth/AnimatedBackground";
 
-// Lazy load components to improve performance
 const EmailVerificationDialog = lazy(() => import("@/components/email/EmailVerificationDialog"));
 
 const signupSchema = z.object({
@@ -67,33 +65,34 @@ export default function Signup() {
     },
   });
 
-  // Calculate password strength
   const calculatePasswordStrength = (password: string): number => {
     if (!password) return 0;
     
     let strength = 0;
     
-    // Length
     if (password.length >= 8) strength += 25;
     
-    // Uppercase
     if (/[A-Z]/.test(password)) strength += 25;
     
-    // Lowercase
     if (/[a-z]/.test(password)) strength += 25;
     
-    // Numbers
     if (/[0-9]/.test(password)) strength += 25;
     
     return strength;
   };
 
-  // Watch password field to calculate strength
   const watchPassword = form.watch("password");
   
   useEffect(() => {
     setPasswordStrength(calculatePasswordStrength(watchPassword));
   }, [watchPassword]);
+
+  const getStrengthColor = (strength: number) => {
+    if (strength <= 25) return "bg-red-500";
+    if (strength <= 50) return "bg-orange-500";
+    if (strength <= 75) return "bg-yellow-500";
+    return "bg-green-500";
+  };
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     if (!mountedRef.current) return;
@@ -144,14 +143,6 @@ export default function Signup() {
       setShowEmailVerification(false);
       navigate("/login");
     }
-  };
-
-  // Get strength color
-  const getStrengthColor = (strength: number) => {
-    if (strength <= 25) return "bg-red-500";
-    if (strength <= 50) return "bg-orange-500";
-    if (strength <= 75) return "bg-yellow-500";
-    return "bg-green-500";
   };
 
   if (!isInitialized) {
@@ -270,7 +261,11 @@ export default function Signup() {
                               <span>Password strength</span>
                               <span>{passwordStrength <= 25 ? "Weak" : passwordStrength <= 50 ? "Fair" : passwordStrength <= 75 ? "Good" : "Strong"}</span>
                             </div>
-                            <Progress value={passwordStrength} className="h-1" indicatorClassName={getStrengthColor(passwordStrength)} />
+                            <Progress 
+                              value={passwordStrength} 
+                              className="h-1" 
+                              indicatorClassName={getStrengthColor(passwordStrength)} 
+                            />
                           </div>
                         )}
                         <FormMessage />

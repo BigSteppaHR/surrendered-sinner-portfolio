@@ -534,17 +534,28 @@ export type Database = {
           author: string
         }[]
       }
-      get_user_profile: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          id: string
-          email: string
-          full_name: string
-          is_admin: boolean
-          email_confirmed: boolean
-          avatar_url: string
-        }[]
-      }
+      get_user_profile:
+        | {
+            Args: Record<PropertyKey, never>
+            Returns: {
+              id: string
+              email: string
+              full_name: string
+              is_admin: boolean
+              email_confirmed: boolean
+              avatar_url: string
+            }[]
+          }
+        | {
+            Args: {
+              user_id: number
+            }
+            Returns: {
+              id: number
+              username: string
+              email: string
+            }[]
+          }
       is_admin:
         | {
             Args: Record<PropertyKey, never>
@@ -556,12 +567,17 @@ export type Database = {
             }
             Returns: boolean
           }
-      is_email_verified: {
-        Args: {
-          user_email: string
-        }
-        Returns: boolean
-      }
+      is_email_verified:
+        | {
+            Args: Record<PropertyKey, never>
+            Returns: boolean
+          }
+        | {
+            Args: {
+              user_email: string
+            }
+            Returns: boolean
+          }
     }
     Enums: {
       [_ in never]: never
