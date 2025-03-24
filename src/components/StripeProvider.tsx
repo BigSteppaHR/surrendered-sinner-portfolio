@@ -19,6 +19,12 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeStripe = async () => {
       try {
+        // If stripe is already initialized, don't do it again
+        if (stripePromise) {
+          setIsStripeLoaded(true);
+          return;
+        }
+        
         // Get the publishable key from environment variables
         const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
         
