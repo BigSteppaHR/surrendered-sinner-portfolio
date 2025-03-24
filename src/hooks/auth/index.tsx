@@ -5,7 +5,7 @@ import { useAuthPassword } from './useAuthPassword';
 import { useAuthLogout } from './useAuthLogout';
 
 export const useAuthOperations = () => {
-  const { login } = useAuthLogin();
+  const { login, refreshProfile } = useAuthLogin();
   const { signup } = useAuthSignup();
   const { resetPassword, updatePassword } = useAuthPassword();
   const { logout } = useAuthLogout();
@@ -14,7 +14,7 @@ export const useAuthOperations = () => {
     login,
     signup,
     logout,
-    // We don't return refreshProfile here as we get it from authState
+    refreshProfile,
     resetPassword,
     updatePassword,
   };
