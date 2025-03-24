@@ -9,6 +9,8 @@ export type Profile = {
   full_name?: string;
   avatar_url?: string;
   is_admin: boolean;
+  email_confirmed?: boolean;
+  email?: string;
 };
 
 export type AuthContextType = {
@@ -19,7 +21,14 @@ export type AuthContextType = {
   isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: any | null }>;
-  signup: (email: string, password: string, fullName: string) => Promise<{ error: any | null, data: any | null }>;
+  signup: (email: string, password: string, fullName: string) => Promise<{ 
+    error: any | null, 
+    data: { 
+      user?: User | null,
+      session?: Session | null,
+      emailSent?: boolean
+    } | null 
+  }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any | null }>;

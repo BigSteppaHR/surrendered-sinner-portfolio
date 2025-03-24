@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -90,6 +91,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signup = async (email: string, password: string, fullName: string) => {
     try {
+      // First check if the user already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      
+      if (existingUser) {
+        toast({
+          title: "Account already exists",
+          description: "An account with this email already exists. Please login instead.",
+          variant: "destructive",
+        });
+        return { error: { message: "Account already exists" }, data: null };
+      }
+
+      // Create the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -97,15 +115,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           data: {
             full_name: fullName,
           },
-          emailRedirectTo: `${window.location.origin}/auth?verify=success`,
         },
       });
       
       if (error) throw error;
       
+      // Generate a verification token
+      const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      // Store the verification token in a separate table
+      const { error: tokenError } = await supabase
+        .from('verification_tokens')
+        .insert({ 
+          user_email: email, 
+          token: verificationToken, 
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
+        });
+      
+      if (tokenError) {
+        console.error('Error storing verification token:', tokenError);
+      }
+      
+      // Create the verification URL
+      const verificationUrl = `${window.location.origin}/auth?verify=${verificationToken}&email=${encodeURIComponent(email)}`;
+      
+      // Send the verification email using our custom function
       try {
-        const verificationUrl = `${window.location.origin}/auth?verify=success&email=${encodeURIComponent(email)}`;
-        
         await sendEmail({
           to: email,
           subject: "Welcome to Surrendered Sinner - Please Verify Your Email",
@@ -134,8 +169,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             </div>
           `,
         });
-      } catch (emailError: any) {
+        
+        console.log('Verification email sent successfully to:', email);
+      } catch (emailError) {
         console.error('Error sending verification email:', emailError);
+        // Continue even if sending email fails, we'll show a message to the user
       }
       
       toast({
@@ -143,8 +181,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Please check your email to verify your account",
       });
       
-      return { error: null, data };
-    } catch (error: any) {
+      return { error: null, data: { user: data.user, session: data.session, emailSent: true } };
+    } catch (error) {
       console.error('Signup error:', error.message);
       toast({
         title: "Signup failed",
