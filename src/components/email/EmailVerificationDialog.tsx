@@ -109,6 +109,9 @@ const EmailVerificationDialog = ({
     return null;
   }
 
+  // The verification dialog description
+  const dialogDescription = `Please verify your email address ${email ? `(${email})` : ""} to continue using your account`;
+
   return (
     <Dialog 
       open={isVisible} 
@@ -127,8 +130,11 @@ const EmailVerificationDialog = ({
           <X className="h-4 w-4 text-white" />
           <span className="sr-only">Close</span>
         </DialogClose>
-        <div id="email-verification-description" className="sr-only">
-          Please verify your email address to continue using the application
+        <div 
+          id="email-verification-description" 
+          className="sr-only"
+        >
+          {dialogDescription}
         </div>
         <EmailVerificationCard 
           email={email}

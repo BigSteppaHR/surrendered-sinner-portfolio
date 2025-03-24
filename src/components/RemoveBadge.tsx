@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 
 const RemoveBadge: React.FC = () => {
@@ -7,6 +6,7 @@ const RemoveBadge: React.FC = () => {
   const timeoutIdsRef = useRef<NodeJS.Timeout[]>([]);
   const lastOperationTimeRef = useRef<number>(0);
   const processingElementsRef = useRef<Set<Element>>(new Set());
+  const pendingRemovalsRef = useRef<Map<Element, number>>(new Map());
 
   useEffect(() => {
     // Set mounted flag
@@ -23,20 +23,46 @@ const RemoveBadge: React.FC = () => {
       }
     };
 
+    // Function to safely attempt to remove an element with retry mechanism
+    const safelyRemoveElement = (element: Element, parentNode: Node) => {
+      try {
+        // Only attempt removal if element is attached to this parent
+        if (parentNode.contains(element)) {
+          parentNode.removeChild(element);
+          return true;
+        } else {
+          // Element is not a child of this parent
+          console.debug('Element is not a child of the parent node');
+          return false;
+        }
+      } catch (err) {
+        console.debug('Error in removeChild operation:', err);
+        return false;
+      }
+    };
+
     // Function to safely remove elements that match selectors
     const safelyRemoveElements = (selectors: string[]) => {
       if (!isMountedRef.current) return;
       
       // Rate limit the DOM operations to prevent rendering issues
       const now = Date.now();
-      if (now - lastOperationTimeRef.current < 200) {
-        return; // Skip if called too frequently
+      if (now - lastOperationTimeRef.current < 300) {
+        return; // Skip if called too frequently - increased throttle time
       }
       lastOperationTimeRef.current = now;
+
+      // Clean up any elements that have been in pending state too long
+      pendingRemovalsRef.current.forEach((timestamp, element) => {
+        if (now - timestamp > 5000) { // After 5 seconds, abandon the removal attempt
+          pendingRemovalsRef.current.delete(element);
+          processingElementsRef.current.delete(element);
+        }
+      });
       
       // Use requestIdleCallback if available for non-critical operations
       const scheduleIdleTask = window.requestIdleCallback || 
-                              ((cb) => setTimeout(cb, 200));
+                              ((cb) => setTimeout(cb, 300)); // Increased timeout
       
       scheduleIdleTask(() => {
         if (!isMountedRef.current) return;
@@ -63,16 +89,22 @@ const RemoveBadge: React.FC = () => {
                     processingElementsRef.current.delete(el);
                   } else if (isElementInDOM(el)) {
                     // Only attempt to remove if element is still in the DOM
-                    // AND we can verify its parent exists
                     if (el.parentNode) {
-                      try {
-                        el.parentNode.removeChild(el);
-                      } catch (removeErr) {
-                        // Silently catch removeChild errors
-                        console.debug('Error removing child:', removeErr);
+                      // Record this removal attempt
+                      pendingRemovalsRef.current.set(el, Date.now());
+                      
+                      // Attempt to remove with safety checks
+                      const removed = safelyRemoveElement(el, el.parentNode);
+                      
+                      if (removed) {
+                        pendingRemovalsRef.current.delete(el);
+                        processingElementsRef.current.delete(el);
                       }
+                      // If not removed, we keep it in the pending map for later cleanup
+                    } else {
+                      // No parent node found
+                      processingElementsRef.current.delete(el);
                     }
-                    processingElementsRef.current.delete(el);
                   } else {
                     // Element not in DOM anymore, just clean up
                     processingElementsRef.current.delete(el);
@@ -80,6 +112,7 @@ const RemoveBadge: React.FC = () => {
                 } catch (err) {
                   // Clean up processing state in case of error
                   processingElementsRef.current.delete(el);
+                  pendingRemovalsRef.current.delete(el);
                   console.debug('Error processing element:', err);
                 }
               });
@@ -121,7 +154,7 @@ const RemoveBadge: React.FC = () => {
       if (isMountedRef.current) {
         safelyRemoveElements(selectors);
       }
-    }, 1000);
+    }, 1500); // Increased initial delay
     
     timeoutIdsRef.current.push(initialRemovalTimeout);
 
@@ -130,7 +163,7 @@ const RemoveBadge: React.FC = () => {
       if (isMountedRef.current) {
         safelyRemoveElements(selectors);
       }
-    }, 10000); // Less frequent checks (10 seconds)
+    }, 15000); // Less frequent checks (15 seconds)
     
     timeoutIdsRef.current.push(periodicRemovalTimeout);
 
@@ -147,7 +180,7 @@ const RemoveBadge: React.FC = () => {
         if (isMountedRef.current) {
           safelyRemoveElements(selectors);
         }
-      }, 500); // Longer debounce to prevent too many operations
+      }, 800); // Longer debounce to prevent too many operations
       
       if (debounceTimer) {
         timeoutIdsRef.current.push(debounceTimer);
@@ -157,7 +190,27 @@ const RemoveBadge: React.FC = () => {
     try {
       // Only observe if the document is ready
       if (document && document.body) {
-        observerRef.current = new MutationObserver(debouncedRemoval);
+        // First, disconnect any existing observer
+        if (observerRef.current) {
+          try {
+            observerRef.current.disconnect();
+          } catch (err) {
+            console.debug('Error disconnecting existing observer:', err);
+          }
+        }
+        
+        // Create a new observer
+        observerRef.current = new MutationObserver((mutations) => {
+          // Only process if we detect relevant additions
+          const shouldProcess = mutations.some(mutation => 
+            mutation.type === 'childList' && 
+            mutation.addedNodes.length > 0
+          );
+          
+          if (shouldProcess) {
+            debouncedRemoval();
+          }
+        });
         
         // Start observing with a more focused approach
         observerRef.current.observe(document.body, { 
@@ -200,6 +253,9 @@ const RemoveBadge: React.FC = () => {
       
       // Clear processing set
       processingElementsRef.current.clear();
+      
+      // Clear pending removals
+      pendingRemovalsRef.current.clear();
     };
   }, []);
 
