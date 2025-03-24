@@ -61,7 +61,7 @@ const RemoveBadge = () => {
     // Set up a more aggressive MutationObserver to watch for elements being added
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.addedNodes.length || mutation.attributeChanged) {
+        if (mutation.addedNodes.length || mutation.type === 'attributes') {
           removeAllBranding();
         }
       }
