@@ -45,26 +45,61 @@ export const useEmailVerification = (email: string) => {
       
       const emailResult = await sendEmail({
         to: email,
-        subject: "Surrendered Sinner - Email Verification Reminder",
+        subject: "Surrendered Sinner - Verify Your Email",
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h1 style="color: #333; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Verify Your Email</h1>
-            <p>Hi there,</p>
-            <p>You requested a new verification link for your Surrendered Sinner account. Please verify your email address by clicking the link below:</p>
-            <p style="text-align: center;">
-              <a href="${verificationUrl}" 
-                 style="background-color: #e32400; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
-                Verify My Email
-              </a>
-            </p>
-            <p>If the button above doesn't work, you can copy and paste the following URL into your browser:</p>
-            <p style="word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">
-              ${verificationUrl}
-            </p>
-            <p>This link will expire in 24 hours.</p>
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #777;">
-              <p>Surrendered Sinner Elite Fitness Coaching</p>
-              <p>&copy; ${new Date().getFullYear()} Surrendered Sinner. All rights reserved.</p>
+          <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #000000;">
+            <!-- Header with Logo -->
+            <div style="background-color: #111111; padding: 20px; text-align: center; border-bottom: 3px solid #FF2D2D;">
+              <h1 style="color: #FFFFFF; margin: 0; font-size: 28px; font-weight: bold;">
+                SURRENDERED<span style="color: #FF2D2D;">SINNER</span>
+              </h1>
+              <p style="color: #AAAAAA; margin: 5px 0 0; font-size: 16px;">Elite Fitness Coaching</p>
+            </div>
+            
+            <!-- Main Content -->
+            <div style="background-color: #111111; color: #FFFFFF; padding: 30px 20px;">
+              <h2 style="color: #FFFFFF; margin-top: 0; font-size: 22px; border-bottom: 1px solid #333333; padding-bottom: 10px;">
+                Verify Your Email
+              </h2>
+              
+              <p style="margin: 20px 0; font-size: 16px; line-height: 1.5;">
+                You requested a new verification link for your Surrendered Sinner account.
+              </p>
+              
+              <p style="margin: 20px 0; font-size: 16px; line-height: 1.5;">
+                Please verify your email address by clicking the button below:
+              </p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${verificationUrl}" 
+                  style="background-color: #FF2D2D; color: white; padding: 14px 28px; text-decoration: none; 
+                  border-radius: 4px; display: inline-block; font-size: 16px; font-weight: bold; text-transform: uppercase;
+                  border: none;">
+                  VERIFY EMAIL
+                </a>
+              </div>
+              
+              <p style="margin: 20px 0; font-size: 16px; line-height: 1.5;">
+                If the button above doesn't work, you can copy and paste the following URL into your browser:
+              </p>
+              
+              <div style="background-color: #222222; padding: 15px; border-radius: 4px; word-break: break-all; margin: 20px 0; font-size: 14px;">
+                ${verificationUrl}
+              </div>
+              
+              <p style="margin: 20px 0; font-size: 16px; line-height: 1.5;">
+                This link will expire in 24 hours.
+              </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #000000; padding: 20px; text-align: center; border-top: 1px solid #333333;">
+              <p style="color: #777777; margin: 0 0 10px; font-size: 14px;">
+                Surrendered Sinner Elite Fitness Coaching
+              </p>
+              <p style="color: #777777; margin: 0; font-size: 12px;">
+                &copy; ${new Date().getFullYear()} Surrendered Sinner. All rights reserved.
+              </p>
             </div>
           </div>
         `,
