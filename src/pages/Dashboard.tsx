@@ -10,7 +10,7 @@ const Dashboard = () => {
   useEffect(() => {
     // If not authenticated, redirect to login
     if (!isLoading && !isAuthenticated) {
-      navigate("/auth");
+      navigate("/login");
     }
     
     // If authenticated but email not confirmed, redirect to confirmation page

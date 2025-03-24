@@ -15,7 +15,10 @@ import Dashboard from "./pages/Dashboard";
 import Schedule from "./pages/Schedule";
 import Payment from "./pages/Payment";
 import PaymentPortal from "./pages/PaymentPortal";
-import Auth from "./pages/Auth";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ConfirmEmail from "./pages/ConfirmEmail";
+import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import { useAuth } from "./hooks/useAuth";
 
@@ -32,9 +35,8 @@ const AuthNavigation = () => {
     if (location.state?.authRedirect) {
       const { redirectTo, redirectState } = location.state.authRedirect;
       
-      // Remove the special handling for /confirm-email - let Auth page handle it
-      if (redirectTo && redirectTo !== "/confirm-email") {
-        // For other redirects, proceed normally
+      // For redirects, proceed normally
+      if (redirectTo) {
         navigate(redirectTo, { state: redirectState, replace: true });
       }
     }
@@ -56,14 +58,17 @@ const App = () => {
                 <Sonner />
                 <Routes>
                   <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/confirm-email" element={<ConfirmEmail />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/schedule" element={<Schedule />} />
                   <Route path="/payment" element={<Payment />} />
                   <Route path="/payment-portal" element={<PaymentPortal />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
-                  {/* ConfirmEmail route passes state to auth page */}
-                  <Route path="/confirm-email" element={<Navigate to="/auth" replace />} />
+                  {/* Redirect /auth to /login for backward compatibility */}
+                  <Route path="/auth" element={<Navigate to="/login" replace />} />
                   <Route path="/admin/*" element={<AdminDashboard />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
