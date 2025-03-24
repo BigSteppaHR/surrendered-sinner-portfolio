@@ -61,9 +61,17 @@ const RemoveBadge: React.FC = () => {
                       el.setAttribute('content', content.replace(/lovable\.dev/g, 'surrenderedsinner.fitness'));
                     }
                     processingElementsRef.current.delete(el);
-                  } else if (isElementInDOM(el) && el.parentNode) {
-                    // Only remove if we can verify parent exists AND element is still in the DOM
-                    el.parentNode.removeChild(el);
+                  } else if (isElementInDOM(el)) {
+                    // Only attempt to remove if element is still in the DOM
+                    // AND we can verify its parent exists
+                    if (el.parentNode) {
+                      try {
+                        el.parentNode.removeChild(el);
+                      } catch (removeErr) {
+                        // Silently catch removeChild errors
+                        console.debug('Error removing child:', removeErr);
+                      }
+                    }
                     processingElementsRef.current.delete(el);
                   } else {
                     // Element not in DOM anymore, just clean up
@@ -72,7 +80,7 @@ const RemoveBadge: React.FC = () => {
                 } catch (err) {
                   // Clean up processing state in case of error
                   processingElementsRef.current.delete(el);
-                  console.debug('Error removing element:', err);
+                  console.debug('Error processing element:', err);
                 }
               });
             }
