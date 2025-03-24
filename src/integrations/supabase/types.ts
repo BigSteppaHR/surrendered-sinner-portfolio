@@ -320,7 +320,7 @@ export type Database = {
           avatar_url: string | null
           debug_mode: boolean | null
           email: string | null
-          email_confirmed: boolean | null
+          email_confirmed: boolean
           email_verified_at: string | null
           full_name: string | null
           id: string
@@ -337,7 +337,7 @@ export type Database = {
           avatar_url?: string | null
           debug_mode?: boolean | null
           email?: string | null
-          email_confirmed?: boolean | null
+          email_confirmed?: boolean
           email_verified_at?: string | null
           full_name?: string | null
           id: string
@@ -354,7 +354,7 @@ export type Database = {
           avatar_url?: string | null
           debug_mode?: boolean | null
           email?: string | null
-          email_confirmed?: boolean | null
+          email_confirmed?: boolean
           email_verified_at?: string | null
           full_name?: string | null
           id?: string
@@ -976,7 +976,7 @@ export type Database = {
           avatar_url: string | null
           debug_mode: boolean | null
           email: string | null
-          email_confirmed: boolean | null
+          email_confirmed: boolean
           email_verified_at: string | null
           full_name: string | null
           id: string

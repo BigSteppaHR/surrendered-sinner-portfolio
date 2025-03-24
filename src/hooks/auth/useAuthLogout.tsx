@@ -55,6 +55,7 @@ export const useAuthLogout = () => {
       toast({
         title: "Logout successful",
         description: "You have been logged out successfully",
+        variant: "default",
       });
       
       // Force reload the page to clear any in-memory state
