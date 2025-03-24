@@ -10,7 +10,7 @@ import { useEmail } from "@/hooks/useEmail";
 import { supabase } from "@/integrations/supabase/client";
 
 const ConfirmEmail = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -22,29 +22,50 @@ const ConfirmEmail = () => {
   const email = location.state?.email || user?.email || "";
 
   useEffect(() => {
-    // If user has confirmed email, redirect to dashboard
-    if (profile?.email_confirmed) {
-      navigate("/dashboard");
-      return;
-    }
+    // Check for user authentication and redirect if needed
+    const checkAuthState = async () => {
+      setIsLoading(true);
+      
+      try {
+        // If no email available and no user is logged in, redirect to auth
+        if (!email && !user) {
+          navigate("/auth");
+          return;
+        }
+        
+        // If user exists, refresh profile to get latest email_confirmed status
+        if (user) {
+          await refreshProfile();
+        }
+        
+        // If user has confirmed email, redirect to dashboard
+        if (profile?.email_confirmed) {
+          navigate("/dashboard");
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking auth state:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // If no email in state or user is not logged in, redirect to auth
-    if (!email && !user) {
-      navigate("/auth");
-      return;
-    }
-
-    setIsLoading(false);
-  }, [profile, user, email, navigate]);
+    checkAuthState();
+  }, [profile, user, email, navigate, refreshProfile]);
 
   useEffect(() => {
     // Countdown timer for resend cooldown
+    let timer: number | undefined;
+    
     if (resendCooldown > 0) {
-      const timer = setTimeout(() => {
+      timer = window.setTimeout(() => {
         setResendCooldown(resendCooldown - 1);
       }, 1000);
-      return () => clearTimeout(timer);
     }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [resendCooldown]);
 
   const handleResendEmail = async () => {
