@@ -61,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Set up automatic session refresh - use a more conservative interval
         if (sessionRefreshInterval.current) {
           clearInterval(sessionRefreshInterval.current);
+          sessionRefreshInterval.current = null;
         }
         
         // Only set up refreshing if there's an active session

@@ -11,6 +11,7 @@ export const useAuthState = () => {
   const [isLoading, setIsLoading] = useState(true);
   const initializeAttempted = useRef(false);
   const profileFetchAttempted = useRef(false);
+  const authSubscription = useRef<{ unsubscribe: () => void } | null>(null);
 
   // Handle profile updates - improved with better error handling
   const refreshProfileData = async (currentUser: User | null) => {
@@ -96,15 +97,18 @@ export const useAuthState = () => {
     if (initializeAttempted.current) return;
     initializeAttempted.current = true;
     
-    let authStateSubscription: { data?: { subscription: any } } = {};
-    
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth state...');
         setIsLoading(true);
         
+        // Clean up any previous subscription
+        if (authSubscription.current) {
+          authSubscription.current.unsubscribe();
+        }
+        
         // Set up the auth state listener first
-        authStateSubscription = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        const { data } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
           console.log('Auth state changed:', event, currentSession?.user?.email);
           
           // Process synchronously to avoid race conditions
@@ -127,6 +131,8 @@ export const useAuthState = () => {
           // Complete loading
           setIsLoading(false);
         });
+        
+        authSubscription.current = data.subscription;
 
         // Then get the current session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -159,8 +165,8 @@ export const useAuthState = () => {
     
     // Clean up subscription on unmount
     return () => {
-      if (authStateSubscription.data?.subscription) {
-        authStateSubscription.data.subscription.unsubscribe();
+      if (authSubscription.current) {
+        authSubscription.current.unsubscribe();
       }
     };
   }, []);
