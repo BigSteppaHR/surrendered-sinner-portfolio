@@ -3,7 +3,8 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 import EmailVerificationCard from "@/components/email/EmailVerificationCard";
 
 interface EmailVerificationDialogProps {
@@ -44,6 +45,10 @@ const EmailVerificationDialog = ({ isOpen, onClose, initialEmail = "" }: EmailVe
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 bg-transparent border-none shadow-none max-w-md mx-auto">
         <DialogTitle className="sr-only">Email Verification</DialogTitle>
+        <DialogClose className="absolute right-2 top-2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10">
+          <X className="h-4 w-4 text-white" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
         <EmailVerificationCard 
           email={email}
           isLoading={false}

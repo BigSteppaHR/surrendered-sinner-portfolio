@@ -44,13 +44,11 @@ export default function Auth() {
   const location = useLocation();
 
   useEffect(() => {
-    // Check for email verification dialog triggers
     const shouldShowVerification = location.state?.email || 
                                   location.state?.redirectState?.email ||
                                   (isAuthenticated && profile && !profile.email_confirmed);
     
     if (shouldShowVerification) {
-      // Get the email from wherever it's available
       const email = location.state?.email || 
                    location.state?.redirectState?.email || 
                    (profile?.email || "");
@@ -60,7 +58,6 @@ export default function Auth() {
         setShowVerificationDialog(true);
       }
     } else if (isAuthenticated && profile?.email_confirmed) {
-      // If user is authenticated and email is confirmed, go to dashboard
       navigate("/dashboard");
     }
   }, [isAuthenticated, profile, navigate, location]);
@@ -117,7 +114,6 @@ export default function Auth() {
 
   const handleCloseVerification = () => {
     setShowVerificationDialog(false);
-    // Clear any state that might cause the dialog to reappear
     if (location.state) {
       navigate(location.pathname, { replace: true });
     }
