@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -24,11 +24,26 @@ export default function Login() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const mountedRef = useRef(true);
 
-  // Redirect if already authenticated - use conditional checking
+  // Setup cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Redirect if already authenticated - use conditional checking with a ref to prevent state updates after unmount
   useEffect(() => {
     if (isInitialized && isAuthenticated && profile?.email_confirmed) {
-      navigate("/dashboard");
+      // Use setTimeout to give React time to complete current render cycle
+      const redirectTimer = setTimeout(() => {
+        if (mountedRef.current) {
+          navigate("/dashboard");
+        }
+      }, 0);
+      
+      return () => clearTimeout(redirectTimer);
     }
   }, [isAuthenticated, profile, navigate, isInitialized]);
 
@@ -48,11 +63,16 @@ export default function Login() {
       
       if (result.error) {
         setLoginError(result.error.message || "Login failed. Please try again.");
-      } else if (result.data?.redirectTo) {
-        // No immediate redirection - will be handled by the useEffect
-      }
+      } 
+      // No else block with navigation - let the useEffect handle redirects
+    } catch (error) {
+      console.error("Login error:", error);
+      setLoginError("An unexpected error occurred. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      // Only update state if component is still mounted
+      if (mountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   };
 

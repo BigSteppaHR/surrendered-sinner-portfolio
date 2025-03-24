@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import StripeProvider from "./components/StripeProvider";
 import { AuthProvider } from "./components/AuthProvider";
 import Index from "./pages/Index";
@@ -35,12 +35,19 @@ const AuthNavigation = () => {
   const { isInitialized } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const processingRef = useRef(false);
   
   useEffect(() => {
+    // Avoid duplicate processing
+    if (processingRef.current) return;
+    
     // Safety measure - avoid manipulating history during render
     if (location.state && location.state._suppressRouteNavigation) {
       return;
     }
+    
+    // Mark as processing
+    processingRef.current = true;
     
     // Clear any state that might cause UI issues when navigating
     const cleanHistory = () => {
@@ -49,12 +56,20 @@ const AuthNavigation = () => {
         document.title, 
         location.pathname
       );
+      
+      // Reset processing flag after a delay
+      setTimeout(() => {
+        processingRef.current = false;
+      }, 100);
     };
     
     // Small delay to let React finish its work
     const timer = setTimeout(cleanHistory, 50);
-    return () => clearTimeout(timer);
-    
+    return () => {
+      clearTimeout(timer);
+      // Ensure we reset the processing flag on cleanup
+      processingRef.current = false;
+    };
   }, [location.pathname, location.state]);
   
   // Only return a component when auth is initialized
