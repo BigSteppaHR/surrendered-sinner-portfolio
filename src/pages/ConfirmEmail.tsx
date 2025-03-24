@@ -106,10 +106,11 @@ const ConfirmEmail = () => {
         throw new Error("Failed to create verification token");
       }
       
+      // IMPORTANT: Fix the URL - it should be /verify-email, not /api/verify-email
       const BASE_URL = window.location.origin;
-      const verificationApiUrl = `${BASE_URL}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+      const verificationUrl = `${BASE_URL}/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
       
-      console.log("Generated verification URL:", verificationApiUrl);
+      console.log("Generated verification URL:", verificationUrl);
       
       const emailResult = await sendEmail({
         to: email,
@@ -120,14 +121,14 @@ const ConfirmEmail = () => {
             <p>Hi there,</p>
             <p>You requested a new verification link for your Surrendered Sinner account. Please verify your email address by clicking the link below:</p>
             <p style="text-align: center;">
-              <a href="${verificationApiUrl}" 
+              <a href="${verificationUrl}" 
                  style="background-color: #e32400; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
                 Verify My Email
               </a>
             </p>
             <p>If the button above doesn't work, you can copy and paste the following URL into your browser:</p>
             <p style="word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">
-              ${verificationApiUrl}
+              ${verificationUrl}
             </p>
             <p>This link will expire in 24 hours.</p>
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #777;">

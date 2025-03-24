@@ -58,7 +58,7 @@ const App = () => {
                   <Route path="/schedule" element={<Schedule />} />
                   <Route path="/payment" element={<Payment />} />
                   <Route path="/payment-portal" element={<PaymentPortal />} />
-                  <Route path="/api/verify-email" element={<VerifyEmail />} />
+                  <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/confirm-email" element={<ConfirmEmail />} />
                   <Route path="/admin/*" element={<AdminDashboard />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

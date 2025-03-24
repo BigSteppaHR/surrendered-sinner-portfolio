@@ -6,11 +6,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { refreshProfile } = useAuth();
+  const { toast } = useToast();
   const [verificationStatus, setVerificationStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -80,6 +82,12 @@ const VerifyEmail = () => {
 
         console.log("Email verification completed successfully");
         setVerificationStatus('success');
+        
+        toast({
+          title: "Email verified",
+          description: "Your email has been successfully verified. You can now access all features of your account.",
+        });
+        
       } catch (error) {
         console.error("Email verification error:", error);
         setVerificationStatus('error');
@@ -88,7 +96,7 @@ const VerifyEmail = () => {
     };
 
     verifyEmail();
-  }, [searchParams, navigate, refreshProfile]);
+  }, [searchParams, navigate, refreshProfile, toast]);
 
   const handleRedirect = () => {
     if (verificationStatus === 'success') {
