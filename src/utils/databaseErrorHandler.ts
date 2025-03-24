@@ -1,4 +1,3 @@
-
 import { PostgrestError } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
 
@@ -130,4 +129,30 @@ export const withErrorHandling = async <T>(
       name: 'RetryError' // Add the missing name property
     } 
   };
+};
+
+/**
+ * Helper to determine if a database error is due to a not found condition
+ * @param error The PostgrestError object
+ * @returns boolean indicating if the error is a not found error
+ */
+export const isNotFoundError = (error: PostgrestError | null): boolean => {
+  if (!error) return false;
+  return error.code === 'PGRST116' || // Row not found
+         (error.message && error.message.includes('not found'));
+};
+
+/**
+ * Helper to determine if a database error is due to a permission issue
+ * @param error The PostgrestError object
+ * @returns boolean indicating if the error is a permission error
+ */
+export const isPermissionError = (error: PostgrestError | null): boolean => {
+  if (!error) return false;
+  return error.code === '42501' || // Insufficient privilege
+         error.code === 'PGRST204' || // Permission denied
+         (error.message && (
+           error.message.includes('permission denied') ||
+           error.message.includes('violates row-level security')
+         ));
 };

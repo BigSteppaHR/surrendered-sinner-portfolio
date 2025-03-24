@@ -16,6 +16,7 @@ export type Database = {
           email_confirmed: boolean | null;
           email: string | null;
           updated_at: string | null;
+          debug_mode: boolean | null;
         };
         Insert: {
           id: string;
@@ -26,6 +27,7 @@ export type Database = {
           email_confirmed?: boolean | null;
           email?: string | null;
           updated_at?: string | null;
+          debug_mode?: boolean | null;
         };
         Update: {
           id?: string;
@@ -36,6 +38,7 @@ export type Database = {
           email_confirmed?: boolean | null;
           email?: string | null;
           updated_at?: string | null;
+          debug_mode?: boolean | null;
         };
       };
       verification_tokens: {
@@ -172,6 +175,7 @@ export type Database = {
           quote: string;
           author: string | null;
           is_active: boolean;
+          is_featured: boolean;
           created_at: string;
         };
         Insert: {
@@ -179,6 +183,7 @@ export type Database = {
           quote: string;
           author?: string | null;
           is_active?: boolean;
+          is_featured?: boolean;
           created_at?: string;
         };
         Update: {
@@ -186,7 +191,168 @@ export type Database = {
           quote?: string;
           author?: string | null;
           is_active?: boolean;
+          is_featured?: boolean;
           created_at?: string;
+        };
+      };
+      system_settings: {
+        Row: {
+          id: string;
+          setting_key: string;
+          setting_value: any;
+          description: string | null;
+          is_public: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          setting_key: string;
+          setting_value: any;
+          description?: string | null;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          setting_key?: string;
+          setting_value?: any;
+          description?: string | null;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      user_notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          message: string;
+          is_read: boolean;
+          notification_type: string;
+          created_at: string;
+          expires_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          message: string;
+          is_read?: boolean;
+          notification_type?: string;
+          created_at?: string;
+          expires_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          message?: string;
+          is_read?: boolean;
+          notification_type?: string;
+          created_at?: string;
+          expires_at?: string | null;
+        };
+      };
+      support_tickets: {
+        Row: {
+          id: string;
+          user_id: string;
+          subject: string;
+          message: string;
+          status: 'open' | 'in_progress' | 'closed';
+          priority: 'low' | 'medium' | 'high';
+          type: string;
+          created_at: string;
+          updated_at: string;
+          response_time: string | null;
+          last_updated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          subject: string;
+          message: string;
+          status?: 'open' | 'in_progress' | 'closed';
+          priority?: 'low' | 'medium' | 'high';
+          type: string;
+          created_at?: string;
+          updated_at?: string;
+          response_time?: string | null;
+          last_updated_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          subject?: string;
+          message?: string;
+          status?: 'open' | 'in_progress' | 'closed';
+          priority?: 'low' | 'medium' | 'high';
+          type?: string;
+          created_at?: string;
+          updated_at?: string;
+          response_time?: string | null;
+          last_updated_by?: string | null;
+        };
+      };
+      support_ticket_responses: {
+        Row: {
+          id: string;
+          ticket_id: string;
+          response_text: string;
+          responded_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          ticket_id: string;
+          response_text: string;
+          responded_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          ticket_id?: string;
+          response_text?: string;
+          responded_by?: string;
+          created_at?: string;
+        };
+      };
+      admin_statistics: {
+        Row: {
+          id: string;
+          stat_name: string;
+          stat_value: number;
+          stat_change: number;
+          is_positive: boolean;
+          icon: string | null;
+          time_period: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          stat_name: string;
+          stat_value: number;
+          stat_change?: number;
+          is_positive?: boolean;
+          icon?: string | null;
+          time_period?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          stat_name?: string;
+          stat_value?: number;
+          stat_change?: number;
+          is_positive?: boolean;
+          icon?: string | null;
+          time_period?: string;
+          created_at?: string;
+          updated_at?: string;
         };
       };
     };
