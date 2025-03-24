@@ -33,7 +33,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             // Trigger a profile refresh when authentication state changes
             if (session?.user) {
-              await authState.refreshProfile();
+              try {
+                await authState.refreshProfile();
+              } catch (error) {
+                console.error("Error refreshing profile:", error);
+              }
             }
           }
         );
@@ -41,6 +45,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Get session to ensure we have the most up-to-date state
         const { data } = await supabase.auth.getSession();
         console.log('Current session:', data.session ? 'Active' : 'None');
+        
+        // If session exists, refresh profile data
+        if (data.session?.user) {
+          try {
+            await authState.refreshProfile();
+          } catch (error) {
+            console.error("Error refreshing initial profile:", error);
+          }
+        }
         
         // Always mark as initialized even if there's no session
         setIsInitialized(true);

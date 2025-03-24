@@ -1,7 +1,6 @@
 
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import DashboardNav from "@/components/dashboard/DashboardNav";
 import { useEffect, useState } from "react";
 
 // We no longer need to include auth-related paths here as they're now directly at root level
@@ -53,8 +52,8 @@ const DashboardLayout = () => {
   
   // For authenticated dashboard pages, show the dashboard layout with navigation
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#000000] text-white">
-      <DashboardNav />
+    <div className="min-h-screen bg-[#000000] text-white">
+      {/* We removed the DashboardNav component from here since it's already included in child pages */}
       <div className="flex-1 overflow-auto">
         <Outlet />
       </div>

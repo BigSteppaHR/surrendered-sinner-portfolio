@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -123,8 +122,8 @@ const Dashboard = () => {
   // Show loading state while checking auth
   if (isLoading || !isInitialized || !isPageLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C]">
-        <div className="animate-spin h-8 w-8 border-4 border-[#9b87f5] border-t-transparent rounded-full"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
+        <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
       </div>
     );
   }
