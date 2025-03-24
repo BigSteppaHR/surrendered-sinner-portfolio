@@ -28,6 +28,7 @@ export type AuthContextType = {
       user?: User | null,
       session?: Session | null,
       emailSent?: boolean,
+      showVerification?: boolean,
       redirectTo?: string,
       redirectState?: any
     } | null 
