@@ -76,7 +76,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        // Check for specific email provider disabled error
+        if (error.message.includes("Email logins are disabled")) {
+          toast({
+            title: "Email authentication disabled",
+            description: "Email authentication is currently disabled in this application. Please contact the administrator.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Login failed",
+            description: error.message || "There was a problem logging in",
+            variant: "destructive",
+          });
+        }
+        return { error };
+      }
       return { error: null };
     } catch (error: any) {
       console.error('Login error:', error.message);
@@ -118,7 +134,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       });
       
-      if (error) throw error;
+      if (error) {
+        // Check for specific email provider disabled error
+        if (error.message.includes("Email signups are disabled")) {
+          toast({
+            title: "Email authentication disabled",
+            description: "Email registration is currently disabled in this application. Please contact the administrator.",
+            variant: "destructive",
+          });
+          return { error, data: null };
+        }
+        
+        throw error;
+      }
       
       // Generate a verification token
       const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Navigate, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogIn, UserPlus, Lock, Mail, User, ArrowLeft, KeyRound, CheckCircle } from "lucide-react";
+import { LogIn, UserPlus, Lock, Mail, User, ArrowLeft, KeyRound, CheckCircle, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +28,7 @@ const Auth = () => {
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [verificationError, setVerificationError] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(false);
+  const [authDisabled, setAuthDisabled] = useState(false);
   
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -55,7 +55,6 @@ const Auth = () => {
             throw new Error("Email parameter is missing");
           }
           
-          // Get the token from the verification_tokens table
           const { data: tokenData, error: tokenError } = await supabase
             .from('verification_tokens')
             .select('*')
@@ -67,12 +66,10 @@ const Auth = () => {
             throw new Error("Invalid or expired verification token");
           }
           
-          // Check if token has expired
           if (new Date(tokenData.expires_at) < new Date()) {
             throw new Error("Verification token has expired");
           }
           
-          // Update the user's profile to mark email as confirmed
           const { error: updateError } = await supabase
             .from('profiles')
             .update({ email_confirmed: true, email: email })
@@ -82,7 +79,6 @@ const Auth = () => {
             throw new Error("Failed to verify email");
           }
           
-          // Delete the used token
           await supabase
             .from('verification_tokens')
             .delete()
@@ -123,6 +119,29 @@ const Auth = () => {
       setActiveTab("updatePassword");
     }
   }, [searchParams, toast]);
+  
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: "test@example.com",
+        });
+        
+        if (error && error.message.includes("Email logins are disabled")) {
+          setAuthDisabled(true);
+          toast({
+            title: "Authentication Disabled",
+            description: "Email authentication is currently disabled. Please contact the administrator.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+      }
+    };
+    
+    checkAuthStatus();
+  }, [toast]);
   
   if (isAuthenticated && !isLoading) {
     return <Navigate to={from} replace />;
@@ -219,7 +238,24 @@ const Auth = () => {
           <p className="text-gray-400 mt-2">Elite fitness coaching</p>
         </div>
         
-        {verificationLoading ? (
+        {authDisabled ? (
+          <Card className="bg-gray-900 text-white border-gray-800">
+            <CardContent className="pt-6 flex flex-col items-center justify-center space-y-4">
+              <AlertTriangle className="h-16 w-16 text-yellow-500" />
+              <p className="text-xl font-bold">Authentication Disabled</p>
+              <Alert className="bg-gray-800 border-yellow-600">
+                <AlertTitle>Email authentication is disabled</AlertTitle>
+                <AlertDescription>
+                  The administrator needs to enable email authentication in Supabase for login and registration to work.
+                </AlertDescription>
+              </Alert>
+              <p>Please contact the administrator to enable authentication.</p>
+              <Button onClick={() => navigate("/")} variant="outline" className="mt-4">
+                Return to Home
+              </Button>
+            </CardContent>
+          </Card>
+        ) : verificationLoading ? (
           <Card className="bg-gray-900 text-white border-gray-800">
             <CardContent className="pt-6 flex flex-col items-center justify-center space-y-4">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
