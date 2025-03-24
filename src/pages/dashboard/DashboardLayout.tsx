@@ -4,13 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import DashboardNav from "@/components/dashboard/DashboardNav";
 import { useEffect, useState } from "react";
 
-// Pages that don't require authentication or should not show the dashboard navigation
-const publicPages = [
-  "/dashboard/login",
-  "/dashboard/signup",
-  "/dashboard/reset-password",
-  "/dashboard/verify-email"
-];
+// We no longer need to include auth-related paths here as they're now directly at root level
+const publicPages = [];
 
 const DashboardLayout = () => {
   const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
@@ -35,27 +30,19 @@ const DashboardLayout = () => {
     );
   }
   
-  // Handle authentication redirects for protected pages
-  if (!isPublicPage) {
-    // If authenticated admin, redirect to admin dashboard
-    if (isAuthenticated && profile?.is_admin) {
-      return <Navigate to="/admin" replace />;
-    }
-    
-    // If not authenticated, redirect to login
-    if (!isAuthenticated) {
-      return <Navigate to="/dashboard/login" replace />;
-    }
-    
-    // If authenticated but email not confirmed, redirect to confirmation page
-    if (isAuthenticated && profile && !profile.email_confirmed) {
-      return <Navigate to="/dashboard/confirm-email" state={{ email: profile.email }} replace />;
-    }
+  // For dashboard routes, we require authentication
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
   }
   
-  // For public pages (login, signup, etc) don't show the dashboard navigation
-  if (isPublicPage) {
-    return <Outlet />;
+  // If authenticated admin, redirect to admin dashboard
+  if (isAuthenticated && profile?.is_admin) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  // If authenticated but email not confirmed, redirect to confirmation page
+  if (isAuthenticated && profile && !profile.email_confirmed) {
+    return <Navigate to="/confirm-email" state={{ email: profile.email }} replace />;
   }
   
   // For authenticated dashboard pages, show the dashboard layout with navigation

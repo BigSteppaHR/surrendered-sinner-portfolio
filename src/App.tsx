@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -146,10 +145,30 @@ const AppRoutes = () => {
       <AuthNavigation />
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/login" element={<Navigate to="/dashboard/login" replace />} />
-        <Route path="/signup" element={<Navigate to="/dashboard/signup" replace />} />
-        <Route path="/reset-password" element={<Navigate to="/dashboard/reset-password" replace />} />
-        <Route path="/verify-email" element={<Navigate to="/dashboard/verify-email" replace />} />
+        
+        {/* Direct login routes */}
+        <Route path="/login" element={
+          <Suspense fallback={<PageLoader />}>
+            <Login />
+          </Suspense>
+        } />
+        <Route path="/signup" element={
+          <Suspense fallback={<PageLoader />}>
+            <Signup />
+          </Suspense>
+        } />
+        <Route path="/reset-password" element={
+          <Suspense fallback={<PageLoader />}>
+            <ResetPassword />
+          </Suspense>
+        } />
+        <Route path="/verify-email" element={
+          <Suspense fallback={<PageLoader />}>
+            <VerifyEmail />
+          </Suspense>
+        } />
+        
+        {/* Remove old redirects that were sending to /dashboard/login */}
         
         {/* Dashboard routes - all nested under /dashboard */}
         <Route path="/dashboard" element={<DashboardLayout />}>
@@ -184,26 +203,11 @@ const AppRoutes = () => {
               <Account />
             </Suspense>
           } />
-          <Route path="login" element={
-            <Suspense fallback={<PageLoader />}>
-              <Login />
-            </Suspense>
-          } />
-          <Route path="signup" element={
-            <Suspense fallback={<PageLoader />}>
-              <Signup />
-            </Suspense>
-          } />
-          <Route path="reset-password" element={
-            <Suspense fallback={<PageLoader />}>
-              <ResetPassword />
-            </Suspense>
-          } />
-          <Route path="verify-email" element={
-            <Suspense fallback={<PageLoader />}>
-              <VerifyEmail />
-            </Suspense>
-          } />
+          {/* Keep auth related routes in dashboard for backward compatibility */}
+          <Route path="login" element={<Navigate to="/login" replace />} />
+          <Route path="signup" element={<Navigate to="/signup" replace />} />
+          <Route path="reset-password" element={<Navigate to="/reset-password" replace />} />
+          <Route path="verify-email" element={<Navigate to="/verify-email" replace />} />
           <Route path="payment-portal" element={
             <Suspense fallback={<PageLoader />}>
               <PaymentPortal />
@@ -220,10 +224,10 @@ const AppRoutes = () => {
         <Route path="/payment-portal" element={<Navigate to="/dashboard/payment-portal" replace />} />
         <Route path="/plans" element={<Navigate to="/dashboard/plans" replace />} />
         
-        {/* Redirect /confirm-email to /dashboard/login for backward compatibility */}
-        <Route path="/confirm-email" element={<Navigate to="/dashboard/login" replace />} />
-        {/* Redirect /auth to /dashboard/login for backward compatibility */}
-        <Route path="/auth" element={<Navigate to="/dashboard/login" replace />} />
+        {/* Redirect /confirm-email to /login for backward compatibility */}
+        <Route path="/confirm-email" element={<Navigate to="/login" replace />} />
+        {/* Redirect /auth to /login for backward compatibility */}
+        <Route path="/auth" element={<Navigate to="/login" replace />} />
         
         <Route path="/admin/*" element={<AdminDashboard />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
