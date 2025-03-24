@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -32,13 +32,23 @@ const signupSchema = z.object({
 });
 
 export default function Auth() {
-  const { login, signup, isAuthenticated } = useAuth();
+  const { login, signup, isAuthenticated, profile } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (profile && !profile.email_confirmed) {
+        navigate("/confirm-email", { state: { email: profile.email } });
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [isAuthenticated, profile, navigate]);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -93,7 +103,6 @@ export default function Auth() {
   };
 
   if (isAuthenticated) {
-    navigate("/dashboard");
     return null;
   }
 

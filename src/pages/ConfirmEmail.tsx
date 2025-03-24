@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Mail, AlertTriangle, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEmail } from "@/hooks/useEmail";
+import { supabase } from "@/integrations/supabase/client";
 
 const ConfirmEmail = () => {
   const { user, profile } = useAuth();
@@ -48,9 +49,13 @@ const ConfirmEmail = () => {
       // Generate a new verification token
       const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
-      // Store the token in Supabase
-      const { supabase } = await import("@/integrations/supabase/client");
+      // Delete any existing tokens for this email
+      await supabase
+        .from('verification_tokens')
+        .delete()
+        .eq('user_email', email);
       
+      // Store the new token in Supabase
       await supabase
         .from('verification_tokens')
         .insert({ 
@@ -59,7 +64,7 @@ const ConfirmEmail = () => {
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
         });
       
-      const BASE_URL = "https://codecove.dev";
+      const BASE_URL = window.location.origin;
       const verificationApiUrl = `${BASE_URL}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
       
       console.log("Generated verification URL:", verificationApiUrl);
@@ -99,6 +104,7 @@ const ConfirmEmail = () => {
         // Set a 60-second cooldown
         setResendCooldown(60);
       } else {
+        console.error("Email sending failed:", emailResult);
         toast({
           title: "Failed to send email",
           description: "Please try again later or contact support",
