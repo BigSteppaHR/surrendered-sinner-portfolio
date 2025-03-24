@@ -154,66 +154,90 @@ export const updateEmailConfirmationStatus = async (userId: string, email: strin
   try {
     console.log(`Updating email confirmation status for user ${userId} with email ${email}`);
     
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        email_confirmed: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
-    
-    if (error) {
-      console.error("Error updating profile confirmation status by ID:", error);
-      
-      // Try updating by email as a fallback
-      const { error: emailUpdateError } = await supabase
+    // Update both auth.users (if we have proper permissions) and profiles
+    try {
+      // First update the profile - this is crucial
+      const { error } = await supabase
         .from('profiles')
         .update({ 
           email_confirmed: true,
           updated_at: new Date().toISOString()
         })
-        .eq('email', email);
+        .eq('id', userId);
       
-      if (emailUpdateError) {
-        console.error("Error updating profile by email:", emailUpdateError);
+      if (error) {
+        console.error("Error updating profile confirmation status by ID:", error);
         
-        // One last attempt - look up user by email using a query
-        try {
-          // Find user by email in auth.users indirectly through profiles
-          const { data: userData } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', email)
-            .maybeSingle();
-            
-          if (userData?.id) {
-            console.log("Found user ID from email query:", userData.id);
-            
-            const { error: finalError } = await supabase
+        // Try updating by email as a fallback
+        const { error: emailUpdateError } = await supabase
+          .from('profiles')
+          .update({ 
+            email_confirmed: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('email', email);
+        
+        if (emailUpdateError) {
+          console.error("Error updating profile by email:", emailUpdateError);
+          
+          // One last attempt - look up user by email using a query
+          try {
+            // Find user by email in auth.users indirectly through profiles
+            const { data: userData } = await supabase
               .from('profiles')
-              .update({ 
-                email_confirmed: true,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', userData.id);
+              .select('id')
+              .eq('email', email)
+              .maybeSingle();
               
-            if (finalError) {
-              console.error("Final attempt to update profile failed:", finalError);
-              return false;
+            if (userData?.id) {
+              console.log("Found user ID from email query:", userData.id);
+              
+              const { error: finalError } = await supabase
+                .from('profiles')
+                .update({ 
+                  email_confirmed: true,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', userData.id);
+                
+              if (finalError) {
+                console.error("Final attempt to update profile failed:", finalError);
+                return false;
+              }
+              
+              return true;
             }
-            
-            return true;
+          } catch (lookupError) {
+            console.error("Error looking up user by email:", lookupError);
+            return false;
           }
-        } catch (lookupError) {
-          console.error("Error looking up user by email:", lookupError);
+          
           return false;
         }
-        
-        return false;
       }
+      
+      console.log("Successfully updated email confirmation status in profiles");
+    } catch (error) {
+      console.error("Exception updating profile confirmation status:", error);
     }
     
-    console.log("Successfully updated email confirmation status");
+    // Also try to update the auth status directly (may or may not work depending on permissions)
+    try {
+      // This requires admin privileges, so it will likely fail for most users
+      const { data, error } = await supabase.rpc('update_user_email_status', {
+        user_id: userId,
+        is_confirmed: true
+      });
+      
+      if (error) {
+        console.warn("Could not update auth.users email_confirmed_at (expected, no admin privileges):", error);
+      } else {
+        console.log("Successfully updated auth.users email_confirmed_at");
+      }
+    } catch (adminError) {
+      console.warn("Exception trying to update auth.users (expected, no admin privileges):", adminError);
+    }
+    
     return true;
   } catch (error) {
     console.error("Exception updating email confirmation status:", error);

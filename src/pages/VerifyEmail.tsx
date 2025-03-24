@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -161,10 +160,10 @@ export default function VerifyEmail() {
         
         // If no token or email, show error
         if (!token && !email) {
+          console.error('Missing verification parameters', { token, type, redirectTo, email });
           setVerificationStatus('error');
           setStatusMessage('Missing verification parameters. Please check your email link.');
           setIsProcessing(false);
-          console.error('Missing verification parameters', { token, type, redirectTo, email });
           return;
         }
         
