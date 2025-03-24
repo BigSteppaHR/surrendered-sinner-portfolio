@@ -1,7 +1,5 @@
-
 import React from 'react';
 
-// This is a functional component that uses React hooks
 const RemoveBadge: React.FC = () => {
   React.useEffect(() => {
     // Function to remove the badge and all other Lovable-related elements
