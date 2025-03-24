@@ -861,6 +861,16 @@ export type Database = {
             }
             Returns: boolean
           }
+      is_profile_owner: {
+        Args: {
+          profile_id: string
+        }
+        Returns: boolean
+      }
+      is_user_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
