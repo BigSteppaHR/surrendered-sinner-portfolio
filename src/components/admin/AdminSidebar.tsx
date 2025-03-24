@@ -1,3 +1,4 @@
+
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -19,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useAuthLogout } from "@/hooks/auth/useAuthLogout";
+import { useState } from "react";
 
 const AdminSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
