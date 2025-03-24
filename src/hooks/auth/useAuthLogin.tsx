@@ -22,13 +22,34 @@ export const useAuthLogin = () => {
         .eq('id', data.user.id)
         .single();
 
-      // Return navigation data instead of using navigate directly
-      const redirectData = {
-        redirectTo: profile?.email_confirmed ? '/dashboard' : '/confirm-email',
-        redirectState: { email }
-      };
+      if (!profile?.email_confirmed) {
+        // If email is not confirmed, sign out immediately
+        await supabase.auth.signOut();
+        
+        toast({
+          title: "Email not verified",
+          description: "Please verify your email before logging in",
+          variant: "destructive",
+        });
+        
+        // Return navigation data to show the email verification dialog
+        return { 
+          error: null, 
+          data: { 
+            redirectTo: '/confirm-email', 
+            redirectState: { email } 
+          } 
+        };
+      }
 
-      return { error: null, data: { ...data, ...redirectData } };
+      // Return navigation data for confirmed users
+      return { 
+        error: null, 
+        data: { 
+          ...data, 
+          redirectTo: '/dashboard'
+        } 
+      };
     } catch (error: any) {
       console.error('Login error:', error.message);
       toast({
