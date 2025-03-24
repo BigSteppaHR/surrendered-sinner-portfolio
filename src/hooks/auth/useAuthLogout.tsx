@@ -7,10 +7,12 @@ export const useAuthLogout = () => {
 
   const logout = async () => {
     try {
-      // Sign out from Supabase auth
-      await supabase.auth.signOut({ scope: 'global' }); // Use global to clear all sessions
+      // Sign out from Supabase auth with global scope to clear all sessions
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       
-      // Clear all auth-related data from localStorage
+      if (error) throw error;
+      
+      // Clear all auth-related data from localStorage with improved cleanup
       const keysToRemove: string[] = [];
       
       for (let i = 0; i < localStorage.length; i++) {
@@ -25,7 +27,7 @@ export const useAuthLogout = () => {
         }
       }
       
-      // Remove the keys (outside the loop to avoid index shifting)
+      // Remove the keys outside the loop to avoid index shifting issues
       keysToRemove.forEach(key => localStorage.removeItem(key));
       
       // Clear all cookies related to authentication
@@ -40,12 +42,14 @@ export const useAuthLogout = () => {
         }
       });
       
+      // Notify user about successful logout
       toast({
         title: "Logout successful",
         description: "You have been logged out successfully",
       });
       
       // Force reload the page to clear any in-memory state
+      // Use a small delay to ensure toast is visible
       setTimeout(() => {
         window.location.href = '/login';
       }, 300);
