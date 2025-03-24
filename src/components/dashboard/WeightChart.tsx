@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,14 +9,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-
-interface WeightRecord {
-  id: string;
-  weight: number;
-  recorded_at: string;
-  notes: string | null;
-  is_approved: boolean;
-}
+import { WeightRecord } from '@/types';
 
 const WeightChart = () => {
   const [weightRecords, setWeightRecords] = useState<WeightRecord[]>([]);
@@ -28,7 +20,6 @@ const WeightChart = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Calculate weight change
   const getWeightChange = () => {
     if (weightRecords.length < 2) return { value: 0, isPositive: false };
     
@@ -46,7 +37,6 @@ const WeightChart = () => {
     };
   };
 
-  // Format data for chart
   const formatChartData = () => {
     return weightRecords
       .filter(record => record.is_approved)
@@ -98,14 +88,16 @@ const WeightChart = () => {
     
     setSubmitting(true);
     try {
+      const newRecord = {
+        user_id: user.id,
+        weight: parseFloat(weight),
+        notes: notes || null,
+        recorded_at: new Date().toISOString().split('T')[0]
+      };
+      
       const { data, error } = await supabase
         .from('weight_records')
-        .insert([{
-          user_id: user.id,
-          weight: parseFloat(weight),
-          notes: notes || null,
-          recorded_at: new Date().toISOString().split('T')[0]
-        }])
+        .insert([newRecord])
         .select()
         .single();
         

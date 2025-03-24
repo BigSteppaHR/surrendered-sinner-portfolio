@@ -1,14 +1,8 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from 'lucide-react';
-
-interface Quote {
-  id: string;
-  quote: string;
-  author: string;
-}
+import { Quote } from '@/types';
 
 const DailyQuote = () => {
   const [quote, setQuote] = useState<Quote | null>(null);

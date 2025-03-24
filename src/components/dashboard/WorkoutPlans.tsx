@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,14 +5,7 @@ import { FileIcon, FileText, Coffee } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-
-interface WorkoutPlan {
-  id: string;
-  title: string;
-  description: string | null;
-  pdf_url: string | null;
-  plan_type: 'workout' | 'meal';
-}
+import { WorkoutPlan } from '@/types';
 
 const WorkoutPlans = () => {
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);

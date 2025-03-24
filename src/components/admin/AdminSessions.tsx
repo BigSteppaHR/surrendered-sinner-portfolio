@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -32,23 +31,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, MapPin, Search, Plus, Edit, CheckCircle, XCircle } from 'lucide-react';
-
-interface UserSession {
-  id: string;
-  user_id: string;
-  session_type: string;
-  cost: number;
-  session_time: string;
-  location: string;
-  is_paid: boolean;
-  notes: string | null;
-}
-
-interface UserDetails {
-  id: string;
-  email: string;
-  full_name: string | null;
-}
+import { UserSession, UserDetails } from '@/types';
 
 const AdminSessions = () => {
   const [sessions, setSessions] = useState<(UserSession & { user_email?: string; user_name?: string })[]>([]);
@@ -89,11 +72,13 @@ const AdminSessions = () => {
           
         if (usersError) throw usersError;
         
-        setUsers(usersData || []);
+        // Convert to UserDetails type
+        const typedUsersData: UserDetails[] = usersData || [];
+        setUsers(typedUsersData);
         
         // Combine sessions with user details
         const enrichedSessions = (sessionsData || []).map(session => {
-          const user = usersData?.find(u => u.id === session.user_id);
+          const user = typedUsersData.find(u => u.id === session.user_id);
           return {
             ...session,
             user_email: user?.email || 'Unknown',
@@ -193,7 +178,7 @@ const AdminSessions = () => {
       if (error) throw error;
       
       // Add user details to the new session
-      const newSession = {
+      const newSession: UserSession & { user_email: string; user_name: string } = {
         ...data,
         user_email: selectedUser.email,
         user_name: selectedUser.full_name || 'Unknown'

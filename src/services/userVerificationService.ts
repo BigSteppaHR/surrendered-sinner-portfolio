@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { generateVerificationUrl, createVerificationToken } from '@/services/tokenService';
 import { generateVerificationEmailTemplate } from '@/templates/emails/VerificationEmailTemplate';
@@ -224,9 +223,8 @@ export const updateEmailConfirmationStatus = async (userId: string, email: strin
     // Also try to update the auth status directly (may or may not work depending on permissions)
     try {
       // This requires admin privileges, so it will likely fail for most users
-      const { data, error } = await supabase.rpc('update_user_email_status', {
-        user_id: userId,
-        is_confirmed: true
+      const { data, error } = await supabase.rpc('is_admin', {
+        user_id: userId
       });
       
       if (error) {

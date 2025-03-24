@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,16 +5,7 @@ import { CalendarIcon, Clock, MapPin, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { formatRelative } from 'date-fns';
-
-interface UserSession {
-  id: string;
-  session_type: string;
-  cost: number;
-  session_time: string;
-  location: string;
-  is_paid: boolean;
-  notes: string | null;
-}
+import { UserSession } from '@/types';
 
 const UpcomingSessions = () => {
   const [sessions, setSessions] = useState<UserSession[]>([]);
