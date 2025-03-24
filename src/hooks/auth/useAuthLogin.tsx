@@ -48,8 +48,16 @@ export const useAuthLogin = () => {
       const { user, session, error } = await authenticateUser(email, password);
 
       if (error) {
+        console.error('Authentication error:', error);
         throw error;
       }
+
+      if (!user) {
+        console.error('No user returned from authentication');
+        throw new Error('Authentication failed');
+      }
+
+      console.log('User authenticated successfully:', user.email);
 
       // Step 2: Fetch user profile to check email confirmation status
       const { profile, error: profileError } = await fetchUserProfile(user.id);
@@ -73,8 +81,11 @@ export const useAuthLogin = () => {
         };
       }
 
+      console.log('Profile fetched:', profile);
+
       // Step 3: Check if email is confirmed
       if (!profile?.email_confirmed) {
+        console.log('Email not confirmed for user:', email);
         return handleEmailVerification(email);
       }
 

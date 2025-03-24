@@ -56,7 +56,8 @@ export const useAuthSignup = () => {
           user: user, 
           session: null, 
           emailSent: false,
-          showVerification: true 
+          showVerification: true,
+          redirectTo: "/login" 
         } 
       };
     }
@@ -84,7 +85,8 @@ export const useAuthSignup = () => {
         user: user, 
         session: null, // No active session until email verification
         emailSent: verificationResult.emailSent,
-        showVerification: true
+        showVerification: true,
+        redirectTo: "/login" // Explicitly set redirectTo to login
       } 
     };
   };
@@ -110,7 +112,12 @@ export const useAuthSignup = () => {
       variant: "destructive",
     });
     
-    return { error: { message: "Account already exists" }, data: null };
+    return { 
+      error: { message: "Account already exists" }, 
+      data: { 
+        redirectTo: "/login" 
+      } 
+    };
   };
 
   // Handle special error cases

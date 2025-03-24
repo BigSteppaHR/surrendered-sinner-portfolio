@@ -42,6 +42,8 @@ export const createAuthUser = async (
   fullName: string
 ): Promise<AuthResult> => {
   try {
+    console.log(`Creating auth user with email: ${email} and name: ${fullName}`);
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -54,15 +56,18 @@ export const createAuthUser = async (
     });
 
     if (error) {
+      console.error('Error creating auth user:', error);
       return { error };
     }
 
+    console.log('Auth user created successfully:', data.user?.id);
+    
     return {
       user: data.user,
       session: data.session
     };
   } catch (error) {
-    console.error('Error creating auth user:', error);
+    console.error('Exception creating auth user:', error);
     return { error };
   }
 };
@@ -74,6 +79,8 @@ export const createUserProfile = async (
   fullName: string
 ): Promise<ProfileCreationResult> => {
   try {
+    console.log(`Creating/updating profile for user: ${userId}, ${email}, ${fullName}`);
+    
     const { error } = await supabase
       .from('profiles')
       .upsert({ 
@@ -87,6 +94,8 @@ export const createUserProfile = async (
       console.error("Error updating profile:", error);
       return { success: false, error };
     }
+    
+    console.log('Profile created/updated successfully');
     return { success: true };
   } catch (error) {
     console.error("Exception updating profile:", error);
@@ -97,7 +106,9 @@ export const createUserProfile = async (
 // Sign out user
 export const signOutUser = async (): Promise<void> => {
   try {
+    console.log('Signing out user');
     await supabase.auth.signOut();
+    console.log('User signed out successfully');
   } catch (error) {
     console.error("Error signing out user:", error);
   }
@@ -117,15 +128,18 @@ export const authenticateUser = async (email: string, password: string): Promise
     });
 
     if (error) {
+      console.error('Auth error:', error.message);
       return { error };
     }
 
+    console.log('User authenticated successfully:', data.user?.email);
+    
     return {
       user: data.user,
       session: data.session
     };
   } catch (error) {
-    console.error('Error authenticating user:', error);
+    console.error('Exception authenticating user:', error);
     return { error };
   }
 };
@@ -133,6 +147,8 @@ export const authenticateUser = async (email: string, password: string): Promise
 // Fetch user profile by ID
 export const fetchUserProfile = async (userId: string) => {
   try {
+    console.log(`Fetching profile for user: ${userId}`);
+    
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
@@ -144,6 +160,7 @@ export const fetchUserProfile = async (userId: string) => {
       return { profile: null, error };
     }
 
+    console.log('Profile fetched:', profile ? 'success' : 'not found');
     return { profile, error: null };
   } catch (error) {
     console.error('Exception in fetchUserProfile:', error);

@@ -62,6 +62,8 @@ export default function Signup() {
   });
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
+    if (!mountedRef.current) return;
+    
     setIsSubmitting(true);
     setSignupError(null);
     
@@ -69,16 +71,31 @@ export default function Signup() {
       console.log("Submitting signup form for:", values.email);
       const result = await signup(values.email, values.password, values.fullName);
       
+      if (!mountedRef.current) return;
+      
       if (result.error) {
         console.log("Signup error:", result.error);
         setSignupError(result.error.message || "There was a problem creating your account");
-      } else if (result.data?.showVerification) {
-        console.log("Showing verification dialog for:", values.email);
-        setSignupEmail(values.email);
-        setShowEmailVerification(true);
-        form.reset();
+      } else {
+        if (result.data?.showVerification) {
+          console.log("Showing verification dialog for:", values.email);
+          setSignupEmail(values.email);
+          setShowEmailVerification(true);
+          form.reset();
+        }
+        
+        if (result.data?.redirectTo) {
+          setTimeout(() => {
+            if (mountedRef.current) {
+              console.log("Redirecting to:", result.data?.redirectTo);
+              navigate(result.data?.redirectTo as string);
+            }
+          }, 3000);
+        }
       }
     } catch (error) {
+      if (!mountedRef.current) return;
+      
       console.error("Unexpected signup error:", error);
       setSignupError("An unexpected error occurred. Please try again.");
     } finally {
@@ -91,6 +108,7 @@ export default function Signup() {
   const handleCloseVerification = () => {
     if (mountedRef.current) {
       setShowEmailVerification(false);
+      navigate("/login");
     }
   };
 

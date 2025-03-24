@@ -29,14 +29,11 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    // Add a slight delay to prevent flashing
-    const timer = setTimeout(() => {
-      if (mountedRef.current && isInitialized && isAuthenticated && profile?.email_confirmed) {
-        navigate("/dashboard");
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    // Only redirect if the user is authenticated and email is confirmed
+    if (isInitialized && isAuthenticated && profile?.email_confirmed) {
+      console.log("Login: User authenticated and email confirmed, redirecting to dashboard");
+      navigate("/dashboard");
+    }
   }, [isAuthenticated, profile, navigate, isInitialized]);
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
@@ -61,6 +58,7 @@ export default function Login() {
           setLoginError(result.error.message || "Login failed. Please try again.");
         }
       } 
+      // No need to navigate here as the useEffect will handle it
     } catch (error) {
       if (!mountedRef.current) return;
       
