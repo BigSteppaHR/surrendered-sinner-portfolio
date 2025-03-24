@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import StripeProvider from "./components/StripeProvider";
 import { AuthProvider } from "./components/AuthProvider";
 import Index from "./pages/Index";
@@ -14,6 +14,19 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import Dashboard from "./pages/Dashboard";
 import { useAuth } from "./hooks/useAuth";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
+
+// Lazy load dashboard pages
+const Sessions = lazy(() => import("./pages/dashboard/Sessions"));
+const Schedule = lazy(() => import("./pages/dashboard/Schedule"));
+const TrainingPlans = lazy(() => import("./pages/dashboard/TrainingPlans"));
+const DashboardPayment = lazy(() => import("./pages/dashboard/Payment"));
+const Progress = lazy(() => import("./pages/dashboard/Progress"));
+const Account = lazy(() => import("./pages/dashboard/Account"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const PaymentPortal = lazy(() => import("./pages/PaymentPortal"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -118,6 +131,13 @@ const AuthNavigation = () => {
   ) : null;
 };
 
+// Loading component for suspense fallback
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-[#000000]">
+    <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
+  </div>
+);
+
 // Routes component that includes navigation and routes
 // This component must be used INSIDE AuthProvider
 const AppRoutes = () => {
@@ -134,17 +154,61 @@ const AppRoutes = () => {
         {/* Dashboard routes - all nested under /dashboard */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="sessions" element={<import("./pages/dashboard/Sessions").then(mod => <mod.default />)} />
-          <Route path="schedule" element={<import("./pages/dashboard/Schedule").then(mod => <mod.default />)} />
-          <Route path="plans" element={<import("./pages/dashboard/TrainingPlans").then(mod => <mod.default />)} />
-          <Route path="payment" element={<import("./pages/dashboard/Payment").then(mod => <mod.default />)} />
-          <Route path="progress" element={<import("./pages/dashboard/Progress").then(mod => <mod.default />)} />
-          <Route path="account" element={<import("./pages/dashboard/Account").then(mod => <mod.default />)} />
-          <Route path="login" element={<import("./pages/Login").then(mod => <mod.default />)} />
-          <Route path="signup" element={<import("./pages/Signup").then(mod => <mod.default />)} />
-          <Route path="reset-password" element={<import("./pages/ResetPassword").then(mod => <mod.default />)} />
-          <Route path="verify-email" element={<import("./pages/VerifyEmail").then(mod => <mod.default />)} />
-          <Route path="payment-portal" element={<import("./pages/PaymentPortal").then(mod => <mod.default />)} />
+          <Route path="sessions" element={
+            <Suspense fallback={<PageLoader />}>
+              <Sessions />
+            </Suspense>
+          } />
+          <Route path="schedule" element={
+            <Suspense fallback={<PageLoader />}>
+              <Schedule />
+            </Suspense>
+          } />
+          <Route path="plans" element={
+            <Suspense fallback={<PageLoader />}>
+              <TrainingPlans />
+            </Suspense>
+          } />
+          <Route path="payment" element={
+            <Suspense fallback={<PageLoader />}>
+              <DashboardPayment />
+            </Suspense>
+          } />
+          <Route path="progress" element={
+            <Suspense fallback={<PageLoader />}>
+              <Progress />
+            </Suspense>
+          } />
+          <Route path="account" element={
+            <Suspense fallback={<PageLoader />}>
+              <Account />
+            </Suspense>
+          } />
+          <Route path="login" element={
+            <Suspense fallback={<PageLoader />}>
+              <Login />
+            </Suspense>
+          } />
+          <Route path="signup" element={
+            <Suspense fallback={<PageLoader />}>
+              <Signup />
+            </Suspense>
+          } />
+          <Route path="reset-password" element={
+            <Suspense fallback={<PageLoader />}>
+              <ResetPassword />
+            </Suspense>
+          } />
+          <Route path="verify-email" element={
+            <Suspense fallback={<PageLoader />}>
+              <VerifyEmail />
+            </Suspense>
+          } />
+          <Route path="payment-portal" element={
+            <Suspense fallback={<PageLoader />}>
+              <PaymentPortal />
+            </Suspense>
+          } />
         </Route>
         
         {/* Redirect old routes to new dashboard routes */}
