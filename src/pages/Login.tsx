@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -5,10 +6,12 @@ import * as z from "zod";
 import LoginHeader from "@/components/auth/LoginHeader";
 import LoginForm from "@/components/auth/LoginForm";
 import LoginFooter from "@/components/auth/LoginFooter";
-import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedBackground from "@/components/auth/AnimatedBackground";
+
+// Lazy load the EmailVerificationDialog component
+const EmailVerificationDialogLazy = lazy(() => import("@/components/email/EmailVerificationDialog"));
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
