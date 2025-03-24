@@ -14,10 +14,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 // Define types for our data
 type StatType = {
@@ -37,28 +38,30 @@ type TrafficDataType = {
 };
 
 type RevenueDataType = {
-  id: string;
   month: string;
   revenue: number;
+};
+
+type SubscriptionDistType = {
+  name: string;
+  value: number;
+  color: string;
 };
 
 const AdminOverview = () => {
   const [statistics, setStatistics] = useState<StatType[]>([]);
   const [visitData, setVisitData] = useState<TrafficDataType[]>([]);
   const [revenueData, setRevenueData] = useState<RevenueDataType[]>([]);
+  const [subscriptionDist, setSubscriptionDist] = useState<SubscriptionDistType[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch statistics
-        const { data: statsData, error: statsError } = await supabase
-          .from('admin_statistics')
-          .select('*');
+        setLoading(true);
         
-        if (statsError) throw statsError;
-        
-        // Fetch site traffic
+        // Fetch site traffic from Supabase
         const { data: trafficData, error: trafficError } = await supabase
           .from('site_traffic')
           .select('*')
@@ -66,26 +69,36 @@ const AdminOverview = () => {
         
         if (trafficError) throw trafficError;
         
-        // Fetch revenue data
-        const { data: revData, error: revError } = await supabase
-          .from('revenue_data')
-          .select('*')
-          .order('created_at', { ascending: true });
+        // Get dashboard data from Stripe via our edge function
+        const { data: stripeData, error } = await supabase.functions.invoke('stripe-helper', {
+          body: { action: 'get-dashboard-data' },
+        });
         
-        if (revError) throw revError;
+        if (error) {
+          throw new Error(`Error fetching Stripe data: ${error.message}`);
+        }
         
-        setStatistics(statsData);
+        if (stripeData) {
+          setStatistics(stripeData.stats || []);
+          setRevenueData(stripeData.revenueData || []);
+          setSubscriptionDist(stripeData.subscriptionDistribution || []);
+        }
+        
         setVisitData(trafficData);
-        setRevenueData(revData);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        toast({
+          title: "Error loading dashboard data",
+          description: "Please check your connection and try again.",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [toast]);
 
   const getIconComponent = (iconName: string) => {
     switch (iconName) {
@@ -123,16 +136,22 @@ const AdminOverview = () => {
             </Card>
           ))
         ) : (
-          statistics.map((stat) => (
+          statistics.length > 0 ? statistics.map((stat) => (
             <StatCard 
               key={stat.id}
               title={stat.stat_name} 
-              value={stat.stat_name === 'Monthly Revenue' ? `$${stat.stat_value.toLocaleString()}` : stat.stat_value.toLocaleString()} 
+              value={stat.stat_name === 'Monthly Revenue' || stat.stat_name === 'Average Invoice' 
+                ? `$${stat.stat_value.toLocaleString()}` 
+                : stat.stat_value.toLocaleString()} 
               change={`${stat.is_positive ? '+' : ''}${stat.stat_change}%`} 
               icon={getIconComponent(stat.icon)} 
               positive={stat.is_positive}
             />
-          ))
+          )) : (
+            <div className="col-span-4 text-center py-10">
+              <p className="text-gray-400">No statistics available. Connect your Stripe account to see real-time data.</p>
+            </div>
+          )
         )}
       </div>
 
@@ -147,7 +166,7 @@ const AdminOverview = () => {
               <div className="h-80 flex items-center justify-center">
                 <div className="animate-spin h-8 w-8 border-4 border-[#9b87f5] border-t-transparent rounded-full"></div>
               </div>
-            ) : (
+            ) : visitData.length > 0 ? (
               <ChartContainer config={{ visits: { theme: { light: "#9b87f5", dark: "#9b87f5" } } }} className="h-80">
                 <AreaChart data={visitData}>
                   <defs>
@@ -163,6 +182,10 @@ const AdminOverview = () => {
                   <Area type="monotone" dataKey="visits" stroke="#9b87f5" fillOpacity={1} fill="url(#colorVisits)" />
                 </AreaChart>
               </ChartContainer>
+            ) : (
+              <div className="h-80 flex items-center justify-center">
+                <p className="text-gray-400">No traffic data available. Connect Google Analytics to see real-time traffic.</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -177,7 +200,7 @@ const AdminOverview = () => {
               <div className="h-80 flex items-center justify-center">
                 <div className="animate-spin h-8 w-8 border-4 border-[#9b87f5] border-t-transparent rounded-full"></div>
               </div>
-            ) : (
+            ) : revenueData.length > 0 ? (
               <ChartContainer config={{ revenue: { theme: { light: "#7E69AB", dark: "#7E69AB" } } }} className="h-80">
                 <BarChart data={revenueData}>
                   <XAxis dataKey="month" stroke="#666" />
@@ -187,10 +210,56 @@ const AdminOverview = () => {
                   <Bar dataKey="revenue" fill="#7E69AB" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ChartContainer>
+            ) : (
+              <div className="h-80 flex items-center justify-center">
+                <p className="text-gray-400">No revenue data available. Complete transactions in Stripe to see revenue statistics.</p>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
+      
+      <Card className="bg-[#252A38] border-[#353A48]">
+        <CardHeader>
+          <CardTitle>Subscription Plans Distribution</CardTitle>
+          <CardDescription className="text-gray-400">Customer plan selection</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="h-80 flex items-center justify-center">
+              <div className="animate-spin h-8 w-8 border-4 border-[#9b87f5] border-t-transparent rounded-full"></div>
+            </div>
+          ) : subscriptionDist.length > 0 ? (
+            <ChartContainer 
+              config={{value: { theme: { light: "#9b87f5", dark: "#9b87f5" } }}} 
+              className="h-80"
+            >
+              <PieChart>
+                <Pie
+                  data={subscriptionDist}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {subscriptionDist.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ChartContainer>
+          ) : (
+            <div className="h-80 flex items-center justify-center">
+              <p className="text-gray-400">No subscription data available. Create subscription plans in Stripe to see distribution.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

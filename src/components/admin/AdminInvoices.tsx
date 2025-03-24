@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Search, 
   FileText, 
@@ -22,34 +23,46 @@ import {
   Plus,
   Trash2,
   Send,
-  X
+  ExternalLink,
+  Copy,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 
-// Sample data - in a real app, this would come from your database
-const invoices = [
-  { id: "INV-001", customer: "John Doe", email: "john@example.com", amount: "$99.99", date: "2025-03-12", status: "Paid" },
-  { id: "INV-002", customer: "Sarah Johnson", email: "sarah@example.com", amount: "$29.99", date: "2025-03-10", status: "Paid" },
-  { id: "INV-003", customer: "Michael Brown", email: "michael@example.com", amount: "$249.99", date: "2025-03-09", status: "Pending" },
-  { id: "INV-004", customer: "Emily Davis", email: "emily@example.com", amount: "$99.99", date: "2025-03-07", status: "Overdue" },
-  { id: "INV-005", customer: "Robert Wilson", email: "robert@example.com", amount: "$29.99", date: "2025-03-05", status: "Paid" },
-];
+type InvoiceType = {
+  id: string;
+  customer: string;
+  email: string;
+  amount: string;
+  date: string;
+  status: string;
+};
 
-const tickets = [
-  { id: "TIC-001", customer: "John Doe", email: "john@example.com", subject: "Billing issue with subscription", date: "2025-03-12", status: "Open", priority: "High" },
-  { id: "TIC-002", customer: "Sarah Johnson", email: "sarah@example.com", subject: "Question about workout plan", date: "2025-03-10", status: "Closed", priority: "Medium" },
-  { id: "TIC-003", customer: "Michael Brown", email: "michael@example.com", subject: "Can't access premium content", date: "2025-03-09", status: "In Progress", priority: "High" },
-  { id: "TIC-004", customer: "Emily Davis", email: "emily@example.com", subject: "Request for custom plan", date: "2025-03-07", status: "Open", priority: "Low" },
-  { id: "TIC-005", customer: "Robert Wilson", email: "robert@example.com", subject: "Payment method update", date: "2025-03-05", status: "Closed", priority: "Medium" },
-];
+type TicketType = {
+  id: string;
+  customer: string;
+  email: string;
+  subject: string;
+  date: string;
+  status: string;
+  priority: string;
+};
 
 const AdminInvoices = () => {
   const [searchInvoice, setSearchInvoice] = useState("");
   const [searchTicket, setSearchTicket] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
   const [showNewInvoiceDialog, setShowNewInvoiceDialog] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceType | null>(null);
   const [ticketReply, setTicketReply] = useState("");
   const [ticketStatus, setTicketStatus] = useState("");
+  const [invoices, setInvoices] = useState<InvoiceType[]>([]);
+  const [tickets, setTickets] = useState<TicketType[]>([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false);
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState("");
+  const [isCreatingPaymentLink, setIsCreatingPaymentLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const { toast } = useToast();
   
   // New invoice state
@@ -60,6 +73,85 @@ const AdminInvoices = () => {
     description: "",
     dueDate: ""
   });
+  
+  // Fetch invoices from Stripe
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        setIsLoadingInvoices(true);
+        const { data, error } = await supabase.functions.invoke('stripe-helper', {
+          body: { action: 'list-invoices', limit: 100 },
+        });
+        
+        if (error) throw new Error(error.message);
+        
+        if (data && Array.isArray(data)) {
+          setInvoices(data);
+        } else {
+          setInvoices([]);
+        }
+      } catch (err: any) {
+        console.error("Error fetching invoices:", err);
+        toast({
+          title: "Failed to load invoices",
+          description: err.message || "There was an error loading invoice data",
+          variant: "destructive"
+        });
+        setInvoices([]);
+      } finally {
+        setIsLoadingInvoices(false);
+      }
+    };
+    
+    const fetchTickets = async () => {
+      try {
+        setIsLoadingTickets(true);
+        const { data, error } = await supabase
+          .from('support_tickets')
+          .select(`
+            id,
+            subject,
+            type,
+            status,
+            created_at,
+            message,
+            user_id,
+            profiles(full_name, email)
+          `)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data) {
+          // Transform the data to match our ticket type
+          const formattedTickets = data.map(ticket => ({
+            id: ticket.id,
+            customer: ticket.profiles?.full_name || 'Unknown User',
+            email: ticket.profiles?.email || 'No email provided',
+            subject: ticket.subject,
+            date: new Date(ticket.created_at).toISOString().split('T')[0],
+            status: ticket.status,
+            priority: ticket.type === 'urgent' ? 'High' : ticket.type === 'question' ? 'Medium' : 'Low',
+          }));
+          
+          setTickets(formattedTickets);
+        }
+      } catch (err: any) {
+        console.error("Error fetching tickets:", err);
+        toast({
+          title: "Failed to load support tickets",
+          description: err.message || "There was an error loading support ticket data",
+          variant: "destructive"
+        });
+        setTickets([]);
+      } finally {
+        setIsLoadingTickets(false);
+      }
+    };
+    
+    fetchInvoices();
+    fetchTickets();
+  }, [toast]);
   
   const filteredInvoices = invoices.filter(invoice => 
     invoice.customer.toLowerCase().includes(searchInvoice.toLowerCase()) ||
@@ -106,14 +198,72 @@ const AdminInvoices = () => {
     }
   };
 
-  const handleCreateInvoice = () => {
-    // In a real app, this would send data to your backend
+  const handleCreatePaymentLink = async () => {
+    if (!newInvoice.amount || !newInvoice.customer) {
+      toast({
+        title: "Missing information",
+        description: "Please provide at least a customer name and amount",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsCreatingPaymentLink(true);
+    
+    try {
+      const amountValue = parseFloat(newInvoice.amount);
+      
+      if (isNaN(amountValue) || amountValue <= 0) {
+        throw new Error("Please enter a valid amount");
+      }
+      
+      const { data, error } = await supabase.functions.invoke('stripe-helper', {
+        body: {
+          action: 'create-payment-link',
+          amount: amountValue,
+          description: newInvoice.description || "Fitness Training Services",
+          customerEmail: newInvoice.email,
+          customerName: newInvoice.customer
+        },
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      if (data && data.url) {
+        setPaymentLinkUrl(data.url);
+        toast({
+          title: "Payment Link Created",
+          description: "The payment link has been successfully created",
+        });
+      } else {
+        throw new Error("No payment link returned from the server");
+      }
+    } catch (err: any) {
+      console.error("Error creating payment link:", err);
+      toast({
+        title: "Failed to create payment link",
+        description: err.message || "There was an error creating the payment link",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingPaymentLink(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(paymentLinkUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const handleSendInvoice = async () => {
+    // In a real app, this would send an email with the payment link
     toast({
-      title: "Invoice Created",
-      description: `Invoice for ${newInvoice.customer} has been created.`,
+      title: "Invoice Sent",
+      description: `Payment link has been sent to ${newInvoice.email}`,
     });
     setShowNewInvoiceDialog(false);
-    // Reset form
+    setPaymentLinkUrl("");
     setNewInvoice({
       customer: "",
       email: "",
@@ -123,8 +273,8 @@ const AdminInvoices = () => {
     });
   };
 
-  const handleSendReply = () => {
-    if (!ticketReply.trim()) {
+  const handleSendReply = async () => {
+    if (!ticketReply.trim() || !selectedTicket) {
       toast({
         title: "Empty Reply",
         description: "Please enter a reply message.",
@@ -133,22 +283,56 @@ const AdminInvoices = () => {
       return;
     }
 
-    toast({
-      title: "Reply Sent",
-      description: `Your reply to ticket ${selectedTicket.id} has been sent.`,
-    });
-    
-    setTicketReply("");
-    if (ticketStatus) {
+    try {
+      // In a real application, we would save the reply to the database
+      // and potentially send an email notification
+      
       toast({
-        title: "Status Updated",
-        description: `Ticket status changed to ${ticketStatus}.`,
+        title: "Reply Sent",
+        description: `Your reply to ticket ${selectedTicket.id} has been sent.`,
       });
-      setTicketStatus("");
+      
+      setTicketReply("");
+      
+      if (ticketStatus) {
+        // Update ticket status
+        const { error } = await supabase
+          .from('support_tickets')
+          .update({ status: ticketStatus.toLowerCase() })
+          .eq('id', selectedTicket.id);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Status Updated",
+          description: `Ticket status changed to ${ticketStatus}.`,
+        });
+        
+        // Update local ticket data
+        setTickets(tickets.map(ticket => 
+          ticket.id === selectedTicket.id 
+            ? { ...ticket, status: ticketStatus } 
+            : ticket
+        ));
+        
+        setSelectedTicket({
+          ...selectedTicket,
+          status: ticketStatus
+        });
+        
+        setTicketStatus("");
+      }
+    } catch (err: any) {
+      console.error("Error sending reply:", err);
+      toast({
+        title: "Failed to send reply",
+        description: err.message || "There was an error sending your reply",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleViewInvoice = (invoice: any) => {
+  const handleViewInvoice = (invoice: InvoiceType) => {
     setSelectedInvoice(invoice);
   };
 
@@ -214,10 +398,21 @@ const AdminInvoices = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInvoices.length > 0 ? (
+                  {isLoadingInvoices ? (
+                    Array(5).fill(0).map((_, index) => (
+                      <TableRow key={index} className="border-[#353A48]">
+                        <TableCell colSpan={6}>
+                          <div className="flex items-center space-x-2">
+                            <div className="h-4 w-4 rounded bg-[#353A48] animate-pulse"></div>
+                            <div className="h-4 w-[80%] rounded bg-[#353A48] animate-pulse"></div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : filteredInvoices.length > 0 ? (
                     filteredInvoices.map((invoice) => (
                       <TableRow key={invoice.id} className="border-[#353A48] hover:bg-[#2A2F3C]/50">
-                        <TableCell className="font-medium">{invoice.id}</TableCell>
+                        <TableCell className="font-medium">{invoice.id.substring(0, 8)}</TableCell>
                         <TableCell>
                           <div>
                             <p>{invoice.customer}</p>
@@ -257,7 +452,9 @@ const AdminInvoices = () => {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-400">
-                        No invoices found matching the search criteria.
+                        {searchInvoice ? 
+                          "No invoices found matching the search criteria." :
+                          "No invoices available. Create a new invoice to get started."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -271,7 +468,7 @@ const AdminInvoices = () => {
             <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
               <DialogContent className="bg-[#252A38] border-[#353A48] text-white">
                 <DialogHeader>
-                  <DialogTitle className="text-xl">Invoice {selectedInvoice.id}</DialogTitle>
+                  <DialogTitle className="text-xl">Invoice {selectedInvoice.id.substring(0, 8)}</DialogTitle>
                   <DialogDescription className="text-gray-400">
                     Details for invoice issued on {selectedInvoice.date}
                   </DialogDescription>
@@ -295,7 +492,7 @@ const AdminInvoices = () => {
                   
                   <div className="border-t border-[#353A48] pt-4">
                     <h4 className="text-sm font-medium text-gray-400 mb-2">Description</h4>
-                    <p className="text-sm">Personal training sessions (4) - March 2025</p>
+                    <p className="text-sm">Fitness training services</p>
                   </div>
                 </div>
                 
@@ -328,7 +525,7 @@ const AdminInvoices = () => {
               <DialogHeader>
                 <DialogTitle>Create New Invoice</DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Fill in the details to create a new invoice
+                  Create a payment link and send it to your client
                 </DialogDescription>
               </DialogHeader>
               
@@ -386,19 +583,78 @@ const AdminInvoices = () => {
                     className="bg-[#1A1F2C] border-[#353A48] min-h-[100px]"
                     value={newInvoice.description}
                     onChange={(e) => setNewInvoice({...newInvoice, description: e.target.value})}
+                    placeholder="e.g. Personal training sessions (4) - Monthly fee"
                   />
                 </div>
+                
+                {paymentLinkUrl && (
+                  <div className="mt-4 p-4 bg-[#1A1F2C] rounded-md border border-[#353A48]">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-medium">Payment Link</h4>
+                      <div className="flex space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8"
+                          onClick={handleCopyLink}
+                        >
+                          {linkCopied ? <CheckCircle2 className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+                          {linkCopied ? "Copied" : "Copy"}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8"
+                          onClick={() => window.open(paymentLinkUrl, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Open
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 break-all">{paymentLinkUrl}</p>
+                    
+                    <div className="mt-4 pt-4 border-t border-[#353A48] flex justify-between">
+                      <p className="text-sm text-gray-400">
+                        <AlertCircle className="h-4 w-4 inline mr-1" />
+                        Ready to send this payment link to the client?
+                      </p>
+                      <Button size="sm" onClick={handleSendInvoice}>
+                        <Send className="h-4 w-4 mr-1" />
+                        Send to Client
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <DialogFooter>
                 <Button 
                   variant="outline" 
-                  onClick={() => setShowNewInvoiceDialog(false)}
+                  onClick={() => {
+                    setShowNewInvoiceDialog(false);
+                    setPaymentLinkUrl("");
+                    setNewInvoice({
+                      customer: "",
+                      email: "",
+                      amount: "",
+                      description: "",
+                      dueDate: ""
+                    });
+                  }}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleCreateInvoice}>
-                  Create Invoice
+                <Button 
+                  onClick={handleCreatePaymentLink}
+                  disabled={isCreatingPaymentLink}
+                >
+                  {isCreatingPaymentLink ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      Creating...
+                    </>
+                  ) : paymentLinkUrl ? "Update Link" : "Create Payment Link"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -441,14 +697,25 @@ const AdminInvoices = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredTickets.length > 0 ? (
+                      {isLoadingTickets ? (
+                        Array(5).fill(0).map((_, index) => (
+                          <TableRow key={index} className="border-[#353A48]">
+                            <TableCell colSpan={6}>
+                              <div className="flex items-center space-x-2">
+                                <div className="h-4 w-4 rounded bg-[#353A48] animate-pulse"></div>
+                                <div className="h-4 w-[80%] rounded bg-[#353A48] animate-pulse"></div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : filteredTickets.length > 0 ? (
                         filteredTickets.map((ticket) => (
                           <TableRow 
                             key={ticket.id} 
                             className={`border-[#353A48] cursor-pointer hover:bg-[#2A2F3C]/50 ${selectedTicket?.id === ticket.id ? 'bg-[#2A2F3C]/70' : ''}`}
                             onClick={() => setSelectedTicket(ticket)}
                           >
-                            <TableCell className="font-medium">{ticket.id}</TableCell>
+                            <TableCell className="font-medium">{ticket.id.substring(0, 8)}</TableCell>
                             <TableCell>
                               <div className="flex items-center">
                                 <MessageSquare className="h-4 w-4 mr-2 text-gray-400" />
@@ -477,7 +744,9 @@ const AdminInvoices = () => {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-gray-400">
-                            No tickets found matching the search criteria.
+                            {searchTicket ? 
+                              "No tickets found matching the search criteria." :
+                              "No support tickets available."}
                           </TableCell>
                         </TableRow>
                       )}
@@ -502,7 +771,7 @@ const AdminInvoices = () => {
                     <CardTitle className="text-lg mt-3">{selectedTicket.subject}</CardTitle>
                     <div className="text-sm text-gray-400 mt-1 flex items-center">
                       <FileText className="h-3 w-3 mr-1" />
-                      <span>Ticket {selectedTicket.id}</span>
+                      <span>Ticket {selectedTicket.id.substring(0, 8)}</span>
                       <span className="mx-2">•</span>
                       <span>Opened on {selectedTicket.date}</span>
                     </div>

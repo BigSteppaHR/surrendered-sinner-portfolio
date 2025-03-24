@@ -6,25 +6,61 @@ import DashboardNav from "@/components/dashboard/DashboardNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { WeightRecord } from "@/types";
 import { format, subMonths, parseISO, differenceInDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, TrendingDown, TrendingUp, Award, Scale } from "lucide-react";
+import { ChevronDown, TrendingDown, TrendingUp, Award, Scale, Barbell, ImagePlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Extend the WeightRecord type to include image_url
+type WeightRecord = {
+  id: string;
+  user_id: string;
+  weight: number;
+  recorded_at: string;
+  notes: string | null;
+  image_url: string | null;
+};
+
+// Define the LiftRecord type for tracking lifts
+type LiftRecord = {
+  id: string;
+  user_id: string;
+  recorded_at: string;
+  squat: number | null;
+  bench: number | null;
+  deadlift: number | null;
+  notes: string | null;
+};
+
+type LiftData = {
+  date: string;
+  squat: number | null;
+  bench: number | null;
+  deadlift: number | null;
+};
 
 const Progress = () => {
   const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [weightRecords, setWeightRecords] = useState<WeightRecord[]>([]);
+  const [liftRecords, setLiftRecords] = useState<LiftRecord[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [weight, setWeight] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [trackingMode, setTrackingMode] = useState<"weight" | "lifts">("weight");
+  const [chartMode, setChartMode] = useState<"weight" | "lifts">("weight");
+  const [squat, setSquat] = useState<string>("");
+  const [bench, setBench] = useState<string>("");
+  const [deadlift, setDeadlift] = useState<string>("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
   useEffect(() => {
     if (!isInitialized) return;
@@ -36,6 +72,7 @@ const Progress = () => {
     
     if (isAuthenticated && profile) {
       fetchWeightRecords();
+      fetchLiftRecords();
     }
   }, [isAuthenticated, isLoading, profile, isInitialized]);
 
@@ -68,6 +105,75 @@ const Progress = () => {
     }
   };
 
+  const fetchLiftRecords = async () => {
+    try {
+      setIsLoadingData(true);
+      
+      // Get last 6 months of lift records
+      const sixMonthsAgo = subMonths(new Date(), 6).toISOString();
+      
+      const { data, error } = await supabase
+        .from('performance_records')
+        .select('*')
+        .eq('user_id', profile?.id)
+        .gte('recorded_at', sixMonthsAgo)
+        .in('exercise_type', ['squat', 'bench', 'deadlift'])
+        .order('recorded_at', { ascending: true });
+        
+      if (error) {
+        console.error("Error fetching lift records:", error);
+        return;
+      }
+      
+      if (data) {
+        // Transform the data to group by date
+        const liftsByDate = data.reduce((acc, record) => {
+          const date = record.recorded_at.split('T')[0];
+          if (!acc[date]) {
+            acc[date] = {
+              id: record.id,
+              user_id: record.user_id,
+              recorded_at: record.recorded_at,
+              squat: null,
+              bench: null,
+              deadlift: null,
+              notes: record.notes
+            };
+          }
+          
+          // Set the value for the specific lift type
+          if (record.exercise_type === 'squat') acc[date].squat = record.weight;
+          if (record.exercise_type === 'bench') acc[date].bench = record.weight;
+          if (record.exercise_type === 'deadlift') acc[date].deadlift = record.weight;
+          
+          return acc;
+        }, {} as Record<string, LiftRecord>);
+        
+        // Convert the grouped data back to an array
+        const liftsArray = Object.values(liftsByDate);
+        setLiftRecords(liftsArray);
+      }
+    } catch (err) {
+      console.error("Failed to fetch lift records:", err);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setPhotoFile(file);
+      
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmitWeight = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -86,12 +192,35 @@ const Progress = () => {
     setIsSubmitting(true);
     
     try {
+      let imageUrl = null;
+      
+      // If there's a photo, upload it first
+      if (photoFile) {
+        const fileName = `${profile.id}/${Date.now()}.${photoFile.name.split('.').pop()}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('profiles')
+          .upload(`weight-records/${fileName}`, photoFile);
+          
+        if (uploadError) throw uploadError;
+        
+        // Get the public URL
+        const { data: publicUrlData } = await supabase.storage
+          .from('profiles')
+          .getPublicUrl(`weight-records/${fileName}`);
+          
+        if (publicUrlData) {
+          imageUrl = publicUrlData.publicUrl;
+        }
+      }
+      
       const { data, error } = await supabase
         .from('weight_records')
         .insert({
           user_id: profile.id,
           weight: weightValue,
           notes: notes || null,
+          image_url: imageUrl,
           recorded_at: new Date().toISOString()
         })
         .select();
@@ -107,6 +236,8 @@ const Progress = () => {
       
       setWeight("");
       setNotes("");
+      setPhotoFile(null);
+      setPhotoPreview(null);
       
       // Refresh weight records
       fetchWeightRecords();
@@ -122,7 +253,104 @@ const Progress = () => {
     }
   };
 
-  const getFormattedChartData = () => {
+  const handleSubmitLifts = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!profile?.id) return;
+    
+    // Validate that at least one lift is provided
+    const squatValue = squat ? parseFloat(squat) : null;
+    const benchValue = bench ? parseFloat(bench) : null;
+    const deadliftValue = deadlift ? parseFloat(deadlift) : null;
+    
+    if (
+      (squatValue === null || isNaN(squatValue)) && 
+      (benchValue === null || isNaN(benchValue)) && 
+      (deadliftValue === null || isNaN(deadliftValue))
+    ) {
+      toast({
+        title: "Missing lift data",
+        description: "Please enter at least one lift value",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const timestamp = new Date().toISOString();
+      const records = [];
+      
+      // Only add records for lifts that have values
+      if (squatValue !== null && !isNaN(squatValue)) {
+        records.push({
+          user_id: profile.id,
+          exercise_type: 'squat',
+          weight: squatValue,
+          reps: 1, // We're only tracking 1RM
+          notes: notes || null,
+          recorded_at: timestamp
+        });
+      }
+      
+      if (benchValue !== null && !isNaN(benchValue)) {
+        records.push({
+          user_id: profile.id,
+          exercise_type: 'bench',
+          weight: benchValue,
+          reps: 1,
+          notes: notes || null,
+          recorded_at: timestamp
+        });
+      }
+      
+      if (deadliftValue !== null && !isNaN(deadliftValue)) {
+        records.push({
+          user_id: profile.id,
+          exercise_type: 'deadlift',
+          weight: deadliftValue,
+          reps: 1,
+          notes: notes || null,
+          recorded_at: timestamp
+        });
+      }
+      
+      // Insert all records in a batch
+      const { data, error } = await supabase
+        .from('performance_records')
+        .insert(records)
+        .select();
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Lift records added",
+        description: "Your lift records have been successfully added"
+      });
+      
+      setSquat("");
+      setBench("");
+      setDeadlift("");
+      setNotes("");
+      
+      // Refresh lift records
+      fetchLiftRecords();
+      
+    } catch (error: any) {
+      toast({
+        title: "Error adding lift records",
+        description: error.message || "Something went wrong",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getFormattedWeightChartData = () => {
     if (!weightRecords.length) {
       // Create empty data points for the last 6 weeks
       const emptyData = [];
@@ -141,6 +369,32 @@ const Progress = () => {
     return weightRecords.map(record => ({
       date: format(parseISO(record.recorded_at), 'MMM dd'),
       weight: record.weight,
+    }));
+  };
+
+  const getFormattedLiftChartData = (): LiftData[] => {
+    if (!liftRecords.length) {
+      // Create empty data points for the last 6 weeks
+      const emptyData = [];
+      const today = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(today.getDate() - (i * 7)); // Go back by weeks
+        emptyData.push({
+          date: format(date, 'MMM dd'),
+          squat: null,
+          bench: null,
+          deadlift: null
+        });
+      }
+      return emptyData;
+    }
+    
+    return liftRecords.map(record => ({
+      date: format(parseISO(record.recorded_at), 'MMM dd'),
+      squat: record.squat,
+      bench: record.bench,
+      deadlift: record.deadlift,
     }));
   };
 
@@ -202,6 +456,20 @@ const Progress = () => {
     return `${Math.round(consistencyScore)}%`;
   };
 
+  // Get max lift values
+  const getMaxLift = (liftType: 'squat' | 'bench' | 'deadlift') => {
+    if (liftRecords.length === 0) return 'N/A';
+    
+    const liftValues = liftRecords
+      .map(record => record[liftType])
+      .filter(val => val !== null) as number[];
+    
+    if (liftValues.length === 0) return 'N/A';
+    
+    const maxLift = Math.max(...liftValues);
+    return `${maxLift.toFixed(1)} lbs`;
+  };
+
   // Loading state
   if (isLoading || !isInitialized) {
     return (
@@ -230,21 +498,34 @@ const Progress = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <div className="lg:col-span-2">
               <Card className="bg-gray-900 border-gray-800">
-                <CardHeader>
-                  <CardTitle>Weight Progress</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Track your weight changes over time
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Progress Chart</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Track your progress over time
+                    </CardDescription>
+                  </div>
+                  <Tabs 
+                    defaultValue="weight" 
+                    value={chartMode}
+                    onValueChange={(value) => setChartMode(value as "weight" | "lifts")}
+                    className="w-auto"
+                  >
+                    <TabsList className="grid grid-cols-2 w-[200px]">
+                      <TabsTrigger value="weight">Weight</TabsTrigger>
+                      <TabsTrigger value="lifts">Lifts</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
                 </CardHeader>
                 <CardContent>
                   {isLoadingData ? (
                     <div className="h-[300px] flex items-center justify-center">
                       <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
                     </div>
-                  ) : (
+                  ) : chartMode === "weight" ? (
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={getFormattedChartData()}>
+                        <LineChart data={getFormattedWeightChartData()}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                           <XAxis dataKey="date" stroke="#666" />
                           <YAxis stroke="#666" />
@@ -253,7 +534,44 @@ const Progress = () => {
                           <Line 
                             type="monotone" 
                             dataKey="weight" 
+                            name="Body Weight (lbs)"
+                            stroke="#9b87f5" 
+                            activeDot={{ r: 8 }}
+                            strokeWidth={2}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={getFormattedLiftChartData()}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                          <XAxis dataKey="date" stroke="#666" />
+                          <YAxis stroke="#666" />
+                          <Tooltip contentStyle={{ background: '#222', borderColor: '#444' }} />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="squat" 
+                            name="Squat (lbs)"
                             stroke="#ff2d2d" 
+                            activeDot={{ r: 8 }}
+                            strokeWidth={2}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="bench" 
+                            name="Bench (lbs)"
+                            stroke="#3b82f6" 
+                            activeDot={{ r: 8 }}
+                            strokeWidth={2}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="deadlift" 
+                            name="Deadlift (lbs)"
+                            stroke="#22c55e" 
                             activeDot={{ r: 8 }}
                             strokeWidth={2}
                           />
@@ -334,6 +652,36 @@ const Progress = () => {
                           <div className="text-lg font-semibold">{getConsistencyScore()}</div>
                         </CardContent>
                       </Card>
+                      
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Barbell className="h-4 w-4 text-red-500" />
+                            <span className="text-sm text-gray-400">Best Squat</span>
+                          </div>
+                          <div className="text-lg font-semibold">{getMaxLift('squat')}</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Barbell className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm text-gray-400">Best Bench</span>
+                          </div>
+                          <div className="text-lg font-semibold">{getMaxLift('bench')}</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Barbell className="h-4 w-4 text-green-500" />
+                            <span className="text-sm text-gray-400">Best Deadlift</span>
+                          </div>
+                          <div className="text-lg font-semibold">{getMaxLift('deadlift')}</div>
+                        </CardContent>
+                      </Card>
                     </div>
                   </CardContent>
                 )}
@@ -341,52 +689,190 @@ const Progress = () => {
 
               <Card className="bg-gray-900 border-gray-800 mt-4 md:mt-6">
                 <CardHeader>
-                  <CardTitle>Submit Weight Update</CardTitle>
+                  <div className="flex flex-row items-center justify-between">
+                    <CardTitle>Record Progress</CardTitle>
+                    <Tabs 
+                      defaultValue="weight" 
+                      value={trackingMode}
+                      onValueChange={(value) => setTrackingMode(value as "weight" | "lifts")}
+                      className="w-auto"
+                    >
+                      <TabsList className="grid grid-cols-2 w-[200px]">
+                        <TabsTrigger value="weight">Weight</TabsTrigger>
+                        <TabsTrigger value="lifts">Lifts</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
                   <CardDescription className="text-gray-400">
-                    Record your current weight to track progress
+                    Record your current progress metrics
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmitWeight} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="weight">Current Weight (lbs)</Label>
-                      <Input
-                        id="weight"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="Enter your weight"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        className="bg-gray-800 border-gray-700"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Notes (optional)</Label>
-                      <Textarea
-                        id="notes"
-                        placeholder="Any additional notes about this weigh-in"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="bg-gray-800 border-gray-700 min-h-[100px]"
-                      />
-                    </div>
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-[#9b87f5] hover:bg-[#8a76e4]"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <span className="flex items-center">
-                          <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
-                          Submitting...
-                        </span>
-                      ) : "Submit Weight Record"}
-                    </Button>
-                  </form>
+                  {trackingMode === "weight" ? (
+                    <form onSubmit={handleSubmitWeight} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="weight">Current Weight (lbs)</Label>
+                          <Input
+                            id="weight"
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            placeholder="Enter your weight"
+                            value={weight}
+                            onChange={(e) => setWeight(e.target.value)}
+                            className="bg-gray-800 border-gray-700"
+                            required
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="photo">Photo (optional)</Label>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => document.getElementById('photo-upload')?.click()}
+                              className="w-full bg-gray-800 border-gray-700 hover:bg-gray-700"
+                            >
+                              <ImagePlus className="h-4 w-4 mr-2" />
+                              Add Photo
+                            </Button>
+                            <input
+                              id="photo-upload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleFileChange}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {photoPreview && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-400 mb-2">Photo Preview:</p>
+                          <div className="w-32 h-32 relative rounded-md overflow-hidden">
+                            <img 
+                              src={photoPreview} 
+                              alt="Preview" 
+                              className="object-cover w-full h-full" 
+                            />
+                            <button 
+                              type="button"
+                              className="absolute top-2 right-2 bg-black/50 p-1 rounded-full hover:bg-black/70"
+                              onClick={() => {
+                                setPhotoFile(null);
+                                setPhotoPreview(null);
+                              }}
+                            >
+                              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="notes">Notes (optional)</Label>
+                        <Textarea
+                          id="notes"
+                          placeholder="Any additional notes about this weigh-in"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          className="bg-gray-800 border-gray-700 min-h-[100px]"
+                        />
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-[#9b87f5] hover:bg-[#8a76e4]"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <span className="flex items-center">
+                            <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                            Submitting...
+                          </span>
+                        ) : "Submit Weight Record"}
+                      </Button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleSubmitLifts} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="squat">Squat (lbs)</Label>
+                          <Input
+                            id="squat"
+                            type="number"
+                            step="5"
+                            min="0"
+                            placeholder="Enter squat weight"
+                            value={squat}
+                            onChange={(e) => setSquat(e.target.value)}
+                            className="bg-gray-800 border-gray-700"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="bench">Bench Press (lbs)</Label>
+                          <Input
+                            id="bench"
+                            type="number"
+                            step="5"
+                            min="0"
+                            placeholder="Enter bench weight"
+                            value={bench}
+                            onChange={(e) => setBench(e.target.value)}
+                            className="bg-gray-800 border-gray-700"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="deadlift">Deadlift (lbs)</Label>
+                          <Input
+                            id="deadlift"
+                            type="number"
+                            step="5"
+                            min="0"
+                            placeholder="Enter deadlift weight"
+                            value={deadlift}
+                            onChange={(e) => setDeadlift(e.target.value)}
+                            className="bg-gray-800 border-gray-700"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-800/50 p-3 rounded-md border border-gray-700 text-sm text-gray-400">
+                        <p>Leave fields blank for lifts you haven't performed. You must enter at least one lift.</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="notes">Notes (optional)</Label>
+                        <Textarea
+                          id="notes"
+                          placeholder="Any additional notes about these lifts"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          className="bg-gray-800 border-gray-700 min-h-[100px]"
+                        />
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-[#9b87f5] hover:bg-[#8a76e4]"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <span className="flex items-center">
+                            <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                            Submitting...
+                          </span>
+                        ) : "Submit Lift Records"}
+                      </Button>
+                    </form>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -423,9 +909,30 @@ const Progress = () => {
                       </span>
                     </div>
                     
+                    <div className="flex justify-between pb-2 border-b border-gray-800">
+                      <span className="text-gray-400">Best Squat</span>
+                      <span className="font-semibold text-red-500">
+                        {getMaxLift('squat')}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between pb-2 border-b border-gray-800">
+                      <span className="text-gray-400">Best Bench</span>
+                      <span className="font-semibold text-blue-500">
+                        {getMaxLift('bench')}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between pb-2 border-b border-gray-800">
+                      <span className="text-gray-400">Best Deadlift</span>
+                      <span className="font-semibold text-green-500">
+                        {getMaxLift('deadlift')}
+                      </span>
+                    </div>
+                    
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Weigh-ins</span>
-                      <span className="font-semibold">{weightRecords.length}</span>
+                      <span className="text-gray-400">Total Records</span>
+                      <span className="font-semibold">{weightRecords.length + liftRecords.length}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -439,19 +946,33 @@ const Progress = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {weightRecords.length > 0 ? (
+                  {weightRecords.length > 0 || liftRecords.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
-                        <div className="bg-[#9b87f5] p-2 rounded-full mr-3">
-                          <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
+                      {weightRecords.length > 0 && (
+                        <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
+                          <div className="bg-[#9b87f5] p-2 rounded-full mr-3">
+                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium">First Weigh-in</p>
+                            <p className="text-xs text-gray-400">Started tracking your progress</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">First Weigh-in</p>
-                          <p className="text-xs text-gray-400">Started tracking your progress</p>
+                      )}
+                      
+                      {liftRecords.length > 0 && (
+                        <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
+                          <div className="bg-[#9b87f5] p-2 rounded-full mr-3">
+                            <Barbell className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Strength Tracker</p>
+                            <p className="text-xs text-gray-400">Started tracking your lifts</p>
+                          </div>
                         </div>
-                      </div>
+                      )}
                       
                       {weightRecords.length >= 5 && (
                         <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
@@ -495,11 +1016,48 @@ const Progress = () => {
                           </div>
                         </div>
                       )}
+                      
+                      {/* Lifting achievements */}
+                      {parseFloat(getMaxLift('squat').replace(/[^\d.-]/g, '')) > 200 && (
+                        <div className="p-3 rounded-lg bg-red-500/20 flex items-center">
+                          <div className="bg-red-500 p-2 rounded-full mr-3">
+                            <Barbell className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium">200+ lbs Squat</p>
+                            <p className="text-xs text-gray-400">Achieved a 200+ lbs squat</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {parseFloat(getMaxLift('bench').replace(/[^\d.-]/g, '')) > 200 && (
+                        <div className="p-3 rounded-lg bg-blue-500/20 flex items-center">
+                          <div className="bg-blue-500 p-2 rounded-full mr-3">
+                            <Barbell className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium">200+ lbs Bench</p>
+                            <p className="text-xs text-gray-400">Achieved a 200+ lbs bench press</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {parseFloat(getMaxLift('deadlift').replace(/[^\d.-]/g, '')) > 300 && (
+                        <div className="p-3 rounded-lg bg-green-500/20 flex items-center">
+                          <div className="bg-green-500 p-2 rounded-full mr-3">
+                            <Barbell className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium">300+ lbs Deadlift</p>
+                            <p className="text-xs text-gray-400">Achieved a 300+ lbs deadlift</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-6">
                       <p className="text-gray-400">No achievements yet</p>
-                      <p className="text-sm text-gray-500 mt-1">Record your weight to unlock achievements</p>
+                      <p className="text-sm text-gray-500 mt-1">Record your weight and lifts to unlock achievements</p>
                     </div>
                   )}
                 </CardContent>
