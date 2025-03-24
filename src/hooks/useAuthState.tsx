@@ -75,11 +75,15 @@ export const useAuthState = () => {
   }, []);
 
   // This public refreshProfile function matches the expected signature in AuthContextType
-  const refreshProfile = async () => {
+  const refreshProfile = async (): Promise<Profile | null> => {
     if (user) {
       const profileData = await refreshProfileData(user);
-      setProfile(profileData);
+      if (profileData) {
+        setProfile(profileData);
+      }
+      return profileData;
     }
+    return null;
   };
 
   return {

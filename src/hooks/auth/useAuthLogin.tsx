@@ -1,6 +1,7 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Profile } from '@/hooks/useAuth';
 
 export const useAuthLogin = () => {
   const { toast } = useToast();
@@ -40,7 +41,7 @@ export const useAuthLogin = () => {
   };
 
   // This refreshProfile function should return the Profile object to match the type definition
-  const refreshProfile = async () => {
+  const refreshProfile = async (): Promise<Profile | null> => {
     const { data: session } = await supabase.auth.getSession();
     
     if (session.session?.user) {
