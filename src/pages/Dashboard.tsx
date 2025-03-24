@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Calendar, Dumbbell, Target, Clock, 
-  Zap, FileText, ArrowRight
+  Zap, FileText, ArrowRight, Plus
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 

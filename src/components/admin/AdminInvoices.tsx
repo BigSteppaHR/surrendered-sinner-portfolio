@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -825,17 +824,4 @@ const AdminInvoices = () => {
               ) : (
                 <Card className="bg-[#252A38] border-[#353A48] h-full flex items-center justify-center text-gray-400">
                   <CardContent className="text-center p-6">
-                    <MessageSquare className="h-10 w-10 mx-auto mb-4 opacity-50" />
-                    <p>Select a ticket to view details</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
-
-export default AdminInvoices;
+                    <MessageSquare className="h-10 w-10 mx-auto mb-4 opacity-5
