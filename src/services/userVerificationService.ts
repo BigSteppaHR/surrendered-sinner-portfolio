@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { generateVerificationUrl, createVerificationToken } from '@/services/tokenService';
-import { useEmail } from '@/hooks/useEmail';
 import { generateVerificationEmailTemplate } from '@/templates/emails/VerificationEmailTemplate';
 
 // Type definitions
@@ -28,7 +27,7 @@ export const storeVerificationToken = async (token: string, email: string): Prom
       return false;
     }
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Exception storing verification token:", error);
     return false;
   }

@@ -149,7 +149,10 @@ const VerifyEmail = () => {
                 // Redirect to dashboard after successful sign-in
                 setTimeout(() => {
                   if (mountedRef.current) {
-                    navigate('/dashboard', { replace: true });
+                    navigate('/dashboard', { 
+                      state: { fromVerification: true },
+                      replace: true 
+                    });
                   }
                 }, 1500);
               }
