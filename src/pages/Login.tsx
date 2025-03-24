@@ -36,6 +36,7 @@ export default function Login() {
     };
   }, []);
 
+  // Handle authentication state changes and redirects
   useEffect(() => {
     console.log("Login page - Auth state:", { 
       isAuthenticated, 
@@ -46,12 +47,12 @@ export default function Login() {
     });
     
     // Handle redirection when authentication changes
-    if (isInitialized && isAuthenticated && profile && !redirectAttemptedRef.current) {
-      redirectAttemptedRef.current = true;
+    if (isInitialized && isAuthenticated && profile) {
       console.log("Login: User authenticated, redirecting based on profile:", profile);
       
       // If the user's email is confirmed, redirect them to the appropriate dashboard
       if (profile.email_confirmed) {
+        console.log("User has confirmed email, redirecting to dashboard");
         if (profile.is_admin) {
           navigate("/admin", { replace: true });
         } else {
@@ -164,7 +165,7 @@ export default function Login() {
           });
         }
       } else if (result.data?.user) {
-        // Set redirect flag to false to allow the useEffect to redirect
+        // Reset redirect flag to allow proper redirection
         redirectAttemptedRef.current = false;
         
         toast({
@@ -174,6 +175,7 @@ export default function Login() {
         
         // Immediately redirect if we have profile info
         if (result.data.profile?.email_confirmed) {
+          console.log("Redirecting immediately after successful login");
           if (result.data.profile?.is_admin) {
             navigate("/admin", { replace: true });
           } else {

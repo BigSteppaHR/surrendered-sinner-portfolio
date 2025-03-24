@@ -66,6 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   console.error("Session refresh failed:", error);
                 } else if (data.session) {
                   console.log("Session refreshed successfully at", new Date().toISOString());
+                  
+                  // Ensure profile data is refreshed after session refresh
+                  await authState.refreshProfile();
                 }
               } else {
                 console.log("No active session to refresh");

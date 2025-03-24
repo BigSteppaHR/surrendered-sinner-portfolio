@@ -15,11 +15,13 @@ const DashboardLayout = () => {
   const isPublicPage = publicPages.includes(location.pathname);
   
   useEffect(() => {
+    console.log("DashboardLayout - Auth state:", { isAuthenticated, isInitialized, profile });
+    
     // Only set page as loaded after auth is initialized
     if (isInitialized) {
       setIsPageLoaded(true);
     }
-  }, [isInitialized]);
+  }, [isInitialized, isAuthenticated, profile]);
   
   // Show loading state while checking auth
   if (isLoading || !isInitialized || !isPageLoaded) {
@@ -32,17 +34,20 @@ const DashboardLayout = () => {
   
   // For dashboard routes, we require authentication
   if (!isAuthenticated) {
+    console.log("DashboardLayout: User not authenticated, redirecting to login");
     // Make sure to redirect to the root /login path, not /dashboard/login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
   // If authenticated admin, redirect to admin dashboard
   if (isAuthenticated && profile?.is_admin) {
+    console.log("DashboardLayout: User is admin, redirecting to admin dashboard");
     return <Navigate to="/admin" replace />;
   }
   
   // If authenticated but email not confirmed, redirect to confirmation page
   if (isAuthenticated && profile && !profile.email_confirmed) {
+    console.log("DashboardLayout: Email not confirmed, redirecting to confirm page");
     return <Navigate to="/confirm-email" state={{ email: profile.email }} replace />;
   }
   

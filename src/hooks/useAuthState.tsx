@@ -17,6 +17,7 @@ export const useAuthState = () => {
     if (!currentUser) return null;
     
     try {
+      console.log('Refreshing profile data for user:', currentUser.id);
       // Use the email to query the profile
       const { data, error } = await supabase
         .from('profiles')
@@ -29,6 +30,7 @@ export const useAuthState = () => {
         return null;
       }
       
+      console.log('Profile data fetched:', data ? 'success' : 'not found');
       return data;
     } catch (error: any) {
       console.error('Exception fetching profile:', error.message);
