@@ -62,10 +62,18 @@ export default function Login() {
         .from('profiles')
         .select('email_confirmed')
         .eq('email', email)
-        .maybeSingle()
-        .abortSignal(AbortSignal.timeout(3000)); // Add timeout to prevent long-running queries
+        .maybeSingle();
+      
+      // Add a timeout manually instead of using abortSignal
+      const timeoutId = setTimeout(() => {
+        if (mountedRef.current) {
+          setIsCheckingVerification(false);
+        }
+      }, 3000);
       
       console.log("Profile verification check result:", { data, error });
+      
+      clearTimeout(timeoutId);
       
       if (!error && data && data.email_confirmed) {
         console.log("Email already verified according to database check:", data);
