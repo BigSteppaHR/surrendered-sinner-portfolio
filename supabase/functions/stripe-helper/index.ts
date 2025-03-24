@@ -9,8 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json; charset=utf-8', // Add UTF-8 charset
   'X-Content-Type-Options': 'nosniff', // Prevent MIME-sniffing
-  'Content-Security-Policy': "frame-ancestors 'none'", // Modern alternative to X-Frame-Options
-  'Cache-Control': 'no-store, max-age=0' // Prevent caching of sensitive data
+  'Cache-Control': 'private, max-age=3600' // Better caching directive
 }
 
 serve(async (req) => {

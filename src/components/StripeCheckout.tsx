@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface StripeCheckoutProps {
   amount: number;
@@ -46,7 +47,32 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     setLoading(true);
 
     try {
-      // In a real app, you would call your backend here to create a payment intent
+      // Create a payment intent using our Supabase edge function
+      const { data, error } = await supabase.functions.invoke('stripe-helper', {
+        body: { 
+          action: 'createPaymentIntent',
+          params: { 
+            amount: amount,
+            currency: 'usd'
+          }
+        }
+      });
+
+      if (error) {
+        throw new Error(`Payment initialization failed: ${error.message}`);
+      }
+
+      // For a real implementation, use the client secret to confirm payment
+      // const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(
+      //   data.client_secret,
+      //   {
+      //     payment_method: {
+      //       card: cardElement,
+      //       billing_details: { name, email }
+      //     }
+      //   }
+      // );
+
       // For this demo, we'll simulate a successful payment
       toast({
         title: "Test Payment Processed",
