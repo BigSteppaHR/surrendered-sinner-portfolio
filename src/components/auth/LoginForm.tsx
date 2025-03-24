@@ -34,11 +34,15 @@ const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPass
     },
   });
 
+  const handleSubmit = async (values: z.infer<typeof loginSchema>) => {
+    await onSubmit(values);
+  };
+
   return (
     <Card className="border-0 bg-black/70 backdrop-blur-md shadow-xl">
       <CardContent className="p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="email"

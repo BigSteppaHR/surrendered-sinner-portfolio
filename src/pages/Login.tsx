@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -43,7 +44,26 @@ export default function Login() {
       isLoading,
       redirectAttempted: redirectAttemptedRef.current
     });
-  }, [isAuthenticated, profile, isInitialized, isLoading]);
+    
+    // Handle redirection when authentication changes
+    if (isInitialized && isAuthenticated && profile && !redirectAttemptedRef.current) {
+      redirectAttemptedRef.current = true;
+      console.log("Login: User authenticated, redirecting based on profile:", profile);
+      
+      // If the user's email is confirmed, redirect them to the appropriate dashboard
+      if (profile.email_confirmed) {
+        if (profile.is_admin) {
+          navigate("/admin", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      } else if (!showEmailVerification) {
+        // If email not confirmed, show verification dialog
+        setVerificationEmail(profile.email || "");
+        setShowEmailVerification(true);
+      }
+    }
+  }, [isAuthenticated, profile, navigate, isInitialized, showEmailVerification]);
 
   const checkEmailVerification = async (email: string): Promise<boolean> => {
     if (!email) return false;
@@ -94,34 +114,13 @@ export default function Login() {
     }
   }, [location.state, navigate, toast]);
 
-  useEffect(() => {
-    if (isInitialized && isAuthenticated && !redirectAttemptedRef.current) {
-      redirectAttemptedRef.current = true;
-      console.log("Login: User authenticated, checking profile for redirect:", profile);
-      
-      if (profile?.email_confirmed) {
-        console.log("Login: User authenticated and email confirmed, redirecting to dashboard");
-        
-        // If the user is an admin, redirect to admin dashboard
-        if (profile?.is_admin) {
-          navigate("/admin", { replace: true });
-        } else {
-          navigate("/dashboard", { replace: true });
-        }
-      } else if (profile && !showEmailVerification) {
-        console.log("Login: User authenticated but email not confirmed, showing verification dialog");
-        setVerificationEmail(profile.email || "");
-        setShowEmailVerification(true);
-      }
-    }
-  }, [isAuthenticated, profile, navigate, isInitialized, showEmailVerification]);
-
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     if (!mountedRef.current) return;
     
     console.log("Login form submitted with:", values.email);
     setIsSubmitting(true);
     setLoginError(null);
+    redirectAttemptedRef.current = false; // Reset redirect flag to ensure we try again
     
     try {
       const result = await login(values.email, values.password);
@@ -165,6 +164,7 @@ export default function Login() {
           });
         }
       } else if (result.data?.user) {
+        // Set redirect flag to false to allow the useEffect to redirect
         redirectAttemptedRef.current = false;
         
         toast({
@@ -172,6 +172,7 @@ export default function Login() {
           description: "Welcome back!",
         });
         
+        // Immediately redirect if we have profile info
         if (result.data.profile?.email_confirmed) {
           if (result.data.profile?.is_admin) {
             navigate("/admin", { replace: true });

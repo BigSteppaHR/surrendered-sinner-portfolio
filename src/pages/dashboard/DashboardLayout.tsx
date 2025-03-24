@@ -5,7 +5,7 @@ import DashboardNav from "@/components/dashboard/DashboardNav";
 import { useEffect, useState } from "react";
 
 // We no longer need to include auth-related paths here as they're now directly at root level
-const publicPages = [];
+const publicPages: string[] = [];
 
 const DashboardLayout = () => {
   const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
@@ -32,7 +32,8 @@ const DashboardLayout = () => {
   
   // For dashboard routes, we require authentication
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Make sure to redirect to the root /login path, not /dashboard/login
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
   // If authenticated admin, redirect to admin dashboard
