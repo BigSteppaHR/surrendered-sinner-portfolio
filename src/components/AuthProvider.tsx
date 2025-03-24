@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const initializeAttempted = useRef(false);
 
-  // Setup supabase client to use localStorage
+  // Setup supabase client and initialize session
   useEffect(() => {
     // Initialize auth session only once
     const initializeAuth = async () => {
@@ -27,11 +27,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Get session first to ensure we have the most up-to-date state
         await supabase.auth.getSession();
         
-        // Set up automatic session refresh
+        // Set up automatic session refresh - use a more conservative interval
         const refreshInterval = setInterval(async () => {
-          const { data, error } = await supabase.auth.refreshSession();
-          if (error) console.error("Session refresh error:", error);
-        }, 5 * 60 * 1000); // Refresh every 5 minutes instead of 10
+          try {
+            // Only attempt to refresh if there's a session
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              const { data, error } = await supabase.auth.refreshSession();
+              if (error) console.error("Session refresh error:", error);
+            }
+          } catch (err) {
+            console.error("Error in refresh interval:", err);
+          }
+        }, 5 * 60 * 1000); // Refresh every 5 minutes
         
         setIsInitialized(true);
         

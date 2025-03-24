@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          points: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          points?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          points?: number
+        }
+        Relationships: []
+      }
       daily_quotes: {
         Row: {
           author: string | null
@@ -30,6 +60,30 @@ export type Database = {
           id?: string
           is_active?: boolean
           quote?: string
+        }
+        Relationships: []
+      }
+      payment_balance: {
+        Row: {
+          balance: number
+          currency: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          currency?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          currency?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -72,6 +126,39 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_records: {
+        Row: {
+          created_at: string
+          exercise_type: string
+          id: string
+          notes: string | null
+          recorded_at: string
+          reps: number
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          exercise_type: string
+          id?: string
+          notes?: string | null
+          recorded_at?: string
+          reps?: number
+          user_id: string
+          weight: number
+        }
+        Update: {
+          created_at?: string
+          exercise_type?: string
+          id?: string
+          notes?: string | null
+          recorded_at?: string
+          reps?: number
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -80,6 +167,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean | null
+          profile_picture_url: string | null
           updated_at: string | null
           username: string | null
         }
@@ -90,6 +178,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          profile_picture_url?: string | null
           updated_at?: string | null
           username?: string | null
         }
@@ -100,8 +189,48 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          profile_picture_url?: string | null
           updated_at?: string | null
           username?: string | null
+        }
+        Relationships: []
+      }
+      subscription_packages: {
+        Row: {
+          created_at: string
+          currency: string
+          description: string | null
+          duration_days: number
+          features: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_days: number
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_days?: number
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -177,6 +306,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_sessions: {
         Row: {
           cost: number
@@ -215,6 +373,57 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean
+          package_id: string
+          payment_id: string | null
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          package_id: string
+          payment_id?: string | null
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          package_id?: string
+          payment_id?: string | null
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payment_history"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       verification_tokens: {
         Row: {
