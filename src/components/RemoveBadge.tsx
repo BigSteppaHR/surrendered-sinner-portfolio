@@ -19,9 +19,9 @@ const RemoveBadge = () => {
         '[data-testid*="lovable"]',
         '[aria-label*="lovable"]',
         '[alt*="lovable"]',
-        'script[src*="gpteng.co"]', // Remove the script tag for GPT Engineer
+        'script[src*="gpteng.co"]',
         'script[src*="lovable.dev"]',
-        'meta[content*="lovable.dev"]', // Remove meta tags with Lovable content
+        'meta[content*="lovable.dev"]',
       ];
       
       selectors.forEach(selector => {
@@ -41,7 +41,7 @@ const RemoveBadge = () => {
         }
       });
 
-      // Also modify any og:image, twitter:image URLs
+      // Also modify any og:image, twitter:image URLs that might contain lovable references
       const imageMetaTags = document.querySelectorAll('meta[property="og:image"], meta[name="twitter:image"]');
       imageMetaTags.forEach(tag => {
         const content = tag.getAttribute('content');
