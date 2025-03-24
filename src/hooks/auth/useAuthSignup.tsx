@@ -10,6 +10,9 @@ export const useAuthSignup = () => {
 
   const signup = async (email: string, password: string, fullName: string) => {
     try {
+      console.log('Attempting to create account for:', email);
+
+      // Check if user already exists first
       const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
         .select('*')
@@ -17,6 +20,7 @@ export const useAuthSignup = () => {
         .maybeSingle();
       
       if (existingUser) {
+        console.log('User already exists:', email);
         toast({
           title: "Account already exists",
           description: "An account with this email already exists. Please login instead.",
@@ -32,11 +36,13 @@ export const useAuthSignup = () => {
         options: {
           data: {
             full_name: fullName,
+            email: email, // Add email to metadata
           },
         },
       });
       
       if (error) {
+        console.error('Signup error:', error.message);
         if (error.message.includes("Email signups are disabled")) {
           toast({
             title: "Email authentication disabled",
@@ -50,8 +56,8 @@ export const useAuthSignup = () => {
       }
       
       // Ensure profile is created properly with email field
-      // This is a double-check since the trigger should handle it, but we want to be sure
       if (data.user) {
+        console.log('Creating/updating profile for user:', data.user.id);
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({ 
@@ -67,12 +73,28 @@ export const useAuthSignup = () => {
       }
       
       // Create verification token
-      const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const verificationToken = await createVerificationToken(email);
       
-      const BASE_URL = window.location.origin;
-      const verificationApiUrl = `${BASE_URL}/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
-
-      console.log("Generated verification URL:", verificationApiUrl);
+      if (!verificationToken) {
+        console.error("Failed to create verification token");
+        toast({
+          title: "Warning",
+          description: "Account created but could not generate verification token. Please contact support.",
+          variant: "destructive",
+        });
+        return { 
+          error: null, 
+          data: { 
+            user: data.user, 
+            session: null, 
+            emailSent: false,
+            showVerification: true 
+          } 
+        };
+      }
+      
+      const verificationUrl = generateVerificationUrl(verificationToken, email);
+      console.log("Generated verification URL:", verificationUrl);
       
       try {
         // Store the verification token in the database
@@ -120,7 +142,7 @@ export const useAuthSignup = () => {
                 </p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${verificationApiUrl}" 
+                  <a href="${verificationUrl}" 
                     style="background-color: #FF2D2D; color: white; padding: 14px 28px; text-decoration: none; 
                     border-radius: 4px; display: inline-block; font-size: 16px; font-weight: bold; text-transform: uppercase;
                     border: none;">
@@ -133,7 +155,7 @@ export const useAuthSignup = () => {
                 </p>
                 
                 <div style="background-color: #222222; padding: 15px; border-radius: 4px; word-break: break-all; margin: 20px 0; font-size: 14px;">
-                  ${verificationApiUrl}
+                  ${verificationUrl}
                 </div>
                 
                 <p style="margin: 20px 0; font-size: 16px; line-height: 1.5;">
@@ -190,7 +212,8 @@ export const useAuthSignup = () => {
         data: { 
           user: data.user, 
           session: null, // No active session until email verification
-          emailSent: true 
+          emailSent: true,
+          showVerification: true
         } 
       };
     } catch (error: any) {

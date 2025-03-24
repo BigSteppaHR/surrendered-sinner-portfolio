@@ -35,8 +35,14 @@ export default function LoginForm({ onSubmit, isSubmitting, isLoading, loginErro
 
   // Reset form error when loginError changes
   useEffect(() => {
-    form.clearErrors();
+    if (loginError) {
+      // Only clear form errors if there's a loginError to prevent erasing validation errors
+      form.clearErrors();
+    }
   }, [loginError, form]);
+
+  // Disable the form while submitting
+  const isDisabled = isSubmitting || isLoading;
 
   return (
     <div className="bg-gray-900 text-white p-6 rounded-lg border border-gray-800 w-full">
@@ -59,7 +65,9 @@ export default function LoginForm({ onSubmit, isSubmitting, isLoading, loginErro
                   <Input 
                     placeholder="Enter your email" 
                     {...field} 
-                    disabled={isSubmitting || isLoading}
+                    disabled={isDisabled}
+                    type="email"
+                    autoComplete="email"
                   />
                 </FormControl>
                 <FormMessage />
@@ -79,11 +87,13 @@ export default function LoginForm({ onSubmit, isSubmitting, isLoading, loginErro
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       {...field}
-                      disabled={isSubmitting || isLoading}
+                      disabled={isDisabled}
+                      autoComplete="current-password"
                     />
                     <span
                       className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => !isDisabled && setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
                         <EyeOffIcon className="h-4 w-4 text-gray-500" />
@@ -98,7 +108,7 @@ export default function LoginForm({ onSubmit, isSubmitting, isLoading, loginErro
             )}
           />
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
+          <Button type="submit" className="w-full" disabled={isDisabled}>
             {isSubmitting ? (
               <span className="flex items-center gap-2">
                 <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>

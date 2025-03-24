@@ -1,10 +1,10 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,6 +15,14 @@ const VerifyEmail = () => {
   const { toast } = useToast();
   const [verificationStatus, setVerificationStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState("");
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    // Set up cleanup
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -37,7 +45,7 @@ const VerifyEmail = () => {
           .select('*')
           .eq('token', token)
           .eq('user_email', email)
-          .single();
+          .maybeSingle();
 
         if (tokenError || !tokenData) {
           console.error("Token verification failed:", tokenError);
@@ -61,7 +69,7 @@ const VerifyEmail = () => {
           .from('profiles')
           .select('*')
           .eq('email', email)
-          .single();
+          .maybeSingle();
 
         if (profileError || !profile) {
           console.error("Profile not found:", profileError || "No profile exists");
@@ -91,23 +99,29 @@ const VerifyEmail = () => {
           .delete()
           .eq('token', token);
 
-        console.log("Email verification completed successfully");
-        setVerificationStatus('success');
-        
-        toast({
-          title: "Email verified",
-          description: "Your email has been successfully verified. You can now log in to access your account.",
-        });
-        
-        // Automatically redirect to login after successful verification
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000); // 3 second delay to show success message before redirecting
+        if (mountedRef.current) {
+          console.log("Email verification completed successfully");
+          setVerificationStatus('success');
+          
+          toast({
+            title: "Email verified",
+            description: "Your email has been successfully verified. You can now log in to access your account.",
+          });
+          
+          // Automatically redirect to login after successful verification
+          setTimeout(() => {
+            if (mountedRef.current) {
+              navigate('/login');
+            }
+          }, 3000); // 3 second delay to show success message before redirecting
+        }
         
       } catch (error) {
         console.error("Email verification error:", error);
-        setVerificationStatus('error');
-        setErrorMessage("An unexpected error occurred during verification");
+        if (mountedRef.current) {
+          setVerificationStatus('error');
+          setErrorMessage("An unexpected error occurred during verification");
+        }
       }
     };
 
@@ -134,7 +148,7 @@ const VerifyEmail = () => {
             <CardTitle className="text-2xl text-center flex items-center justify-center">
               {verificationStatus === 'loading' && (
                 <>
-                  <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mr-2"></div>
+                  <Loader2 className="animate-spin h-6 w-6 text-primary mr-2" />
                   Verifying Your Email
                 </>
               )}
@@ -182,6 +196,6 @@ const VerifyEmail = () => {
       </div>
     </div>
   );
-};
+}
 
 export default VerifyEmail;

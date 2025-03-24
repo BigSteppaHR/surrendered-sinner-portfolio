@@ -40,11 +40,14 @@ export default function Login() {
     setIsSubmitting(true);
     setLoginError(null);
     try {
+      console.log("Attempting login with email:", values.email);
       const result = await login(values.email, values.password);
       
       if (result.error) {
+        console.log("Login error:", result.error);
         // Special handling for unconfirmed emails
         if (result.error.code === "email_not_confirmed" && result.data?.showVerification) {
+          console.log("Email not confirmed, showing verification dialog for:", values.email);
           setVerificationEmail(values.email);
           setShowEmailVerification(true);
         } else {

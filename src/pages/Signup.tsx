@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { EyeIcon, EyeOffIcon, AlertCircleIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
 
@@ -38,6 +38,14 @@ export default function Signup() {
   const [signupEmail, setSignupEmail] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const mountedRef = useRef(true);
+
+  // Setup cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -61,11 +69,14 @@ export default function Signup() {
     setSignupError(null);
     
     try {
+      console.log("Submitting signup form for:", values.email);
       const result = await signup(values.email, values.password, values.fullName);
       
       if (result.error) {
+        console.log("Signup error:", result.error);
         setSignupError(result.error.message || "There was a problem creating your account");
-      } else {
+      } else if (result.data?.showVerification) {
+        console.log("Showing verification dialog for:", values.email);
         // Store email for verification dialog
         setSignupEmail(values.email);
         
@@ -75,8 +86,13 @@ export default function Signup() {
         // Reset form
         form.reset();
       }
+    } catch (error) {
+      console.error("Unexpected signup error:", error);
+      setSignupError("An unexpected error occurred. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      if (mountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -125,7 +141,7 @@ export default function Signup() {
           <CardContent>
             {signupError && (
               <div className="bg-red-900/30 border border-red-800 text-white p-3 rounded-md mb-4 flex items-start">
-                <AlertCircleIcon className="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
                 <p className="text-sm">{signupError}</p>
               </div>
             )}
@@ -139,7 +155,12 @@ export default function Signup() {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input type="text" placeholder="Enter your full name" {...field} />
+                        <Input 
+                          type="text" 
+                          placeholder="Enter your full name" 
+                          {...field}
+                          disabled={isSubmitting} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -153,7 +174,12 @@ export default function Signup() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Enter your email" {...field} />
+                        <Input 
+                          type="email" 
+                          placeholder="Enter your email" 
+                          {...field}
+                          disabled={isSubmitting} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -172,6 +198,7 @@ export default function Signup() {
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                             {...field}
+                            disabled={isSubmitting}
                           />
                           <span
                             className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
@@ -202,6 +229,7 @@ export default function Signup() {
                             type={showConfirmPassword ? "text" : "password"}
                             placeholder="Confirm your password"
                             {...field}
+                            disabled={isSubmitting}
                           />
                           <span
                             className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
@@ -220,7 +248,7 @@ export default function Signup() {
                   )}
                 />
 
-                <Button disabled={isSubmitting} type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -246,7 +274,7 @@ export default function Signup() {
 
         <div className="mt-6 text-center text-gray-500">
           <p className="text-xs">
-            <AlertCircleIcon className="inline-block h-4 w-4 mr-1 align-middle" />
+            <AlertCircle className="inline-block h-4 w-4 mr-1 align-middle" />
             By signing up, you agree to our{" "}
             <a href="#" className="text-sinner-red hover:underline">
               Terms of Service

@@ -6,6 +6,7 @@ const RemoveBadge: React.FC = () => {
   const observerRef = useRef<MutationObserver | null>(null);
   const timeoutIdsRef = useRef<NodeJS.Timeout[]>([]);
   const lastOperationTimeRef = useRef<number>(0);
+  const processingElementsRef = useRef<Set<Element>>(new Set());
 
   useEffect(() => {
     // Set mounted flag
@@ -46,18 +47,31 @@ const RemoveBadge: React.FC = () => {
             if (elements.length) {
               elements.forEach(el => {
                 try {
+                  // Skip if we're already processing this element
+                  if (processingElementsRef.current.has(el)) {
+                    return;
+                  }
+                  
+                  processingElementsRef.current.add(el);
+                  
                   // For meta tags, update content instead of removing
                   if (el.tagName === 'META' && el.getAttribute('content')?.includes('lovable.dev')) {
                     const content = el.getAttribute('content');
                     if (content) {
                       el.setAttribute('content', content.replace(/lovable\.dev/g, 'surrenderedsinner.fitness'));
                     }
+                    processingElementsRef.current.delete(el);
                   } else if (isElementInDOM(el) && el.parentNode) {
                     // Only remove if we can verify parent exists AND element is still in the DOM
                     el.parentNode.removeChild(el);
+                    processingElementsRef.current.delete(el);
+                  } else {
+                    // Element not in DOM anymore, just clean up
+                    processingElementsRef.current.delete(el);
                   }
                 } catch (err) {
-                  // Just log the error but don't break execution
+                  // Clean up processing state in case of error
+                  processingElementsRef.current.delete(el);
                   console.debug('Error removing element:', err);
                 }
               });
@@ -175,6 +189,9 @@ const RemoveBadge: React.FC = () => {
       if (debounceTimer !== null) {
         clearTimeout(debounceTimer);
       }
+      
+      // Clear processing set
+      processingElementsRef.current.clear();
     };
   }, []);
 
