@@ -16,6 +16,26 @@ const Payment = () => {
   const { toast } = useToast();
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [dbConnectionStatus, setDbConnectionStatus] = useState<boolean | null>(null);
+  const [stripeInitialized, setStripeInitialized] = useState<boolean>(false);
+  
+  // Check if Stripe is properly initialized
+  useEffect(() => {
+    // Basic check - if window.Stripe exists, we assume the library loaded
+    const checkStripeInitialization = () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+          const isValidKey = stripeKey && stripeKey.startsWith('pk_');
+          setStripeInitialized(isValidKey);
+        } catch (e) {
+          console.error("Error checking Stripe initialization:", e);
+          setStripeInitialized(false);
+        }
+      }
+    };
+    
+    checkStripeInitialization();
+  }, []);
   
   // Check database connection on component mount
   useEffect(() => {
@@ -67,6 +87,17 @@ const Payment = () => {
               Choose between adding funds to your account or subscribing to one of our coaching plans
             </p>
           </div>
+          
+          {!stripeInitialized && (
+            <Alert variant="destructive" className="mb-6 bg-red-950 border-red-800">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Payment Configuration Issue</AlertTitle>
+              <AlertDescription>
+                The payment system is not properly configured. Some payment features may be limited to test mode only.
+                {import.meta.env.DEV && " In development mode, a test Stripe key is being used."}
+              </AlertDescription>
+            </Alert>
+          )}
           
           {dbConnectionStatus === false && (
             <Alert variant="destructive" className="mb-6 bg-red-950 border-red-800">

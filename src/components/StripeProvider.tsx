@@ -7,6 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 // Initialize with a null value, we'll assign the promise directly
 let stripePromise: Promise<Stripe | null> | null = null;
 
+// Define the publishable key - using environment variable with fallback for development
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51NyDWJAfsLmHAfOzbscm6EMsc2zGIp3VCz7dXJwTNAgzyjU62h13qeUWI3j8zNpIImBrzLnRkKiLIi7AuxmfaXj600UBcmzWsn';
+
 interface StripeProviderProps {
   children: React.ReactNode;
 }
@@ -25,20 +28,13 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           return;
         }
         
-        // Get the publishable key from environment variables
-        const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-        
-        // Check if we have a real key that starts with 'pk_'
-        if (!stripePublishableKey || !stripePublishableKey.startsWith('pk_')) {
-          console.warn("Invalid or missing Stripe publishable key. Payments won't be processed in production.");
-          // In development, we'll use a placeholder key that will show Stripe elements but not process payments
-          // This helps developers see the UI without needing real Stripe credentials
-          const testKey = 'pk_test_51NyDWJAfsLmHAfOzbscm6EMsc2zGIp3VCz7dXJwTNAgzyjU62h13qeUWI3j8zNpIImBrzLnRkKiLIi7AuxmfaXj600UBcmzWsn';
-          stripePromise = loadStripe(testKey);
-        } else {
-          // Use the real key
-          stripePromise = loadStripe(stripePublishableKey);
+        // Use the defined key
+        if (!STRIPE_PUBLISHABLE_KEY || !STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
+          console.warn("Using test Stripe publishable key. Payments will only work in test mode.");
         }
+        
+        // Initialize Stripe with the key
+        stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
         
         setIsStripeLoaded(true);
       } catch (error: any) {
