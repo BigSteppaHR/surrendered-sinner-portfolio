@@ -39,6 +39,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_statistics: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          is_positive: boolean | null
+          stat_change: number | null
+          stat_name: string
+          stat_value: number
+          time_period: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_positive?: boolean | null
+          stat_change?: number | null
+          stat_name: string
+          stat_value: number
+          time_period?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_positive?: boolean | null
+          stat_change?: number | null
+          stat_name?: string
+          stat_value?: number
+          time_period?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_quotes: {
         Row: {
           author: string | null
@@ -201,6 +237,48 @@ export type Database = {
           profile_picture_url?: string | null
           updated_at?: string | null
           username?: string | null
+        }
+        Relationships: []
+      }
+      revenue_data: {
+        Row: {
+          created_at: string
+          id: string
+          month: string
+          revenue: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month: string
+          revenue: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: string
+          revenue?: number
+        }
+        Relationships: []
+      }
+      site_traffic: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          visits: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          visits: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          visits?: number
         }
         Relationships: []
       }
