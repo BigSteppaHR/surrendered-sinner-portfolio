@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,11 +27,14 @@ const EmailVerificationDialog = ({
   const [isVisible, setIsVisible] = useState(false);
   const [email, setEmail] = useState("");
   const [dialogDescription, setDialogDescription] = useState("");
+  const descriptionId = "email-verification-description";
 
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
 
   // Update email whenever props or state changes
   useEffect(() => {
+    if (!mounted.current) return;
+    
     const emailToUse = initialEmail || location.state?.email || user?.email || "";
     if (emailToUse) {
       setEmail(emailToUse);
@@ -41,7 +45,7 @@ const EmailVerificationDialog = ({
 
   // Handle visibility safely with a small delay
   useEffect(() => {
-    let visibilityTimer: NodeJS.Timeout;
+    let visibilityTimer: NodeJS.Timeout | undefined;
 
     // Only update visibility if mounted
     if (mounted.current) {
@@ -51,7 +55,7 @@ const EmailVerificationDialog = ({
           if (mounted.current) {
             setIsVisible(true);
           }
-        }, 100); // Slightly increased delay
+        }, 300); // Increased delay to ensure DOM is ready
       } else {
         setIsVisible(false);
       }
@@ -64,32 +68,41 @@ const EmailVerificationDialog = ({
 
   // Handle back to login - redirects to login page when requested
   const handleBackToLogin = () => {
-    if (mounted.current) {
-      onClose();
-      navigate("/login");
-    }
+    if (!mounted.current) return;
+    
+    // First hide the dialog
+    setIsVisible(false);
+    
+    // Then delay the actual close to allow animations to complete
+    setTimeout(() => {
+      if (mounted.current) {
+        onClose();
+        navigate("/login");
+      }
+    }, 300);
   };
 
   // Handle dialog close with improved timing
   const handleDialogClose = () => {
-    if (mounted.current) {
-      setIsVisible(false);
+    if (!mounted.current) return;
+    
+    // First hide the dialog
+    setIsVisible(false);
 
-      // Small delay before actually closing to ensure animations complete
-      const closeTimer = setTimeout(() => {
-        if (mounted.current) {
-          onClose();
-          // Redirect to login page if redirectToLogin is true
-          if (redirectToLogin) {
-            navigate("/login");
-          }
+    // Small delay before actually closing to ensure animations complete
+    const closeTimer = setTimeout(() => {
+      if (mounted.current) {
+        onClose();
+        // Redirect to login page if redirectToLogin is true
+        if (redirectToLogin) {
+          navigate("/login");
         }
-      }, 150);
+      }
+    }, 300);
 
-      return () => {
-        clearTimeout(closeTimer);
-      };
-    }
+    return () => {
+      clearTimeout(closeTimer);
+    };
   };
 
   // Set up cleanup function to update mounted ref when component unmounts
@@ -102,7 +115,7 @@ const EmailVerificationDialog = ({
 
   // If user has confirmed email, close dialog and redirect to dashboard
   useEffect(() => {
-    let redirectTimer: NodeJS.Timeout;
+    let redirectTimer: NodeJS.Timeout | undefined;
 
     if (profile?.email_confirmed && mounted.current) {
       setIsVisible(false);
@@ -113,7 +126,7 @@ const EmailVerificationDialog = ({
           onClose();
           navigate("/dashboard");
         }
-      }, 150);
+      }, 300);
     }
 
     return () => {
@@ -137,17 +150,17 @@ const EmailVerificationDialog = ({
     >
       <DialogContent
         className="p-0 bg-transparent border-none shadow-none max-w-md mx-auto"
-        aria-describedby="email-verification-description"
+        aria-describedby={descriptionId}
       >
         <DialogTitle className="sr-only">Email Verification</DialogTitle>
-        <DialogClose className="absolute right-2 top-2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring[...]">
+        <DialogClose className="absolute right-2 top-2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-10">
           <X className="h-4 w-4 text-white" />
           <span className="sr-only">Close</span>
         </DialogClose>
 
-        {/* Hidden description for accessibility */}
+        {/* Description for accessibility - properly linked with aria-describedby */}
         <div
-          id="email-verification-description"
+          id={descriptionId}
           className="sr-only"
         >
           {dialogDescription}
