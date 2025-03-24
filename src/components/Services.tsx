@@ -3,8 +3,11 @@ import React from 'react';
 import GlassCard from './GlassCard';
 import { ChevronRight, Dumbbell, HeartHandshake, Activity, CalendarClock, Utensils } from 'lucide-react';
 import AnimatedText from './AnimatedText';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Services: React.FC = () => {
+  const isMobile = useIsMobile();
+  
   const services = [
     {
       title: "1:1 Personal Training",
@@ -62,7 +65,8 @@ const Services: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Services grid - improved mobile layout */}
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-8' : 'md:grid-cols-2 lg:grid-cols-4 gap-6'}`}>
           {services.map((service, index) => (
             <GlassCard 
               key={index}
@@ -112,12 +116,13 @@ const Services: React.FC = () => {
           ))}
         </div>
 
-        <div className="mt-16 bg-gradient-to-r from-sinner-red/30 via-sinner-red/20 to-sinner-red/10 rounded-xl p-8 text-center transform hover:scale-[1.01] transition-transform">
-          <h3 className="text-2xl font-bold mb-3">Not sure which program is right for you?</h3>
-          <p className="text-white/80 mb-6 max-w-2xl mx-auto">
+        {/* Mobile-optimized call to action */}
+        <div className="mt-12 md:mt-16 bg-gradient-to-r from-sinner-red/30 via-sinner-red/20 to-sinner-red/10 rounded-xl p-6 md:p-8 text-center transform hover:scale-[1.01] transition-transform">
+          <h3 className="text-xl md:text-2xl font-bold mb-3">Not sure which program is right for you?</h3>
+          <p className="text-white/80 mb-6 max-w-2xl mx-auto text-sm md:text-base">
             Schedule a free 15-minute consultation call to discuss your goals and find the perfect fit for your fitness journey.
           </p>
-          <a href="#contact" className="btn-primary pulse-glow inline-flex">
+          <a href="#contact" className="btn-primary pulse-glow inline-flex text-sm md:text-base">
             Book Free Consultation
           </a>
         </div>
