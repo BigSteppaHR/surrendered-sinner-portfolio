@@ -36,18 +36,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Don't try to refresh profile during initialization to avoid loops
             if (session?.user && authLoaded.current && !isRefreshingProfile.current) {
               // Set a debounce to avoid rapid refresh calls
+              // FIX: Don't return the timeout from this async function
+              isRefreshingProfile.current = true;
+              
               const timeout = setTimeout(async () => {
                 try {
-                  isRefreshingProfile.current = true;
                   await authState.refreshProfile();
-                  isRefreshingProfile.current = false;
                 } catch (error) {
                   console.error("Error refreshing profile:", error);
+                } finally {
                   isRefreshingProfile.current = false;
                 }
               }, 300);
               
-              return () => clearTimeout(timeout);
+              // Clean up timeout if component unmounts
+              return () => {
+                clearTimeout(timeout);
+              };
             }
           }
         );
