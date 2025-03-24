@@ -22,7 +22,7 @@ const EmailVerificationCard = ({
   onBackToLogin,
 }: EmailVerificationCardProps) => {
   return (
-    <Card className="bg-gray-900 text-white border-gray-800">
+    <Card className="bg-gray-900 text-white border-gray-800 w-full shadow-lg">
       <CardHeader className="pb-4">
         <CardTitle className="text-2xl flex items-center justify-center">
           <Mail className="mr-2 h-6 w-6 text-primary" />
