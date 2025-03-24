@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import StripeProvider from "./components/StripeProvider";
 import { AuthProvider } from "./components/AuthProvider";
 import Index from "./pages/Index";
@@ -20,6 +20,7 @@ import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import { useAuth } from "./hooks/useAuth";
+import RemoveBadge from "./components/RemoveBadge";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +37,13 @@ const AuthNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const processingRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    if (isInitialized) {
+      setIsLoading(false);
+    }
+  }, [isInitialized]);
   
   useEffect(() => {
     // Avoid duplicate processing
@@ -51,11 +59,15 @@ const AuthNavigation = () => {
     
     // Clear any state that might cause UI issues when navigating
     const cleanHistory = () => {
-      window.history.replaceState(
-        { _suppressRouteNavigation: true }, 
-        document.title, 
-        location.pathname
-      );
+      try {
+        window.history.replaceState(
+          { _suppressRouteNavigation: true }, 
+          document.title, 
+          location.pathname
+        );
+      } catch (err) {
+        console.error("Error updating history state:", err);
+      }
       
       // Reset processing flag after a delay
       setTimeout(() => {
@@ -72,12 +84,12 @@ const AuthNavigation = () => {
     };
   }, [location.pathname, location.state]);
   
-  // Only return a component when auth is initialized
-  return isInitialized ? null : (
+  // Only return a loading component when auth is not initialized
+  return isLoading ? (
     <div className="fixed inset-0 flex items-center justify-center bg-gray-900 z-50">
       <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
     </div>
-  );
+  ) : null;
 };
 
 const App = () => {
@@ -86,11 +98,10 @@ const App = () => {
       <HelmetProvider>
         <BrowserRouter>
           <AuthProvider>
+            <RemoveBadge />
             <AuthNavigation />
             <StripeProvider>
               <TooltipProvider>
-                <Toaster />
-                <Sonner />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
@@ -109,6 +120,9 @@ const App = () => {
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                {/* Place Toaster components after the Routes */}
+                <Toaster />
+                <Sonner />
               </TooltipProvider>
             </StripeProvider>
           </AuthProvider>

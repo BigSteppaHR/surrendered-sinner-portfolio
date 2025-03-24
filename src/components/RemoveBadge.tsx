@@ -18,8 +18,11 @@ const RemoveBadge: React.FC = () => {
                     el.setAttribute('content', content.replace(/lovable\.dev/g, 'surrenderedsinner.fitness'));
                   }
                 } else if (el.parentNode) {
-                  // Only remove if the element has a parent
-                  el.parentNode.removeChild(el);
+                  // Check if the element is still in the DOM before removing
+                  if (document.body.contains(el)) {
+                    // Remove only if the element is still in the DOM
+                    el.parentNode.removeChild(el);
+                  }
                 }
               } catch (err) {
                 // Silently handle individual element errors
@@ -58,15 +61,20 @@ const RemoveBadge: React.FC = () => {
       '[role="status"]', // Often used for toast notifications
     ];
     
-    // Initial removal
-    safelyRemoveElements(selectors);
+    // Use requestAnimationFrame for initial removal to ensure DOM is stable
+    const handleRemoval = () => {
+      safelyRemoveElements(selectors);
+    };
+    
+    // Run once after the component mounts
+    const initialRemovalTimeout = setTimeout(() => {
+      requestAnimationFrame(handleRemoval);
+    }, 500);
 
     // Set up a more careful MutationObserver that won't throw during removal
     const observer = new MutationObserver(() => {
       // Use requestAnimationFrame to ensure DOM is stable before manipulating
-      requestAnimationFrame(() => {
-        safelyRemoveElements(selectors);
-      });
+      requestAnimationFrame(handleRemoval);
     });
 
     // Start observing with a more limited scope to reduce overhead
@@ -78,6 +86,7 @@ const RemoveBadge: React.FC = () => {
 
     // Clean up
     return () => {
+      clearTimeout(initialRemovalTimeout);
       observer.disconnect();
     };
   }, []);

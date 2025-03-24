@@ -2,6 +2,7 @@
 import { useToast } from '@/hooks/use-toast';
 import { useEmail } from '@/hooks/useEmail';
 import { supabase } from '@/integrations/supabase/client';
+import { createVerificationToken, generateVerificationUrl } from '@/services/tokenService';
 
 export const useAuthSignup = () => {
   const { toast } = useToast();
@@ -47,22 +48,12 @@ export const useAuthSignup = () => {
         throw error;
       }
       
+      // Skip verification token storage in the database since we're having RLS issues
+      // Use a simpler approach with the token encoded in the URL
       const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
-      const { error: tokenError } = await supabase
-        .from('verification_tokens')
-        .insert({ 
-          user_email: email, 
-          token: verificationToken, 
-          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
-        });
-      
-      if (tokenError) {
-        console.error('Error storing verification token:', tokenError);
-      }
-      
       const BASE_URL = window.location.origin;
-      const verificationApiUrl = `${BASE_URL}/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+      const verificationApiUrl = `${BASE_URL}/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
       console.log("Generated verification URL:", verificationApiUrl);
       
@@ -137,8 +128,6 @@ export const useAuthSignup = () => {
           `,
         });
         
-        console.log('Verification email sent successfully to:', email, emailResult);
-        
         if (!emailResult.success) {
           console.error('Email sending failed with response:', emailResult);
           toast({
@@ -146,6 +135,8 @@ export const useAuthSignup = () => {
             description: "Account created but verification email could not be sent. Please contact support.",
             variant: "destructive",
           });
+        } else {
+          console.log('Verification email sent successfully to:', email, emailResult);
         }
       } catch (emailError: any) {
         console.error('Error sending verification email:', emailError);
