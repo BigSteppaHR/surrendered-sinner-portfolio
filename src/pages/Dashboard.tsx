@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +15,6 @@ import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// Define the form schemas
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
@@ -81,7 +79,6 @@ const Dashboard = () => {
     try {
       await signup(values.name, values.email, values.password);
       setShowVerificationDialog(true);
-      // In a real app, we would send a verification email here
       toast({
         title: "Account Created",
         description: "Please verify your email to complete registration.",
@@ -122,7 +119,7 @@ const Dashboard = () => {
                   <span className="text-sinner-red">Sinner</span>
                 </a>
                 <div className="flex items-center gap-4">
-                  <span className="text-gray-300">Welcome, {user.name}</span>
+                  <span className="text-gray-300">Welcome, {user.user_metadata?.full_name || user.email || 'User'}</span>
                   <Button onClick={handleLogout} variant="outline" size="sm">
                     Logout
                   </Button>
@@ -365,7 +362,6 @@ const Dashboard = () => {
         </main>
       </div>
 
-      {/* Email Verification Dialog */}
       <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

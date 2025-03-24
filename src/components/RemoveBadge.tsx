@@ -1,8 +1,9 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 
-const RemoveBadge = () => {
-  useEffect(() => {
+// This is a functional component that uses React hooks
+const RemoveBadge: React.FC = () => {
+  React.useEffect(() => {
     // Function to remove the badge and all other Lovable-related elements
     const removeAllBranding = () => {
       // Extended list of selectors to ensure we catch all variants of branding
