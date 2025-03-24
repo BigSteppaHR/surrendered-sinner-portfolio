@@ -6,13 +6,16 @@ import { loadStripe } from "@stripe/stripe-js";
 import SubscriptionPlans from "@/components/payment/SubscriptionPlans";
 import AddFundsForm from "@/components/payment/AddFundsForm";
 import { subscriptionPlans } from "@/components/payment/SubscriptionData";
+import { useToast } from "@/hooks/use-toast";
 
-// Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+// Initialize Stripe with a fallback to avoid errors
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51QWJOAJ1axkFIKsVApGtDWcUbliJT2kNf90nqUnL3ziUxf3zHANMB6gSKhKkzExWswzuG2pxIa22EqzQA8CD70iZ00LU0YGYQC';
+const stripePromise = loadStripe(stripePublishableKey);
 
 const Payment = () => {
   const [activeTab, setActiveTab] = useState("subscription");
-
+  const { toast } = useToast();
+  
   return (
     <div className="min-h-screen bg-[#000000] text-white">
       <div className="container mx-auto py-8 px-4">
