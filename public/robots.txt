@@ -22,3 +22,12 @@ Allow: /
 # Disallow access to admin areas
 Disallow: /admin/
 Disallow: */admin
+
+# Priority pages
+Allow: /index.html
+Allow: /dashboard
+Allow: /schedule
+Allow: /payment
+
+# Rate limiting
+Crawl-delay: 10

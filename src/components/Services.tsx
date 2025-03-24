@@ -17,7 +17,7 @@ const Services: React.FC = () => {
       highlighted: true,
       showPrice: false,
       price: "",
-      duration: "Contact for pricing",
+      duration: "Based on assessment",
       buttonText: "Take Assessment Quiz"
     },
     {
@@ -50,7 +50,7 @@ const Services: React.FC = () => {
       highlighted: false,
       showPrice: false,
       price: "",
-      duration: "Contact for pricing",
+      duration: "Based on assessment",
       buttonText: "Take Assessment Quiz"
     }
   ];
