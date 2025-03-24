@@ -120,15 +120,13 @@ export const useAuthSignup = () => {
         description: "Please check your email to verify your account",
       });
       
-      // Return data with a redirectTo property to show the dialog instead of a page
+      // Return data without a redirectTo property - we'll handle that in the component
       return { 
         error: null, 
         data: { 
           user: data.user, 
           session: data.session, 
-          emailSent: true,
-          redirectTo: "/confirm-email", 
-          redirectState: { email }
+          emailSent: true 
         } 
       };
     } catch (error: any) {

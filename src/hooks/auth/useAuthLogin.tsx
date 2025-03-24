@@ -34,13 +34,10 @@ export const useAuthLogin = () => {
           variant: "destructive",
         });
         
-        // Return navigation data to show the email verification dialog
+        // Return the error instead of a redirect
         return { 
-          error: null, 
-          data: { 
-            redirectTo: '/confirm-email', 
-            redirectState: { email } 
-          } 
+          error: { message: "Email not verified. Please check your inbox and verify your email before logging in." }, 
+          data: null 
         };
       }
 

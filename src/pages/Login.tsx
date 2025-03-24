@@ -21,6 +21,7 @@ export default function Login() {
   const { login, isAuthenticated, profile, isLoading, isInitialized } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -41,22 +42,18 @@ export default function Login() {
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
+    setLoginError(null);
     try {
       const result = await login(values.email, values.password);
       
-      if (!result.error && result.data) {
-        if (result.data.redirectTo === "/confirm-email") {
-          navigate("/confirm-email", { 
-            state: { email: values.email },
-            replace: true 
-          });
-        } else if (result.data.redirectTo === "/dashboard") {
-          toast({
-            title: "Login successful",
-            description: "Welcome back!",
-          });
-          navigate("/dashboard", { replace: true });
-        }
+      if (result.error) {
+        setLoginError(result.error.message || "Login failed. Please try again.");
+      } else if (result.data?.redirectTo === "/dashboard") {
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+        navigate("/dashboard", { replace: true });
       }
     } finally {
       setIsSubmitting(false);
@@ -96,6 +93,13 @@ export default function Login() {
           </CardHeader>
 
           <CardContent>
+            {loginError && (
+              <div className="bg-red-900/30 border border-red-800 text-white p-3 rounded-md mb-4 flex items-start">
+                <AlertCircleIcon className="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
+                <p className="text-sm">{loginError}</p>
+              </div>
+            )}
+            
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField

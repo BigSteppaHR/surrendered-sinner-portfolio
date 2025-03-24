@@ -17,7 +17,6 @@ import Payment from "./pages/Payment";
 import PaymentPortal from "./pages/PaymentPortal";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import ConfirmEmail from "./pages/ConfirmEmail";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import { useAuth } from "./hooks/useAuth";
@@ -31,10 +30,8 @@ const AuthNavigation = () => {
   
   useEffect(() => {
     // Clear any state that might cause UI issues when navigating
-    if (location.pathname !== '/confirm-email' && location.state?.email) {
-      window.history.replaceState({}, document.title, location.pathname);
-    }
-  }, [location.pathname, location.state]);
+    window.history.replaceState({}, document.title, location.pathname);
+  }, [location.pathname]);
   
   // Only return a component when auth is initialized
   return isInitialized ? null : (
@@ -60,12 +57,13 @@ const App = () => {
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/confirm-email" element={<ConfirmEmail />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/schedule" element={<Schedule />} />
                   <Route path="/payment" element={<Payment />} />
                   <Route path="/payment-portal" element={<PaymentPortal />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
+                  {/* Redirect /confirm-email to /login for backward compatibility */}
+                  <Route path="/confirm-email" element={<Navigate to="/login" replace />} />
                   {/* Redirect /auth to /login for backward compatibility */}
                   <Route path="/auth" element={<Navigate to="/login" replace />} />
                   <Route path="/admin/*" element={<AdminDashboard />} />

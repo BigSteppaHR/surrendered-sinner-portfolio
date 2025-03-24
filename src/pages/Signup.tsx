@@ -10,58 +10,66 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { EyeIcon, EyeOffIcon, AlertCircleIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const signupSchema = z.object({
+  fullName: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z
-    .string()
+  password: z.string()
     .min(8, { message: "Password must be at least 8 characters" })
     .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
     .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
     .regex(/[0-9]/, { message: "Password must contain at least one number" }),
-  fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: "Passwords do not match",
   path: ["confirmPassword"],
 });
 
 export default function Signup() {
-  const { signup, isAuthenticated, profile, isInitialized } = useAuth();
+  const { signup, isAuthenticated, isLoading, isInitialized } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [signupError, setSignupError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isInitialized && isAuthenticated && profile?.email_confirmed) {
+    if (isInitialized && isAuthenticated) {
       navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, profile, navigate, isInitialized]);
+  }, [isAuthenticated, navigate, isInitialized]);
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
+      fullName: "",
       email: "",
       password: "",
       confirmPassword: "",
-      fullName: "",
     },
   });
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     setIsSubmitting(true);
+    setSignupError(null);
+    
     try {
       const result = await signup(values.email, values.password, values.fullName);
       
-      if (!result.error && result.data) {
-        if (result.data.redirectTo === "/confirm-email") {
-          navigate("/confirm-email", { 
-            state: { email: values.email },
-            replace: true 
-          });
-        }
+      if (result.error) {
+        setSignupError(result.error.message || "There was a problem creating your account");
+      } else {
+        // On successful signup, show message about verification email
+        toast({
+          title: "Account created",
+          description: "Please check your email to verify your account",
+        });
+        
+        // Instead of redirecting to confirm-email page, we'll just redirect to login
+        navigate("/login", { replace: true });
       }
     } finally {
       setIsSubmitting(false);
@@ -69,7 +77,7 @@ export default function Signup() {
   };
 
   // Show loading state while checking auth
-  if (!isInitialized) {
+  if (!isInitialized || (isLoading && !isSubmitting)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -77,8 +85,8 @@ export default function Signup() {
     );
   }
 
-  // Don't render if already authenticated and about to redirect
-  if (isAuthenticated && profile?.email_confirmed) {
+  // Don't render if already authenticated (will redirect)
+  if (isAuthenticated) {
     return null;
   }
 
@@ -94,13 +102,20 @@ export default function Signup() {
 
         <Card className="bg-gray-900 text-white border-gray-800">
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl">Create Account</CardTitle>
+            <CardTitle className="text-2xl">Create an Account</CardTitle>
             <CardDescription className="text-gray-400">
               Enter your details to create an account
             </CardDescription>
           </CardHeader>
 
           <CardContent>
+            {signupError && (
+              <div className="bg-red-900/30 border border-red-800 text-white p-3 rounded-md mb-4 flex items-start">
+                <AlertCircleIcon className="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
+                <p className="text-sm">{signupError}</p>
+              </div>
+            )}
+            
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -110,7 +125,7 @@ export default function Signup() {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input type="text" placeholder="Enter your full name" {...field} />
+                        <Input placeholder="Enter your full name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -141,7 +156,7 @@ export default function Signup() {
                         <div className="relative">
                           <Input
                             type={showPassword ? "text" : "password"}
-                            placeholder="Enter your password"
+                            placeholder="Create a password"
                             {...field}
                           />
                           <span
@@ -185,7 +200,7 @@ export default function Signup() {
                             )}
                           </span>
                         </div>
-                      </Control>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -198,7 +213,7 @@ export default function Signup() {
                       Creating Account...
                     </span>
                   ) : (
-                    "Create Account"
+                    "Sign Up"
                   )}
                 </Button>
               </form>
@@ -206,7 +221,7 @@ export default function Signup() {
           </CardContent>
 
           <CardFooter>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 w-full text-center">
               Already have an account?{" "}
               <Link to="/login" className="text-sinner-red hover:underline font-semibold">
                 Login
