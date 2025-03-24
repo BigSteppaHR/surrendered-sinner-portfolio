@@ -4,25 +4,35 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 const Dashboard = () => {
-  const { isAuthenticated, isLoading, profile } = useAuth();
+  const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
   const navigate = useNavigate();
   
   useEffect(() => {
+    // Only redirect once auth is initialized to prevent flashing
+    if (!isInitialized) return;
+    
     // If not authenticated, redirect to login
     if (!isLoading && !isAuthenticated) {
-      navigate("/login");
+      navigate("/login", { replace: true });
+      return;
     }
     
     // If authenticated but email not confirmed, redirect to confirmation page
     if (!isLoading && isAuthenticated && profile && !profile.email_confirmed) {
-      navigate("/confirm-email", { state: { email: profile.email } });
+      navigate("/confirm-email", { state: { email: profile.email }, replace: true });
     }
-  }, [isAuthenticated, isLoading, profile, navigate]);
+  }, [isAuthenticated, isLoading, profile, navigate, isInitialized]);
   
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">
+  // Show loading state while checking auth
+  if (isLoading || !isInitialized) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
     </div>;
+  }
+  
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
   }
   
   return (

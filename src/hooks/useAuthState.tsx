@@ -30,35 +30,37 @@ export const useAuthState = () => {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+    // Set up the auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log('Auth state changed:', event, currentSession?.user?.email);
+      
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        updateProfile(currentSession?.user ?? null);
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(null);
-      }
-    });
-
-    const updateProfile = async (currentUser: User | null) => {
-      if (currentUser) {
-        const profileData = await refreshProfileData(currentUser);
+      if (currentSession?.user) {
+        const profileData = await refreshProfileData(currentSession.user);
         setProfile(profileData);
       } else {
         setProfile(null);
       }
-    };
+      
+      setIsLoading(false);
+    });
 
+    // Then initialize the auth state
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
+        console.log('Initializing auth state...');
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('Current session:', currentSession?.user?.email);
+        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          await updateProfile(currentSession.user);
+          const profileData = await refreshProfileData(currentSession.user);
+          setProfile(profileData);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);

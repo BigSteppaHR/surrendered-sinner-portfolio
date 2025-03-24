@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -27,17 +27,18 @@ const signupSchema = z.object({
 });
 
 export default function Signup() {
-  const { signup, isAuthenticated, profile } = useAuth();
+  const { signup, isAuthenticated, profile, isInitialized } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   // Redirect if already authenticated
-  if (isAuthenticated && profile?.email_confirmed) {
-    navigate("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (isInitialized && isAuthenticated && profile?.email_confirmed) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, profile, navigate, isInitialized]);
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
@@ -50,19 +51,36 @@ export default function Signup() {
   });
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const result = await signup(values.email, values.password, values.fullName);
       
       if (!result.error && result.data) {
         if (result.data.redirectTo === "/confirm-email") {
-          navigate("/confirm-email", { state: { email: values.email } });
+          navigate("/confirm-email", { 
+            state: { email: values.email },
+            replace: true 
+          });
         }
       }
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
+
+  // Show loading state while checking auth
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // Don't render if already authenticated and about to redirect
+  if (isAuthenticated && profile?.email_confirmed) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black p-4">
@@ -167,14 +185,14 @@ export default function Signup() {
                             )}
                           </span>
                         </div>
-                      </FormControl>
+                      </Control>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <Button disabled={isLoading} type="submit" className="w-full">
-                  {isLoading ? (
+                <Button disabled={isSubmitting} type="submit" className="w-full">
+                  {isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                       Creating Account...

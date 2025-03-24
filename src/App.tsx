@@ -3,9 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import StripeProvider from "./components/StripeProvider";
 import { AuthProvider } from "./components/AuthProvider";
 import Index from "./pages/Index";
@@ -26,23 +26,22 @@ const queryClient = new QueryClient();
 
 // Create a navigation handler component that will be inside Router context
 const AuthNavigation = () => {
-  const { user, profile } = useAuth();
-  const navigate = useNavigate();
+  const { isInitialized } = useAuth();
   const location = useLocation();
   
   useEffect(() => {
-    // Handle navigation from login/signup actions
-    if (location.state?.authRedirect) {
-      const { redirectTo, redirectState } = location.state.authRedirect;
-      
-      // For redirects, proceed normally
-      if (redirectTo) {
-        navigate(redirectTo, { state: redirectState, replace: true });
-      }
+    // Clear any state that might cause UI issues when navigating
+    if (location.pathname !== '/confirm-email' && location.state?.email) {
+      window.history.replaceState({}, document.title, location.pathname);
     }
-  }, [location.pathname, location.state, navigate]);
+  }, [location.pathname, location.state]);
   
-  return null;
+  // Only return a component when auth is initialized
+  return isInitialized ? null : (
+    <div className="fixed inset-0 flex items-center justify-center bg-gray-900 z-50">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+    </div>
+  );
 };
 
 const App = () => {

@@ -8,6 +8,7 @@ export const useAuthLogin = () => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login for:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -23,6 +24,7 @@ export const useAuthLogin = () => {
         .single();
 
       if (!profile?.email_confirmed) {
+        console.log('Email not confirmed for user:', email);
         // If email is not confirmed, sign out immediately
         await supabase.auth.signOut();
         
@@ -43,6 +45,7 @@ export const useAuthLogin = () => {
       }
 
       // Return navigation data for confirmed users
+      console.log('Login successful, confirmed user:', email);
       toast({
         title: "Login successful",
         description: "Welcome back!",

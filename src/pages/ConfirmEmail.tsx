@@ -1,37 +1,76 @@
 
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, AlertTriangle, ArrowLeft } from "lucide-react";
-import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ConfirmEmail() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, isAuthenticated } = useAuth();
+  const { profile, isAuthenticated, isInitialized, user } = useAuth();
+  const { toast } = useToast();
+  const [isPageLoaded, setIsPageLoaded] = useState(false);
   
   // Get email from location state or user profile
-  const email = location.state?.email || profile?.email || "";
+  const email = location.state?.email || profile?.email || user?.email || "";
   
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
 
   useEffect(() => {
+    // Don't run effects until auth is initialized
+    if (!isInitialized) return;
+    
+    // Only set page as loaded after a brief delay to prevent flashing
+    const timer = setTimeout(() => {
+      setIsPageLoaded(true);
+    }, 100);
+    
     // If user has confirmed email, redirect to dashboard
     if (isAuthenticated && profile?.email_confirmed) {
-      navigate("/dashboard");
+      toast({
+        title: "Email verified",
+        description: "Your email has been verified. Redirecting to dashboard...",
+      });
+      navigate("/dashboard", { replace: true });
+      return;
     }
     
-    // If no email is available, redirect to login
-    if (!email) {
-      navigate("/login");
+    // If no email is available and auth is initialized, redirect to login
+    if (isPageLoaded && !email && isInitialized) {
+      toast({
+        title: "Missing information",
+        description: "Email information is missing. Please try logging in again.",
+        variant: "destructive",
+      });
+      navigate("/login", { replace: true });
     }
-  }, [profile, isAuthenticated, navigate, email]);
+    
+    return () => clearTimeout(timer);
+  }, [profile, isAuthenticated, navigate, email, isInitialized, isPageLoaded, toast]);
   
   const handleBackToLogin = () => {
-    navigate("/login");
+    // Clear location state to prevent issues
+    window.history.replaceState({}, document.title);
+    navigate("/login", { replace: true });
   };
+
+  // Show loading state until auth is initialized
+  if (!isInitialized || !isPageLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // Don't render anything if about to redirect
+  if (isAuthenticated && profile?.email_confirmed) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black p-4">
@@ -102,6 +141,16 @@ export default function ConfirmEmail() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Login
             </Button>
+            
+            <div className="text-center text-sm text-gray-400 pt-2">
+              <Link 
+                to="/"
+                className="hover:text-gray-300 transition-colors"
+                onClick={() => window.history.replaceState({}, document.title)}
+              >
+                Return to Home Page
+              </Link>
+            </div>
           </CardFooter>
         </Card>
       </div>
