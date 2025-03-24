@@ -108,6 +108,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Send a custom confirmation email
       try {
+        // Generate a verification URL since it's not directly available on the user object
+        const verificationUrl = `${window.location.origin}/auth?verify=success&email=${encodeURIComponent(email)}`;
+        
         await sendEmail({
           to: email,
           subject: "Welcome to Surrendered Sinner - Please Verify Your Email",
@@ -118,14 +121,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               <p>Thank you for signing up for Surrendered Sinner. We're excited to have you join our elite fitness coaching platform.</p>
               <p>Before you can access your account, please verify your email address by clicking the link below:</p>
               <p style="text-align: center;">
-                <a href="${data?.user?.confirmationUrl}" 
+                <a href="${verificationUrl}" 
                    style="background-color: #e32400; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
                   Verify My Email
                 </a>
               </p>
               <p>If the button above doesn't work, you can copy and paste the following URL into your browser:</p>
               <p style="word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">
-                ${data?.user?.confirmationUrl}
+                ${verificationUrl}
               </p>
               <p>This link will expire in 24 hours.</p>
               <p>If you did not sign up for this account, please ignore this email.</p>
