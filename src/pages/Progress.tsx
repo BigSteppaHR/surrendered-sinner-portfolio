@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,10 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, TrendingDown, TrendingUp, Award, Scale, Barbell, ImagePlus } from "lucide-react";
+import { ChevronDown, TrendingDown, TrendingUp, Award, Scale, Dumbbell, ImagePlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Extend the WeightRecord type to include image_url
 type WeightRecord = {
   id: string;
   user_id: string;
@@ -25,7 +23,6 @@ type WeightRecord = {
   image_url: string | null;
 };
 
-// Define the LiftRecord type for tracking lifts
 type LiftRecord = {
   id: string;
   user_id: string;
@@ -80,7 +77,6 @@ const Progress = () => {
     try {
       setIsLoadingData(true);
       
-      // Get last 6 months of weight records
       const sixMonthsAgo = subMonths(new Date(), 6).toISOString();
       
       const { data, error } = await supabase
@@ -109,7 +105,6 @@ const Progress = () => {
     try {
       setIsLoadingData(true);
       
-      // Get last 6 months of lift records
       const sixMonthsAgo = subMonths(new Date(), 6).toISOString();
       
       const { data, error } = await supabase
@@ -126,7 +121,6 @@ const Progress = () => {
       }
       
       if (data) {
-        // Transform the data to group by date
         const liftsByDate = data.reduce((acc, record) => {
           const date = record.recorded_at.split('T')[0];
           if (!acc[date]) {
@@ -141,7 +135,6 @@ const Progress = () => {
             };
           }
           
-          // Set the value for the specific lift type
           if (record.exercise_type === 'squat') acc[date].squat = record.weight;
           if (record.exercise_type === 'bench') acc[date].bench = record.weight;
           if (record.exercise_type === 'deadlift') acc[date].deadlift = record.weight;
@@ -149,7 +142,6 @@ const Progress = () => {
           return acc;
         }, {} as Record<string, LiftRecord>);
         
-        // Convert the grouped data back to an array
         const liftsArray = Object.values(liftsByDate);
         setLiftRecords(liftsArray);
       }
@@ -165,7 +157,6 @@ const Progress = () => {
       const file = e.target.files[0];
       setPhotoFile(file);
       
-      // Create a preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhotoPreview(reader.result as string);
@@ -194,7 +185,6 @@ const Progress = () => {
     try {
       let imageUrl = null;
       
-      // If there's a photo, upload it first
       if (photoFile) {
         const fileName = `${profile.id}/${Date.now()}.${photoFile.name.split('.').pop()}`;
         
@@ -204,7 +194,6 @@ const Progress = () => {
           
         if (uploadError) throw uploadError;
         
-        // Get the public URL
         const { data: publicUrlData } = await supabase.storage
           .from('profiles')
           .getPublicUrl(`weight-records/${fileName}`);
@@ -239,7 +228,6 @@ const Progress = () => {
       setPhotoFile(null);
       setPhotoPreview(null);
       
-      // Refresh weight records
       fetchWeightRecords();
       
     } catch (error: any) {
@@ -258,7 +246,6 @@ const Progress = () => {
     
     if (!profile?.id) return;
     
-    // Validate that at least one lift is provided
     const squatValue = squat ? parseFloat(squat) : null;
     const benchValue = bench ? parseFloat(bench) : null;
     const deadliftValue = deadlift ? parseFloat(deadlift) : null;
@@ -282,13 +269,12 @@ const Progress = () => {
       const timestamp = new Date().toISOString();
       const records = [];
       
-      // Only add records for lifts that have values
       if (squatValue !== null && !isNaN(squatValue)) {
         records.push({
           user_id: profile.id,
           exercise_type: 'squat',
           weight: squatValue,
-          reps: 1, // We're only tracking 1RM
+          reps: 1,
           notes: notes || null,
           recorded_at: timestamp
         });
@@ -316,7 +302,6 @@ const Progress = () => {
         });
       }
       
-      // Insert all records in a batch
       const { data, error } = await supabase
         .from('performance_records')
         .insert(records)
@@ -336,7 +321,6 @@ const Progress = () => {
       setDeadlift("");
       setNotes("");
       
-      // Refresh lift records
       fetchLiftRecords();
       
     } catch (error: any) {
@@ -352,12 +336,11 @@ const Progress = () => {
 
   const getFormattedWeightChartData = () => {
     if (!weightRecords.length) {
-      // Create empty data points for the last 6 weeks
       const emptyData = [];
       const today = new Date();
       for (let i = 5; i >= 0; i--) {
         const date = new Date();
-        date.setDate(today.getDate() - (i * 7)); // Go back by weeks
+        date.setDate(today.getDate() - (i * 7));
         emptyData.push({
           date: format(date, 'MMM dd'),
           weight: null
@@ -374,12 +357,11 @@ const Progress = () => {
 
   const getFormattedLiftChartData = (): LiftData[] => {
     if (!liftRecords.length) {
-      // Create empty data points for the last 6 weeks
       const emptyData = [];
       const today = new Date();
       for (let i = 5; i >= 0; i--) {
         const date = new Date();
-        date.setDate(today.getDate() - (i * 7)); // Go back by weeks
+        date.setDate(today.getDate() - (i * 7));
         emptyData.push({
           date: format(date, 'MMM dd'),
           squat: null,
@@ -398,7 +380,6 @@ const Progress = () => {
     }));
   };
 
-  // Get average weight loss/gain per week
   const getAverageWeeklyChange = () => {
     if (weightRecords.length < 2) return 'N/A';
     
@@ -416,7 +397,6 @@ const Progress = () => {
     return `${weeklyChange.toFixed(2)} lbs/week`;
   };
 
-  // Get max weight recorded
   const getMaxWeight = () => {
     if (weightRecords.length === 0) return 'N/A';
     
@@ -424,7 +404,6 @@ const Progress = () => {
     return `${maxWeight.toFixed(1)} lbs`;
   };
 
-  // Get min weight recorded
   const getMinWeight = () => {
     if (weightRecords.length === 0) return 'N/A';
     
@@ -432,7 +411,6 @@ const Progress = () => {
     return `${minWeight.toFixed(1)} lbs`;
   };
 
-  // Get consistency score (percentage of weeks with at least one weigh-in)
   const getConsistencyScore = () => {
     if (weightRecords.length === 0) return 'N/A';
     
@@ -440,9 +418,8 @@ const Progress = () => {
     const lastRecord = parseISO(weightRecords[weightRecords.length - 1].recorded_at);
     const totalWeeks = Math.ceil(differenceInDays(lastRecord, firstRecord) / 7) + 1;
     
-    if (totalWeeks <= 1) return '100%'; // If all records are within a week
+    if (totalWeeks <= 1) return '100%';
     
-    // Map each record to its ISO week
     const weekMap = new Set();
     weightRecords.forEach(record => {
       const date = parseISO(record.recorded_at);
@@ -456,7 +433,6 @@ const Progress = () => {
     return `${Math.round(consistencyScore)}%`;
   };
 
-  // Get max lift values
   const getMaxLift = (liftType: 'squat' | 'bench' | 'deadlift') => {
     if (liftRecords.length === 0) return 'N/A';
     
@@ -470,7 +446,6 @@ const Progress = () => {
     return `${maxLift.toFixed(1)} lbs`;
   };
 
-  // Loading state
   if (isLoading || !isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C]">
@@ -479,7 +454,6 @@ const Progress = () => {
     );
   }
   
-  // Don't render anything if not authenticated (will redirect)
   if (!isAuthenticated) {
     return null;
   }
@@ -656,7 +630,7 @@ const Progress = () => {
                       <Card className="bg-gray-800 border-gray-700">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <Barbell className="h-4 w-4 text-red-500" />
+                            <Dumbbell className="h-4 w-4 text-red-500" />
                             <span className="text-sm text-gray-400">Best Squat</span>
                           </div>
                           <div className="text-lg font-semibold">{getMaxLift('squat')}</div>
@@ -666,7 +640,7 @@ const Progress = () => {
                       <Card className="bg-gray-800 border-gray-700">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <Barbell className="h-4 w-4 text-blue-500" />
+                            <Dumbbell className="h-4 w-4 text-blue-500" />
                             <span className="text-sm text-gray-400">Best Bench</span>
                           </div>
                           <div className="text-lg font-semibold">{getMaxLift('bench')}</div>
@@ -676,7 +650,7 @@ const Progress = () => {
                       <Card className="bg-gray-800 border-gray-700">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <Barbell className="h-4 w-4 text-green-500" />
+                            <Dumbbell className="h-4 w-4 text-green-500" />
                             <span className="text-sm text-gray-400">Best Deadlift</span>
                           </div>
                           <div className="text-lg font-semibold">{getMaxLift('deadlift')}</div>
@@ -965,7 +939,7 @@ const Progress = () => {
                       {liftRecords.length > 0 && (
                         <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
                           <div className="bg-[#9b87f5] p-2 rounded-full mr-3">
-                            <Barbell className="h-4 w-4 text-white" />
+                            <Dumbbell className="h-4 w-4 text-white" />
                           </div>
                           <div>
                             <p className="font-medium">Strength Tracker</p>
@@ -978,7 +952,7 @@ const Progress = () => {
                         <div className="p-3 rounded-lg bg-[#9b87f5]/20 flex items-center">
                           <div className="bg-[#9b87f5] p-2 rounded-full mr-3">
                             <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2v6a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
                           </div>
                           <div>
@@ -1017,11 +991,10 @@ const Progress = () => {
                         </div>
                       )}
                       
-                      {/* Lifting achievements */}
                       {parseFloat(getMaxLift('squat').replace(/[^\d.-]/g, '')) > 200 && (
                         <div className="p-3 rounded-lg bg-red-500/20 flex items-center">
                           <div className="bg-red-500 p-2 rounded-full mr-3">
-                            <Barbell className="h-4 w-4 text-white" />
+                            <Dumbbell className="h-4 w-4 text-white" />
                           </div>
                           <div>
                             <p className="font-medium">200+ lbs Squat</p>
@@ -1033,7 +1006,7 @@ const Progress = () => {
                       {parseFloat(getMaxLift('bench').replace(/[^\d.-]/g, '')) > 200 && (
                         <div className="p-3 rounded-lg bg-blue-500/20 flex items-center">
                           <div className="bg-blue-500 p-2 rounded-full mr-3">
-                            <Barbell className="h-4 w-4 text-white" />
+                            <Dumbbell className="h-4 w-4 text-white" />
                           </div>
                           <div>
                             <p className="font-medium">200+ lbs Bench</p>
@@ -1045,7 +1018,7 @@ const Progress = () => {
                       {parseFloat(getMaxLift('deadlift').replace(/[^\d.-]/g, '')) > 300 && (
                         <div className="p-3 rounded-lg bg-green-500/20 flex items-center">
                           <div className="bg-green-500 p-2 rounded-full mr-3">
-                            <Barbell className="h-4 w-4 text-white" />
+                            <Dumbbell className="h-4 w-4 text-white" />
                           </div>
                           <div>
                             <p className="font-medium">300+ lbs Deadlift</p>
