@@ -150,7 +150,12 @@ const AdminAnalytics = () => {
                 <CardDescription className="text-gray-400">Distribution of plans</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartContainer className="h-64">
+                <ChartContainer 
+                  config={{
+                    value: { theme: { light: "#9b87f5", dark: "#9b87f5" } }
+                  }}
+                  className="h-64"
+                >
                   <PieChart>
                     <Pie
                       data={planDistributionData}
@@ -179,7 +184,12 @@ const AdminAnalytics = () => {
                 <CardDescription className="text-gray-400">Geographic distribution</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartContainer className="h-64">
+                <ChartContainer 
+                  config={{
+                    value: { theme: { light: "#9b87f5", dark: "#9b87f5" } }
+                  }}
+                  className="h-64"
+                >
                   <BarChart data={locationData} layout="vertical">
                     <XAxis type="number" stroke="#666" />
                     <YAxis dataKey="name" type="category" stroke="#666" />
@@ -207,7 +217,12 @@ const AdminAnalytics = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h4 className="text-lg font-medium mb-4">Traffic by Source</h4>
-                  <ChartContainer className="h-80">
+                  <ChartContainer 
+                    config={{
+                      value: { theme: { light: "#9b87f5", dark: "#9b87f5" } }
+                    }}
+                    className="h-80"
+                  >
                     <PieChart>
                       <Pie
                         data={[
@@ -234,7 +249,14 @@ const AdminAnalytics = () => {
                 </div>
                 <div>
                   <h4 className="text-lg font-medium mb-4">Traffic Trends</h4>
-                  <ChartContainer className="h-80">
+                  <ChartContainer 
+                    config={{
+                      Organic: { theme: { light: "#9b87f5", dark: "#9b87f5" } },
+                      Paid: { theme: { light: "#7E69AB", dark: "#7E69AB" } },
+                      Direct: { theme: { light: "#D6BCFA", dark: "#D6BCFA" } }
+                    }}
+                    className="h-80"
+                  >
                     <LineChart data={trafficData}>
                       <XAxis dataKey="name" stroke="#666" />
                       <YAxis stroke="#666" />
@@ -316,7 +338,12 @@ const AdminAnalytics = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h4 className="text-lg font-medium mb-4">Age Distribution</h4>
-                  <ChartContainer className="h-80">
+                  <ChartContainer 
+                    config={{
+                      value: { theme: { light: "#9b87f5", dark: "#9b87f5" } }
+                    }}
+                    className="h-80"
+                  >
                     <BarChart 
                       data={[
                         { age: "18-24", value: 150 },
@@ -337,7 +364,12 @@ const AdminAnalytics = () => {
                 </div>
                 <div>
                   <h4 className="text-lg font-medium mb-4">Gender Distribution</h4>
-                  <ChartContainer className="h-80">
+                  <ChartContainer 
+                    config={{
+                      value: { theme: { light: "#9b87f5", dark: "#9b87f5" } }
+                    }}
+                    className="h-80"
+                  >
                     <PieChart>
                       <Pie
                         data={[
@@ -370,7 +402,12 @@ const AdminAnalytics = () => {
               
               <div className="mt-6">
                 <h4 className="text-lg font-medium mb-4">User Locations</h4>
-                <ChartContainer className="h-80">
+                <ChartContainer 
+                  config={{
+                    value: { theme: { light: "#9b87f5", dark: "#9b87f5" } }
+                  }}
+                  className="h-80"
+                >
                   <BarChart data={locationData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                     <XAxis type="number" stroke="#666" />
