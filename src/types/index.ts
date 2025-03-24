@@ -49,3 +49,29 @@ export interface UserDetails {
   email: string;
   full_name: string | null;
 }
+
+// Support ticket type
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  subject: string;
+  message: string;
+  type: 'inquiry' | 'call_request';
+  status: 'open' | 'in_progress' | 'closed';
+  created_at: string;
+  updated_at: string;
+  user_email?: string;
+  user_name?: string;
+}
+
+// User profile type
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  email_confirmed: boolean;
+  avatar_url: string | null;
+  is_admin: boolean;
+  username: string | null;
+  updated_at: string | null;
+}

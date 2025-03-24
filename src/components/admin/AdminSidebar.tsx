@@ -1,120 +1,69 @@
 
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { 
   LayoutDashboard, 
+  CalendarDays, 
   CreditCard, 
-  Receipt, 
-  BarChart3, 
-  LogOut,
-  User,
-  Menu,
-  Calendar
+  FileText, 
+  BarChart3,
+  MessageSquare
 } from "lucide-react";
 import { 
   Sidebar, 
   SidebarContent, 
-  SidebarGroup, 
-  SidebarGroupContent,
-  SidebarGroupLabel, 
-  SidebarMenu, 
-  SidebarMenuButton, 
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarTrigger,
-  SidebarFooter
+  SidebarTrigger 
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
 const AdminSidebar = () => {
-  const { logout, profile } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
-
-  const menuItems = [
-    {
-      icon: LayoutDashboard,
-      label: "Overview",
-      path: "/admin/overview"
-    },
-    {
-      icon: Calendar,
-      label: "Sessions",
-      path: "/admin/sessions"
-    },
-    {
-      icon: CreditCard,
-      label: "Payments",
-      path: "/admin/payments"
-    },
-    {
-      icon: Receipt,
-      label: "Invoices",
-      path: "/admin/invoices"
-    },
-    {
-      icon: BarChart3,
-      label: "Analytics",
-      path: "/admin/analytics"
-    }
+  const links = [
+    { name: "Overview", path: "/admin/overview", icon: LayoutDashboard },
+    { name: "Sessions", path: "/admin/sessions", icon: CalendarDays },
+    { name: "Payments", path: "/admin/payments", icon: CreditCard },
+    { name: "Invoices", path: "/admin/invoices", icon: FileText },
+    { name: "Analytics", path: "/admin/analytics", icon: BarChart3 },
+    { name: "Support Tickets", path: "/admin/tickets", icon: MessageSquare },
   ];
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4 flex items-center justify-between border-b border-gray-800">
-        <div className="flex items-center gap-2">
-          <User className="h-6 w-6 text-primary" />
-          <div>
-            <h2 className="text-lg font-semibold">Admin Panel</h2>
-            <p className="text-xs text-gray-400">{profile?.full_name || 'Administrator'}</p>
+    <Sidebar className="border-r border-gray-800 bg-gray-900">
+      <div className="flex h-16 items-center justify-between px-6 border-b border-gray-800">
+        <h1 className="text-xl font-bold">Admin Portal</h1>
+        <SidebarTrigger className="h-7 w-7" />
+      </div>
+      <SidebarContent>
+        <div className="py-6 px-4">
+          <div className="space-y-1">
+            {links.map((link) => (
+              <NavLink
+                key={link.path}
+                to={link.path}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center justify-start gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-red-900/20 text-white"
+                      : "text-gray-400 hover:text-white hover:bg-red-900/10"
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <link.icon
+                      className={cn(
+                        "h-5 w-5",
+                        isActive ? "text-white" : "text-gray-400"
+                      )}
+                    />
+                    <span>{link.name}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
           </div>
         </div>
-        <SidebarTrigger>
-          <Menu className="h-5 w-5" />
-        </SidebarTrigger>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.path}
-                      className={({ isActive }) => 
-                        `flex items-center gap-3 py-2 px-3 rounded-md transition-colors ${
-                          isActive 
-                            ? "bg-primary/20 text-primary" 
-                            : "hover:bg-gray-800"
-                        }`
-                      }
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t border-gray-800">
-        <Button 
-          variant="outline" 
-          className="w-full justify-start gap-2 text-gray-400 hover:text-white hover:bg-gray-800"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button>
-      </SidebarFooter>
     </Sidebar>
   );
 };

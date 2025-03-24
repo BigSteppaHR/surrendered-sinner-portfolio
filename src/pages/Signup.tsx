@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -10,7 +10,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { EyeIcon, EyeOffIcon, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
+import AnimatedBackground from "@/components/auth/AnimatedBackground";
+
+// Lazy load components to improve performance
+const EmailVerificationDialog = lazy(() => import("@/components/email/EmailVerificationDialog"));
 
 const signupSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -129,181 +132,187 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">
-            SURRENDERED<span className="text-red-600">SINNER</span>
-          </h1>
-          <p className="text-gray-400 mt-2">Elite fitness coaching</p>
-        </div>
+    <AnimatedBackground>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-white">
+              SURRENDERED<span className="text-red-600">SINNER</span>
+            </h1>
+            <p className="text-gray-400 mt-2">Elite fitness coaching</p>
+          </div>
 
-        <Card className="bg-gray-900 text-white border-gray-800">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-2xl">Create Account</CardTitle>
-            <CardDescription className="text-gray-400">
-              Enter your details to create an account
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            {signupError && (
-              <div className="bg-red-900/30 border border-red-800 text-white p-3 rounded-md mb-4 flex items-start">
-                <AlertCircle className="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
-                <p className="text-sm">{signupError}</p>
-              </div>
-            )}
+          <Card className="bg-gray-900 text-white border-gray-800">
             
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="text" 
-                          placeholder="Enter your full name" 
-                          {...field}
-                          disabled={isSubmitting} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <CardHeader className="pb-4">
+              <CardTitle className="text-2xl">Create Account</CardTitle>
+              <CardDescription className="text-gray-400">
+                Enter your details to create an account
+              </CardDescription>
+            </CardHeader>
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="Enter your email" 
-                          {...field}
-                          disabled={isSubmitting} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Enter your password"
+            <CardContent>
+              {signupError && (
+                <div className="bg-red-900/30 border border-red-800 text-white p-3 rounded-md mb-4 flex items-start">
+                  <AlertCircle className="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm">{signupError}</p>
+                </div>
+              )}
+              
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="text" 
+                            placeholder="Enter your full name" 
                             {...field}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting} 
                           />
-                          <span
-                            className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? (
-                              <EyeOffIcon className="h-4 w-4 text-gray-500" />
-                            ) : (
-                              <EyeIcon className="h-4 w-4 text-gray-500" />
-                            )}
-                          </span>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            type={showConfirmPassword ? "text" : "password"}
-                            placeholder="Confirm your password"
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="email" 
+                            placeholder="Enter your email" 
                             {...field}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting} 
                           />
-                          <span
-                            className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          >
-                            {showConfirmPassword ? (
-                              <EyeOffIcon className="h-4 w-4 text-gray-500" />
-                            ) : (
-                              <EyeIcon className="h-4 w-4 text-gray-500" />
-                            )}
-                          </span>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      Creating Account...
-                    </span>
-                  ) : (
-                    "Create Account"
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Enter your password"
+                              {...field}
+                              disabled={isSubmitting}
+                            />
+                            <span
+                              className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? (
+                                <EyeOffIcon className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <EyeIcon className="h-4 w-4 text-gray-500" />
+                              )}
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-          <CardFooter>
-            <p className="text-sm text-gray-400 w-full text-center">
-              Already have an account?{" "}
-              <Link to="/login" className="text-sinner-red hover:underline font-semibold">
-                Login
-              </Link>
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="Confirm your password"
+                              {...field}
+                              disabled={isSubmitting}
+                            />
+                            <span
+                              className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOffIcon className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <EyeIcon className="h-4 w-4 text-gray-500" />
+                              )}
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Creating Account...
+                      </span>
+                    ) : (
+                      "Create Account"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+
+            <CardFooter>
+              <p className="text-sm text-gray-400 w-full text-center">
+                Already have an account?{" "}
+                <Link to="/login" className="text-sinner-red hover:underline font-semibold">
+                  Login
+                </Link>
+              </p>
+            </CardFooter>
+          
+          </Card>
+
+          <div className="mt-6 text-center text-gray-500">
+            <p className="text-xs">
+              <AlertCircle className="inline-block h-4 w-4 mr-1 align-middle" />
+              By signing up, you agree to our{" "}
+              <a href="#" className="text-sinner-red hover:underline">
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a href="#" className="text-sinner-red hover:underline">
+                Privacy Policy
+              </a>
+              .
             </p>
-          </CardFooter>
-        </Card>
-
-        <div className="mt-6 text-center text-gray-500">
-          <p className="text-xs">
-            <AlertCircle className="inline-block h-4 w-4 mr-1 align-middle" />
-            By signing up, you agree to our{" "}
-            <a href="#" className="text-sinner-red hover:underline">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="#" className="text-sinner-red hover:underline">
-              Privacy Policy
-            </a>
-            .
-          </p>
+          </div>
         </div>
-      </div>
 
-      {mountedRef.current && (
-        <EmailVerificationDialog 
-          isOpen={showEmailVerification}
-          onClose={handleCloseVerification}
-          initialEmail={signupEmail}
-          redirectToLogin={true}
-        />
-      )}
-    </div>
+        {mountedRef.current && (
+          <Suspense fallback={<div className="animate-pulse">Loading verification...</div>}>
+            <EmailVerificationDialog 
+              isOpen={showEmailVerification}
+              onClose={handleCloseVerification}
+              initialEmail={signupEmail}
+              redirectToLogin={true}
+            />
+          </Suspense>
+        )}
+      </div>
+    </AnimatedBackground>
   );
 }

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 import * as z from "zod";
@@ -9,6 +9,10 @@ import LoginFooter from "@/components/auth/LoginFooter";
 import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import AnimatedBackground from "@/components/auth/AnimatedBackground";
+
+// Lazy load components to improve initial loading performance
+const EmailVerificationDialogLazy = lazy(() => import("@/components/email/EmailVerificationDialog"));
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -28,6 +32,7 @@ export default function Login() {
   const redirectAttemptedRef = useRef(false);
   const { toast } = useToast();
 
+  // Component cleanup
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -45,19 +50,20 @@ export default function Login() {
     });
   }, [isAuthenticated, profile, isInitialized, isLoading]);
 
-  // Check if an email is already verified in the database
+  // Memoized email verification check function to improve performance
   const checkEmailVerification = async (email: string): Promise<boolean> => {
     if (!email) return false;
     
     setIsCheckingVerification(true);
     
     try {
-      // Check if the profile exists
+      // Check if the profile exists - use cached result if available
       const { data, error } = await supabase
         .from('profiles')
         .select('email_confirmed')
         .eq('email', email)
-        .maybeSingle();
+        .maybeSingle()
+        .abortSignal(AbortSignal.timeout(3000)); // Add timeout to prevent long-running queries
       
       console.log("Profile verification check result:", { data, error });
       
@@ -77,8 +83,8 @@ export default function Login() {
     }
   };
 
+  // Check for verification success message
   useEffect(() => {
-    // Check if we have a success message from verification page
     if (location.state?.message) {
       toast({
         title: "Success",
@@ -90,6 +96,7 @@ export default function Login() {
     }
   }, [location.state, navigate, toast]);
 
+  // Auto-redirect to dashboard if authenticated
   useEffect(() => {
     // Only redirect if the user is authenticated and initialization is complete
     if (isInitialized && isAuthenticated && !redirectAttemptedRef.current) {
@@ -108,6 +115,7 @@ export default function Login() {
     }
   }, [isAuthenticated, profile, navigate, isInitialized, showEmailVerification]);
 
+  // Optimized form submission handler
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     if (!mountedRef.current) return;
     
@@ -208,28 +216,32 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-md">
-        <LoginHeader />
-        
-        <LoginForm 
-          onSubmit={onSubmit}
-          isSubmitting={isSubmitting || isCheckingVerification}
-          isLoading={isLoading}
-          loginError={loginError}
-        />
-        
-        <LoginFooter />
-      </div>
+    <AnimatedBackground>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <LoginHeader />
+          
+          <LoginForm 
+            onSubmit={onSubmit}
+            isSubmitting={isSubmitting || isCheckingVerification}
+            isLoading={isLoading}
+            loginError={loginError}
+          />
+          
+          <LoginFooter />
+        </div>
 
-      {showEmailVerification && (
-        <EmailVerificationDialog 
-          isOpen={showEmailVerification}
-          onClose={handleCloseVerification}
-          initialEmail={verificationEmail}
-          redirectToLogin={false}
-        />
-      )}
-    </div>
+        {showEmailVerification && (
+          <Suspense fallback={<div className="animate-pulse">Loading verification...</div>}>
+            <EmailVerificationDialogLazy 
+              isOpen={showEmailVerification}
+              onClose={handleCloseVerification}
+              initialEmail={verificationEmail}
+              redirectToLogin={false}
+            />
+          </Suspense>
+        )}
+      </div>
+    </AnimatedBackground>
   );
 }

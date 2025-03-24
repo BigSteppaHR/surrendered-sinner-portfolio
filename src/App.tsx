@@ -19,6 +19,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
+import Progress from "./pages/Progress";
+import Account from "./pages/Account";
 import { useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient({
@@ -137,6 +139,8 @@ const AppRoutes = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/schedule" element={<Schedule />} />
+        <Route path="/progress" element={<Progress />} />
+        <Route path="/account" element={<Account />} />
         <Route path="/payment" element={<Payment />} />
         <Route path="/payment-portal" element={<PaymentPortal />} />
         <Route path="/verify-email" element={<VerifyEmail />} />

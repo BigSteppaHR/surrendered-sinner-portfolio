@@ -7,6 +7,7 @@ import AdminPayments from "@/components/admin/AdminPayments";
 import AdminInvoices from "@/components/admin/AdminInvoices";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import AdminSessions from "@/components/admin/AdminSessions";
+import AdminTickets from "@/components/admin/AdminTickets";
 import { useAuth } from "@/hooks/useAuth";
 
 const AdminDashboard = () => {
@@ -43,6 +44,7 @@ const AdminDashboard = () => {
             <Route path="/payments" element={<AdminPayments />} />
             <Route path="/invoices" element={<AdminInvoices />} />
             <Route path="/analytics" element={<AdminAnalytics />} />
+            <Route path="/tickets" element={<AdminTickets />} />
           </Routes>
         </div>
       </div>

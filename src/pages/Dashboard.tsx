@@ -8,6 +8,7 @@ import ScheduleSession from "@/components/dashboard/ScheduleSession";
 import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import WeightChart from "@/components/dashboard/WeightChart";
 import WorkoutPlans from "@/components/dashboard/WorkoutPlans";
+import DashboardNav from "@/components/dashboard/DashboardNav";
 import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
@@ -65,29 +66,33 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="min-h-screen bg-[#1A1F2C] text-white p-6">
-      <div className="container mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-gray-400 mt-1">Welcome back, {profile?.full_name || 'Athlete'}!</p>
-          </div>
-          <div className="mt-4 md:mt-0 w-full md:w-auto">
-            <DailyQuote />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 gap-6">
-              <UpcomingSessions />
-              <WorkoutPlans />
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#1A1F2C] text-white">
+      <DashboardNav />
+      
+      <div className="flex-1 overflow-auto">
+        <div className="p-6 max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Dashboard</h1>
+              <p className="text-gray-400 mt-1">Welcome back, {profile?.full_name || 'Athlete'}!</p>
+            </div>
+            <div className="mt-4 md:mt-0 w-full md:w-auto">
+              <DailyQuote />
             </div>
           </div>
           
-          <div className="space-y-6">
-            <ScheduleSession />
-            <WeightChart />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 gap-6">
+                <UpcomingSessions />
+                <WorkoutPlans />
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              <ScheduleSession />
+              <WeightChart />
+            </div>
           </div>
         </div>
       </div>
