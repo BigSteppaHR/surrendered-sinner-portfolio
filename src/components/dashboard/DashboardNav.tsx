@@ -17,6 +17,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useAuthLogout } from "@/hooks/auth/useAuthLogout";
+import UserAccountStatus from "./UserAccountStatus";
 
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -28,11 +30,13 @@ const navItems = [
 ];
 
 const DashboardNav = () => {
-  const { profile, logout } = useAuth();
+  const { profile } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const { logout } = useAuthLogout();
 
   const getInitials = (name: string) => {
+    if (!name) return "U";
     return name
       .split(" ")
       .map((n) => n[0])
@@ -54,8 +58,8 @@ const DashboardNav = () => {
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
           isActive 
-            ? "bg-[#ea384c]/20 text-white" 
-            : "text-gray-400 hover:text-white hover:bg-[#ea384c]/10"
+            ? "bg-sinner-red/20 text-white" 
+            : "text-gray-400 hover:text-white hover:bg-sinner-red/10"
         )}
       >
         <item.icon className="h-5 w-5" />
@@ -71,7 +75,7 @@ const DashboardNav = () => {
         <div className="flex items-center gap-3">
           <Avatar className="h-9 w-9 border border-[#333333]">
             <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || "User"} />
-            <AvatarFallback className="bg-[#ea384c] text-white">
+            <AvatarFallback className="bg-sinner-red text-white">
               {profile?.full_name ? getInitials(profile.full_name) : "U"}
             </AvatarFallback>
           </Avatar>
@@ -93,7 +97,7 @@ const DashboardNav = () => {
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10 border border-[#333333]">
                     <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || "User"} />
-                    <AvatarFallback className="bg-[#ea384c] text-white">
+                    <AvatarFallback className="bg-sinner-red text-white">
                       {profile?.full_name ? getInitials(profile.full_name) : "U"}
                     </AvatarFallback>
                   </Avatar>
@@ -120,9 +124,10 @@ const DashboardNav = () => {
               </div>
               
               <div className="p-4 border-t border-[#333333]">
+                <UserAccountStatus />
                 <Button 
                   variant="ghost" 
-                  className="w-full justify-start text-gray-400 hover:text-white"
+                  className="w-full justify-start text-gray-400 hover:text-white hover:bg-sinner-red/10"
                   onClick={handleLogout}
                 >
                   <LogOut className="h-5 w-5 mr-3" />
@@ -140,7 +145,7 @@ const DashboardNav = () => {
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12 border border-[#333333]">
               <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || "User"} />
-              <AvatarFallback className="bg-[#ea384c] text-white">
+              <AvatarFallback className="bg-sinner-red text-white">
                 {profile?.full_name ? getInitials(profile.full_name) : "U"}
               </AvatarFallback>
             </Avatar>
@@ -170,9 +175,10 @@ const DashboardNav = () => {
         </div>
         
         <div className="p-4 border-t border-[#333333]">
+          <UserAccountStatus />
           <Button 
             variant="ghost" 
-            className="w-full justify-start text-gray-400 hover:text-white hover:bg-[#ea384c]/5"
+            className="w-full justify-start text-gray-400 hover:text-white hover:bg-sinner-red/10"
             onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 mr-3" />

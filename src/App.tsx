@@ -11,7 +11,7 @@ import { AuthProvider } from "./components/AuthProvider";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import Dashboard from "./pages/dashboard/Dashboard";
+import Dashboard from "./pages/Dashboard";
 import { useAuth } from "./hooks/useAuth";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 
@@ -113,7 +113,7 @@ const AuthNavigation = () => {
   // Only return a loading component when auth is not initialized
   return isLoading ? (
     <div className="fixed inset-0 flex items-center justify-center bg-[#000000] z-50">
-      <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+      <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
     </div>
   ) : null;
 };
@@ -135,6 +135,7 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="sessions" element={<import("./pages/dashboard/Sessions").then(mod => <mod.default />)} />
+          <Route path="schedule" element={<import("./pages/dashboard/Schedule").then(mod => <mod.default />)} />
           <Route path="plans" element={<import("./pages/dashboard/TrainingPlans").then(mod => <mod.default />)} />
           <Route path="payment" element={<import("./pages/dashboard/Payment").then(mod => <mod.default />)} />
           <Route path="progress" element={<import("./pages/dashboard/Progress").then(mod => <mod.default />)} />
@@ -148,7 +149,7 @@ const AppRoutes = () => {
         
         {/* Redirect old routes to new dashboard routes */}
         <Route path="/dashboard" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/schedule" element={<Navigate to="/dashboard/sessions" replace />} />
+        <Route path="/schedule" element={<Navigate to="/dashboard/schedule" replace />} />
         <Route path="/progress" element={<Navigate to="/dashboard/progress" replace />} />
         <Route path="/account" element={<Navigate to="/dashboard/account" replace />} />
         <Route path="/payment" element={<Navigate to="/dashboard/payment" replace />} />

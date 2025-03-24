@@ -30,7 +30,7 @@ const DashboardLayout = () => {
   if (isLoading || !isInitialized || !isPageLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+        <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
       </div>
     );
   }
