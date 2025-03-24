@@ -11,13 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EyeIcon, EyeOffIcon, AlertCircleIcon } from "lucide-react";
 
-// Define login form schema
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
-// Define signup form schema
 const signupSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z
@@ -42,7 +40,6 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Setup login form
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -51,7 +48,6 @@ export default function Auth() {
     },
   });
 
-  // Setup signup form
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -62,14 +58,12 @@ export default function Auth() {
     },
   });
 
-  // Handle login submission
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     try {
       const result = await login(values.email, values.password);
       
       if (!result.error && result.data) {
-        // Handle redirection based on email confirmation status
         if (result.data.redirectTo) {
           navigate(result.data.redirectTo, { 
             state: result.data.redirectState,
@@ -82,7 +76,6 @@ export default function Auth() {
     }
   };
 
-  // Handle signup submission
   const onSignupSubmit = async (values: z.infer<typeof signupSchema>) => {
     setIsLoading(true);
     try {
@@ -99,7 +92,6 @@ export default function Auth() {
     }
   };
 
-  // Redirect if already authenticated
   if (isAuthenticated) {
     navigate("/dashboard");
     return null;
