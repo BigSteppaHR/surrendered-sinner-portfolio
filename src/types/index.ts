@@ -9,6 +9,8 @@ export interface UserSession {
   location: string;
   is_paid: boolean;
   notes: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Weight record type
@@ -18,6 +20,7 @@ export interface WeightRecord {
   weight: number;
   recorded_at: string;
   notes: string | null;
+  image_url: string | null;
   is_approved: boolean;
   created_at?: string;
 }
@@ -74,4 +77,32 @@ export interface UserProfile {
   is_admin: boolean;
   username: string | null;
   updated_at: string | null;
+}
+
+// Payment history type
+export interface PaymentHistory {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  payment_method: string | null;
+  status: string;
+  stripe_payment_id: string | null;
+  description: string | null;
+  metadata: Record<string, any> | null;
+  created_at: string;
+}
+
+// Training package type
+export interface TrainingPackage {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  currency: string;
+  duration_days: number | null;
+  sessions_included: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }

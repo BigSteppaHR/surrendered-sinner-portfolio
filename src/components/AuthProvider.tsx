@@ -21,11 +21,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Get session first to ensure we have the most up-to-date state
         await supabase.auth.getSession();
         
-        // Set a check interval to refresh the session periodically
+        // Set up automatic session refresh
         const refreshInterval = setInterval(async () => {
           const { data, error } = await supabase.auth.refreshSession();
           if (error) console.error("Session refresh error:", error);
-        }, 10 * 60 * 1000); // Refresh every 10 minutes
+        }, 5 * 60 * 1000); // Refresh every 5 minutes instead of 10
         
         setIsInitialized(true);
         

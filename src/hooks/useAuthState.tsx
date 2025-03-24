@@ -97,7 +97,7 @@ export const useAuthState = () => {
                   { 
                     id: currentUser.id, 
                     email: email,
-                    email_confirmed: false,
+                    email_confirmed: currentUser.email_confirmed_at ? true : false,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                   }
@@ -130,6 +130,15 @@ export const useAuthState = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log('Auth state changed:', event, currentSession?.user?.email);
       
+      // Add more details to debug
+      console.log('Auth state change details:', {
+        event,
+        user: currentSession?.user?.id,
+        email: currentSession?.user?.email,
+        email_confirmed: currentSession?.user?.email_confirmed_at,
+        timestamp: new Date().toISOString()
+      });
+      
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
@@ -150,6 +159,15 @@ export const useAuthState = () => {
         console.log('Initializing auth state...');
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         console.log('Current session:', currentSession?.user?.email);
+        
+        if (currentSession) {
+          console.log('Found existing session:', {
+            user: currentSession.user.id,
+            email: currentSession.user.email,
+            email_confirmed: currentSession.user.email_confirmed_at,
+            timestamp: new Date().toISOString()
+          });
+        }
         
         setSession(currentSession);
         setUser(currentSession?.user ?? null);

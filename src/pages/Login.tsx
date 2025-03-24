@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -18,7 +19,7 @@ const loginSchema = z.object({
 });
 
 export default function Login() {
-  const { login, isAuthenticated, profile, isLoading, isInitialized } = useAuth();
+  const { login, isAuthenticated, profile, isLoading, isInitialized, resetPassword } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
@@ -102,7 +103,13 @@ export default function Login() {
       
       if (profile?.email_confirmed) {
         console.log("Login: User authenticated and email confirmed, redirecting to dashboard");
-        navigate("/dashboard", { replace: true });
+        
+        // If the user is an admin, redirect to admin dashboard
+        if (profile?.is_admin) {
+          navigate("/admin", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
       } else if (profile && !showEmailVerification) {
         console.log("Login: User authenticated but email not confirmed, showing verification dialog");
         setVerificationEmail(profile.email || "");
@@ -169,7 +176,12 @@ export default function Login() {
         });
         
         if (result.data.profile?.email_confirmed) {
-          navigate("/dashboard", { replace: true });
+          // Redirect based on user role
+          if (result.data.profile?.is_admin) {
+            navigate("/admin", { replace: true });
+          } else {
+            navigate("/dashboard", { replace: true });
+          }
         }
       }
     } catch (error: any) {
@@ -195,6 +207,10 @@ export default function Login() {
       setShowEmailVerification(false);
     }
   };
+  
+  const handleForgotPassword = () => {
+    navigate("/reset-password");
+  };
 
   if (!isInitialized) {
     return (
@@ -215,6 +231,7 @@ export default function Login() {
             isSubmitting={isSubmitting || isCheckingVerification}
             isLoading={isLoading}
             loginError={loginError}
+            onForgotPassword={handleForgotPassword}
           />
           
           <LoginFooter />

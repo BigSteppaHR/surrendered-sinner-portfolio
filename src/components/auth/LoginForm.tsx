@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,9 +20,10 @@ interface LoginFormProps {
   isSubmitting: boolean;
   isLoading: boolean;
   loginError: string | null;
+  onForgotPassword: () => void;
 }
 
-const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError }: LoginFormProps) => {
+const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPassword }: LoginFormProps) => {
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -66,7 +68,7 @@ const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError }: LoginFormP
                       variant="link" 
                       className="px-0 text-sinner-red h-auto py-0" 
                       type="button"
-                      onClick={() => navigate("/reset-password")}
+                      onClick={onForgotPassword}
                     >
                       Forgot password?
                     </Button>
