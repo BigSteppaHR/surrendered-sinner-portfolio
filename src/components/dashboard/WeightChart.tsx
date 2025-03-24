@@ -243,7 +243,7 @@ const WeightChart = () => {
                         fill: "#ef4444", 
                         stroke: "#fff", 
                         strokeWidth: 1,
-                        onClick: (data) => {
+                        onClick: (data: any) => {
                           const record = records.find(r => r.id === data.payload.id);
                           if (record?.image_url) handleViewImage(record);
                         }
