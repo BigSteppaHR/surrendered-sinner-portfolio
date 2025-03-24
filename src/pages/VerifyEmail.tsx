@@ -105,17 +105,81 @@ const VerifyEmail = () => {
           
           toast({
             title: "Email verified",
-            description: "Your email has been successfully verified. You can now log in to access your account.",
+            description: "Your email has been successfully verified. Signing you in automatically...",
           });
           
-          // Automatically redirect to login after successful verification
-          setTimeout(() => {
-            if (mountedRef.current) {
-              navigate('/login');
+          // Get the user's password from local storage if available
+          const storedCreds = localStorage.getItem(`temp_creds_${email}`);
+          let password = null;
+          
+          if (storedCreds) {
+            try {
+              const parsedCreds = JSON.parse(storedCreds);
+              password = parsedCreds.password;
+              // Remove stored credentials after use
+              localStorage.removeItem(`temp_creds_${email}`);
+            } catch (e) {
+              console.error("Error parsing stored credentials:", e);
             }
-          }, 3000); // 3 second delay to show success message before redirecting
+          }
+          
+          // Try to sign in automatically if we have stored credentials
+          if (password) {
+            try {
+              console.log("Attempting automatic sign in for verified user");
+              const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password
+              });
+              
+              if (signInError) {
+                console.error("Auto sign-in failed:", signInError);
+                // Still redirect to login since verification was successful
+                setTimeout(() => {
+                  if (mountedRef.current) {
+                    navigate('/login', { 
+                      state: { 
+                        message: "Email verified successfully. Please sign in with your credentials." 
+                      } 
+                    });
+                  }
+                }, 2000);
+              } else {
+                console.log("Auto sign-in successful, redirecting to dashboard");
+                // Redirect to dashboard after successful sign-in
+                setTimeout(() => {
+                  if (mountedRef.current) {
+                    navigate('/dashboard', { replace: true });
+                  }
+                }, 1500);
+              }
+            } catch (signInError) {
+              console.error("Exception during auto sign-in:", signInError);
+              // Redirect to login with message
+              setTimeout(() => {
+                if (mountedRef.current) {
+                  navigate('/login', { 
+                    state: { 
+                      message: "Email verified successfully. Please sign in with your credentials." 
+                    } 
+                  });
+                }
+              }, 2000);
+            }
+          } else {
+            // No stored credentials, redirect to login
+            console.log("No stored credentials, redirecting to login");
+            setTimeout(() => {
+              if (mountedRef.current) {
+                navigate('/login', { 
+                  state: { 
+                    message: "Email verified successfully. Please sign in with your credentials." 
+                  } 
+                });
+              }
+            }, 2000);
+          }
         }
-        
       } catch (error) {
         console.error("Email verification error:", error);
         if (mountedRef.current) {
@@ -175,7 +239,7 @@ const VerifyEmail = () => {
             )}
             {verificationStatus === 'success' && (
               <p className="text-gray-300">
-                Your email has been successfully verified. Redirecting you to login...
+                Your email has been successfully verified. Signing you in automatically...
               </p>
             )}
             {verificationStatus === 'error' && (
@@ -186,7 +250,7 @@ const VerifyEmail = () => {
           </CardContent>
 
           <CardFooter className="flex justify-center">
-            {(verificationStatus === 'error' || verificationStatus === 'success') && (
+            {verificationStatus === 'error' && (
               <Button onClick={handleRedirect} className="w-full">
                 Go to Login
               </Button>

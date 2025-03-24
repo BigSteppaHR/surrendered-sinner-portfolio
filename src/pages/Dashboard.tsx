@@ -1,11 +1,22 @@
 
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
+  const [isPageLoaded, setIsPageLoaded] = useState(false);
+  
+  useEffect(() => {
+    // Only set page as loaded after auth is initialized
+    if (isInitialized) {
+      setIsPageLoaded(true);
+    }
+  }, [isInitialized]);
   
   useEffect(() => {
     // Only redirect once auth is initialized to prevent flashing
@@ -20,11 +31,23 @@ const Dashboard = () => {
     // If authenticated but email not confirmed, redirect to confirmation page
     if (!isLoading && isAuthenticated && profile && !profile.email_confirmed) {
       navigate("/confirm-email", { state: { email: profile.email }, replace: true });
+      return;
     }
-  }, [isAuthenticated, isLoading, profile, navigate, isInitialized]);
+    
+    // If coming from verification page, show welcome toast
+    if (location.state?.fromVerification) {
+      toast({
+        title: "Welcome to your dashboard!",
+        description: "Your email has been verified and you're now logged in.",
+      });
+      
+      // Clear the state to prevent showing toast on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [isAuthenticated, isLoading, profile, navigate, isInitialized, location.state, toast]);
   
   // Show loading state while checking auth
-  if (isLoading || !isInitialized) {
+  if (isLoading || !isInitialized || !isPageLoaded) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
     </div>;

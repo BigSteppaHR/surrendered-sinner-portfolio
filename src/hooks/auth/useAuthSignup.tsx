@@ -31,7 +31,8 @@ export const useAuthSignup = () => {
   const handleSuccessfulSignup = async (
     user: User | null, 
     fullName: string, 
-    email: string
+    email: string,
+    password: string // Now we need password to store for auto-login
   ): Promise<SignupResult> => {
     // Create user profile if user exists - don't rely on session for this critical operation
     if (user) {
@@ -69,6 +70,19 @@ export const useAuthSignup = () => {
           redirectTo: "/login" 
         } 
       };
+    }
+    
+    // Store credentials temporarily for auto-login after verification
+    try {
+      // Only store for 24 hours (same as token expiry)
+      localStorage.setItem(`temp_creds_${email}`, JSON.stringify({
+        password,
+        expires: Date.now() + (24 * 60 * 60 * 1000)
+      }));
+      console.log("Temporary credentials stored for auto-login after verification");
+    } catch (err) {
+      console.error("Error storing temporary credentials:", err);
+      // Continue despite the error, auto-login will just not work
     }
     
     // Always sign the user out after signup to require email verification
@@ -171,8 +185,8 @@ export const useAuthSignup = () => {
         return handleSignupError(error);
       }
       
-      // Handle successful signup process
-      return await handleSuccessfulSignup(user, fullName, email);
+      // Handle successful signup process - now passing password for auto-login
+      return await handleSuccessfulSignup(user, fullName, email, password);
     } catch (error: any) {
       return handleSignupError(error);
     }

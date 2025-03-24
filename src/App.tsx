@@ -38,6 +38,38 @@ const AuthNavigation = () => {
   const processingRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Clean up expired temp credentials on app load
+  useEffect(() => {
+    try {
+      // Get all localStorage keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        
+        // Check if it's a temp creds key
+        if (key && key.startsWith('temp_creds_')) {
+          try {
+            const value = localStorage.getItem(key);
+            if (value) {
+              const parsedValue = JSON.parse(value);
+              
+              // Check if expired
+              if (parsedValue.expires && parsedValue.expires < Date.now()) {
+                console.log('Removing expired temporary credentials:', key);
+                localStorage.removeItem(key);
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing temporary credentials:', e);
+            // If error, remove the potentially corrupted item
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error cleaning up temporary credentials:', e);
+    }
+  }, []);
+  
   useEffect(() => {
     if (isInitialized) {
       setIsLoading(false);
