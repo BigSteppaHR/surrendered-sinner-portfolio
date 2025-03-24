@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +36,8 @@ type InvoiceType = {
   amount: string;
   date: string;
   status: string;
+  description?: string;
+  payment_link?: string;
 };
 
 type TicketType = {
@@ -45,6 +48,7 @@ type TicketType = {
   date: string;
   status: string;
   priority: string;
+  message?: string;
 };
 
 // Define type for the support ticket response from Supabase
@@ -56,10 +60,20 @@ type TicketResponse = {
   created_at: string;
   message: string;
   user_id: string;
+  priority?: string;
   profiles: {
     full_name: string | null;
     email: string | null;
   } | null;
+};
+
+// Type for ticket responses
+type TicketResponseType = {
+  id: string;
+  ticket_id: string;
+  response_text: string;
+  responded_by: string;
+  created_at: string;
 };
 
 const AdminInvoices = () => {
@@ -72,8 +86,10 @@ const AdminInvoices = () => {
   const [ticketStatus, setTicketStatus] = useState("");
   const [invoices, setInvoices] = useState<InvoiceType[]>([]);
   const [tickets, setTickets] = useState<TicketType[]>([]);
+  const [ticketResponses, setTicketResponses] = useState<TicketResponseType[]>([]);
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [isLoadingTickets, setIsLoadingTickets] = useState(false);
+  const [isLoadingResponses, setIsLoadingResponses] = useState(false);
   const [paymentLinkUrl, setPaymentLinkUrl] = useState("");
   const [isCreatingPaymentLink, setIsCreatingPaymentLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -87,82 +103,161 @@ const AdminInvoices = () => {
     dueDate: ""
   });
   
+  // Function to fetch invoices from both Stripe and our database
+  const fetchInvoices = async () => {
+    try {
+      setIsLoadingInvoices(true);
+      
+      // Fetch from Stripe
+      const { data: stripeData, error: stripeError } = await supabase.functions.invoke('stripe-helper', {
+        body: { action: 'list-invoices', limit: 100 },
+      });
+      
+      if (stripeError) throw new Error(stripeError.message);
+      
+      // Fetch from our database
+      const { data: dbInvoices, error: dbError } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (dbError) throw dbError;
+      
+      let combinedInvoices: InvoiceType[] = [];
+      
+      // Format Stripe invoices
+      if (stripeData && Array.isArray(stripeData)) {
+        combinedInvoices = [
+          ...combinedInvoices,
+          ...stripeData.map((invoice: any) => ({
+            id: invoice.id,
+            customer: invoice.customer,
+            email: invoice.email,
+            amount: invoice.amount,
+            date: invoice.date,
+            status: invoice.status,
+            description: 'Stripe invoice',
+          }))
+        ];
+      }
+      
+      // Format database invoices
+      if (dbInvoices) {
+        combinedInvoices = [
+          ...combinedInvoices,
+          ...dbInvoices.map((invoice) => ({
+            id: invoice.id,
+            customer: invoice.customer_name,
+            email: invoice.customer_email || '',
+            amount: `$${invoice.amount}`,
+            date: new Date(invoice.created_at).toISOString().split('T')[0],
+            status: invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1),
+            description: invoice.description,
+            payment_link: invoice.payment_link
+          }))
+        ];
+      }
+      
+      setInvoices(combinedInvoices);
+    } catch (err: any) {
+      console.error("Error fetching invoices:", err);
+      toast({
+        title: "Failed to load invoices",
+        description: err.message || "There was an error loading invoice data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  };
+  
+  const fetchTickets = async () => {
+    try {
+      setIsLoadingTickets(true);
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select(`
+          id,
+          subject,
+          type,
+          status,
+          priority,
+          created_at,
+          message,
+          user_id,
+          profiles(full_name, email)
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data) {
+        const formattedTickets = data.map((ticket: any) => ({
+          id: ticket.id,
+          customer: ticket.profiles?.full_name || 'Unknown User',
+          email: ticket.profiles?.email || 'No email provided',
+          subject: ticket.subject,
+          date: new Date(ticket.created_at).toISOString().split('T')[0],
+          status: ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1),
+          priority: ticket.priority ? 
+            (ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)) : 
+            (ticket.type === 'urgent' ? 'High' : ticket.type === 'question' ? 'Medium' : 'Low'),
+          message: ticket.message,
+        }));
+        
+        setTickets(formattedTickets);
+      }
+    } catch (err: any) {
+      console.error("Error fetching tickets:", err);
+      toast({
+        title: "Failed to load support tickets",
+        description: err.message || "There was an error loading support ticket data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingTickets(false);
+    }
+  };
+  
+  const fetchTicketResponses = async (ticketId: string) => {
+    try {
+      setIsLoadingResponses(true);
+      const { data, error } = await supabase
+        .from('support_ticket_responses')
+        .select('*')
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      if (data) {
+        setTicketResponses(data);
+      }
+    } catch (err: any) {
+      console.error("Error fetching ticket responses:", err);
+      toast({
+        title: "Failed to load ticket responses",
+        description: err.message || "There was an error loading response data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingResponses(false);
+    }
+  };
+  
   useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        setIsLoadingInvoices(true);
-        const { data, error } = await supabase.functions.invoke('stripe-helper', {
-          body: { action: 'list-invoices', limit: 100 },
-        });
-        
-        if (error) throw new Error(error.message);
-        
-        if (data && Array.isArray(data)) {
-          setInvoices(data);
-        } else {
-          setInvoices([]);
-        }
-      } catch (err: any) {
-        console.error("Error fetching invoices:", err);
-        toast({
-          title: "Failed to load invoices",
-          description: err.message || "There was an error loading invoice data",
-          variant: "destructive"
-        });
-        setInvoices([]);
-      } finally {
-        setIsLoadingInvoices(false);
-      }
-    };
-    
-    const fetchTickets = async () => {
-      try {
-        setIsLoadingTickets(true);
-        const { data, error } = await supabase
-          .from('support_tickets')
-          .select(`
-            id,
-            subject,
-            type,
-            status,
-            created_at,
-            message,
-            user_id,
-            profiles(full_name, email)
-          `)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        if (data) {
-          const formattedTickets = data.map((ticket: any) => ({
-            id: ticket.id,
-            customer: ticket.profiles?.[0]?.full_name || 'Unknown User',
-            email: ticket.profiles?.[0]?.email || 'No email provided',
-            subject: ticket.subject,
-            date: new Date(ticket.created_at).toISOString().split('T')[0],
-            status: ticket.status,
-            priority: ticket.type === 'urgent' ? 'High' : ticket.type === 'question' ? 'Medium' : 'Low',
-          }));
-          
-          setTickets(formattedTickets);
-        }
-      } catch (err: any) {
-        console.error("Error fetching tickets:", err);
-        toast({
-          title: "Failed to load support tickets",
-          description: err.message || "There was an error loading support ticket data",
-          variant: "destructive"
-        });
-        setTickets([]);
-      } finally {
-        setIsLoadingTickets(false);
-      }
-    };
-    
     fetchInvoices();
     fetchTickets();
-  }, [toast]);
+  }, []);
+  
+  // Fetch ticket responses when a ticket is selected
+  useEffect(() => {
+    if (selectedTicket) {
+      fetchTicketResponses(selectedTicket.id);
+    } else {
+      setTicketResponses([]);
+    }
+  }, [selectedTicket]);
   
   const filteredInvoices = invoices.filter(invoice => 
     invoice.customer.toLowerCase().includes(searchInvoice.toLowerCase()) ||
@@ -228,6 +323,7 @@ const AdminInvoices = () => {
         throw new Error("Please enter a valid amount");
       }
       
+      // Create payment link with Stripe
       const { data, error } = await supabase.functions.invoke('stripe-helper', {
         body: {
           action: 'create-payment-link',
@@ -242,9 +338,28 @@ const AdminInvoices = () => {
       
       if (data && data.url) {
         setPaymentLinkUrl(data.url);
+        
+        // Also save to our database
+        const { error: dbError } = await supabase
+          .from('invoices')
+          .insert({
+            customer_name: newInvoice.customer,
+            customer_email: newInvoice.email,
+            amount: amountValue,
+            description: newInvoice.description || "Fitness Training Services",
+            due_date: newInvoice.dueDate ? new Date(newInvoice.dueDate) : null,
+            payment_link: data.url,
+            status: 'pending'
+          });
+        
+        if (dbError) throw dbError;
+        
+        // Refresh the invoice list
+        fetchInvoices();
+        
         toast({
           title: "Payment Link Created",
-          description: "The payment link has been successfully created",
+          description: "The payment link has been successfully created and saved",
         });
       } else {
         throw new Error("No payment link returned from the server");
@@ -294,30 +409,59 @@ const AdminInvoices = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('support_tickets')
-        .update({ status: ticketStatus.toLowerCase() })
-        .eq('id', selectedTicket.id);
+      // Save the reply to the database
+      const { error: replyError } = await supabase
+        .from('support_ticket_responses')
+        .insert({
+          ticket_id: selectedTicket.id,
+          response_text: ticketReply,
+          responded_by: (await supabase.auth.getSession()).data.session?.user.id
+        });
+      
+      if (replyError) throw replyError;
+      
+      // Update ticket status if needed
+      if (ticketStatus) {
+        const { error: statusError } = await supabase
+          .from('support_tickets')
+          .update({ 
+            status: ticketStatus.toLowerCase(),
+            last_updated_by: (await supabase.auth.getSession()).data.session?.user.id
+          })
+          .eq('id', selectedTicket.id);
+          
+        if (statusError) throw statusError;
         
-      if (error) throw error;
+        toast({
+          title: "Status Updated",
+          description: `Ticket status changed to ${ticketStatus}.`,
+        });
+        
+        // Update tickets in UI
+        setTickets(tickets.map(ticket => 
+          ticket.id === selectedTicket.id 
+            ? { ...ticket, status: ticketStatus } 
+            : ticket
+        ));
+        
+        // Update selected ticket in UI
+        setSelectedTicket({
+          ...selectedTicket,
+          status: ticketStatus
+        });
+      }
+      
+      // Refresh ticket responses
+      fetchTicketResponses(selectedTicket.id);
+      
+      // Reset reply form
+      setTicketReply("");
+      setTicketStatus("");
       
       toast({
-        title: "Status Updated",
-        description: `Ticket status changed to ${ticketStatus}.`,
+        title: "Reply Sent",
+        description: "Your response has been saved",
       });
-      
-      setTickets(tickets.map(ticket => 
-        ticket.id === selectedTicket.id 
-          ? { ...ticket, status: ticketStatus } 
-          : ticket
-      ));
-      
-      setSelectedTicket({
-        ...selectedTicket,
-        status: ticketStatus
-      });
-      
-      setTicketStatus("");
     } catch (err: any) {
       console.error("Error sending reply:", err);
       toast({
@@ -330,6 +474,31 @@ const AdminInvoices = () => {
 
   const handleViewInvoice = (invoice: InvoiceType) => {
     setSelectedInvoice(invoice);
+  };
+
+  const handleDeleteInvoice = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      fetchInvoices();
+      
+      toast({
+        title: "Invoice Deleted",
+        description: "The invoice has been successfully deleted",
+      });
+    } catch (err: any) {
+      console.error("Error deleting invoice:", err);
+      toast({
+        title: "Failed to delete invoice",
+        description: err.message || "There was an error deleting the invoice",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -368,9 +537,9 @@ const AdminInvoices = () => {
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
-                <Button variant="outline" size="sm" className="text-gray-400">
+                <Button variant="outline" size="sm" className="text-gray-400" onClick={fetchInvoices}>
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  Refresh
                 </Button>
               </div>
             
@@ -433,11 +602,23 @@ const AdminInvoices = () => {
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View</span>
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <Download className="h-4 w-4" />
-                              <span className="sr-only">Download</span>
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10">
+                            {invoice.payment_link && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0" 
+                                onClick={() => window.open(invoice.payment_link, '_blank')}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                <span className="sr-only">Open Payment Link</span>
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              onClick={() => handleDeleteInvoice(invoice.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete</span>
                             </Button>
@@ -488,8 +669,25 @@ const AdminInvoices = () => {
                   
                   <div className="border-t border-[#353A48] pt-4">
                     <h4 className="text-sm font-medium text-gray-400 mb-2">Description</h4>
-                    <p className="text-sm">Fitness training services</p>
+                    <p className="text-sm">{selectedInvoice.description || "Fitness training services"}</p>
                   </div>
+                  
+                  {selectedInvoice.payment_link && (
+                    <div className="border-t border-[#353A48] pt-4">
+                      <h4 className="text-sm font-medium text-gray-400 mb-2">Payment Link</h4>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm truncate max-w-[300px]">{selectedInvoice.payment_link}</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => window.open(selectedInvoice.payment_link, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Open
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <DialogFooter className="flex justify-between items-center">
@@ -782,14 +980,28 @@ const AdminInvoices = () => {
                     </div>
                     
                     <div>
-                      <h4 className="text-sm font-medium mb-2">Message</h4>
+                      <h4 className="text-sm font-medium mb-2">Initial Message</h4>
                       <div className="bg-[#1A1F2C] p-3 rounded-md text-sm">
-                        <p>Hello,</p>
-                        <p className="my-2">I'm having an issue with {selectedTicket.subject.toLowerCase()}. Could you please help me resolve this as soon as possible?</p>
-                        <p>Thank you,</p>
-                        <p>{selectedTicket.customer}</p>
+                        <p className="mb-2">{selectedTicket.message || "No message content available."}</p>
+                        <p className="text-xs text-gray-400">From: {selectedTicket.customer}</p>
                       </div>
                     </div>
+                    
+                    {ticketResponses.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Previous Responses</h4>
+                        <div className="space-y-3">
+                          {ticketResponses.map(response => (
+                            <div key={response.id} className="bg-[#2A2F3C] p-3 rounded-md text-sm">
+                              <p className="mb-2">{response.response_text}</p>
+                              <p className="text-xs text-gray-400">
+                                Responded on {new Date(response.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     
                     <div>
                       <h4 className="text-sm font-medium mb-2">Reply</h4>

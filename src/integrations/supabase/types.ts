@@ -126,6 +126,57 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          customer_email: string | null
+          customer_name: string
+          description: string | null
+          due_date: string | null
+          id: string
+          issued_date: string | null
+          payment_link: string | null
+          status: string | null
+          stripe_invoice_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          customer_email?: string | null
+          customer_name: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          issued_date?: string | null
+          payment_link?: string | null
+          status?: string | null
+          stripe_invoice_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          issued_date?: string | null
+          payment_link?: string | null
+          status?: string | null
+          stripe_invoice_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payment_balance: {
         Row: {
           balance: number
@@ -387,11 +438,46 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_responses: {
+        Row: {
+          created_at: string | null
+          id: string
+          responded_by: string | null
+          response_text: string
+          ticket_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          responded_by?: string | null
+          response_text: string
+          ticket_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          responded_by?: string | null
+          response_text?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_responses_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           created_at: string
           id: string
+          last_updated_by: string | null
           message: string
+          priority: string | null
+          response_time: string | null
           status: string
           subject: string
           type: string
@@ -401,7 +487,10 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_updated_by?: string | null
           message: string
+          priority?: string | null
+          response_time?: string | null
           status?: string
           subject: string
           type: string
@@ -411,7 +500,10 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_updated_by?: string | null
           message?: string
+          priority?: string | null
+          response_time?: string | null
           status?: string
           subject?: string
           type?: string
