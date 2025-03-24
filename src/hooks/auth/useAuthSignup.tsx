@@ -33,11 +33,20 @@ export const useAuthSignup = () => {
     fullName: string, 
     email: string
   ): Promise<SignupResult> => {
-    // Create user profile if user exists
+    // Create user profile if user exists - don't rely on session for this critical operation
     if (user) {
-      const profileResult = await createUserProfile(user.id, email, fullName);
-      if (!profileResult.success) {
-        console.error("Profile creation failed:", profileResult.error);
+      try {
+        console.log(`Attempting direct profile creation for user: ${user.id}, ${email}, ${fullName}`);
+        const profileResult = await createUserProfile(user.id, email, fullName);
+        if (!profileResult.success) {
+          console.error("Profile creation failed:", profileResult.error);
+          // Continue anyway since this shouldn't block the email verification process
+        } else {
+          console.log("Profile created successfully via direct method");
+        }
+      } catch (err) {
+        console.error("Error in profile creation:", err);
+        // Continue with the process despite the error
       }
     }
     

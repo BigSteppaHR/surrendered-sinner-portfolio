@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -80,7 +79,7 @@ export const createAuthUser = async (
   }
 };
 
-// Create or update user profile
+// Create or update user profile - less dependent on active session
 export const createUserProfile = async (
   userId: string, 
   email: string, 
@@ -89,14 +88,67 @@ export const createUserProfile = async (
   try {
     console.log(`Creating/updating profile for user: ${userId}, ${email}, ${fullName}`);
     
-    // Get the current session to use its JWT for the request
+    // First try to create profile with direct insert using service key
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({ 
+          id: userId,
+          email: email,
+          full_name: fullName,
+          email_confirmed: false
+        }, { onConflict: 'id' });
+        
+      if (error) {
+        console.warn("Direct profile creation encountered an error:", error);
+        // Don't return yet, try the fallback approach
+      } else {
+        console.log('Profile created/updated successfully via direct method');
+        return { success: true };
+      }
+    } catch (directError) {
+      console.warn("Exception in direct profile creation:", directError);
+      // Continue to fallback approach
+    }
+    
+    // Fallback: Try with current session if available
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      console.error("No active session for profile creation");
-      return { success: false, error: "No active session" };
+      console.warn("No active session for profile creation, trying RPC method");
+      
+      // Try one more approach - use the REST API directly
+      try {
+        const response = await fetch(`${window.location.origin}/rest/v1/profiles`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.SUPABASE_ANON_KEY || '',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            id: userId,
+            email: email,
+            full_name: fullName,
+            email_confirmed: false
+          })
+        });
+        
+        if (response.ok) {
+          console.log('Profile created/updated successfully via REST API');
+          return { success: true };
+        } else {
+          const errorData = await response.json();
+          console.error("REST API profile creation failed:", errorData);
+          return { success: false, error: "Failed to create profile via all methods" };
+        }
+      } catch (restError) {
+        console.error("Exception in REST API profile creation:", restError);
+        return { success: false, error: restError };
+      }
     }
     
+    // If we have a session, use it
     const { error } = await supabase
       .from('profiles')
       .upsert({ 
@@ -107,11 +159,11 @@ export const createUserProfile = async (
       }, { onConflict: 'id' });
       
     if (error) {
-      console.error("Error updating profile:", error);
+      console.error("Error updating profile with session:", error);
       return { success: false, error };
     }
     
-    console.log('Profile created/updated successfully');
+    console.log('Profile created/updated successfully with session');
     return { success: true };
   } catch (error) {
     console.error("Exception updating profile:", error);

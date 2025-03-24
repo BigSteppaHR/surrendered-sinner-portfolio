@@ -43,19 +43,18 @@ const EmailVerificationDialog = ({
     }
   }, [initialEmail, location.state?.email, user?.email]);
 
-  // Handle visibility safely with a small delay
+  // Handle visibility with a delay to prevent race conditions
   useEffect(() => {
     let visibilityTimer: NodeJS.Timeout | undefined;
 
-    // Only update visibility if mounted
     if (mounted.current) {
       if (isOpen) {
-        // Small delay before showing to ensure proper rendering
+        // Increased delay for dialog opening to ensure DOM is ready
         visibilityTimer = setTimeout(() => {
           if (mounted.current) {
             setIsVisible(true);
           }
-        }, 300); // Increased delay to ensure DOM is ready
+        }, 500);
       } else {
         setIsVisible(false);
       }
@@ -66,20 +65,20 @@ const EmailVerificationDialog = ({
     };
   }, [isOpen]);
 
-  // Handle back to login - redirects to login page when requested
+  // Handle back to login with proper unmounting
   const handleBackToLogin = () => {
     if (!mounted.current) return;
     
     // First hide the dialog
     setIsVisible(false);
     
-    // Then delay the actual close to allow animations to complete
+    // Longer delay to ensure all animations complete before navigation
     setTimeout(() => {
       if (mounted.current) {
         onClose();
         navigate("/login");
       }
-    }, 300);
+    }, 500);
   };
 
   // Handle dialog close with improved timing
@@ -89,7 +88,7 @@ const EmailVerificationDialog = ({
     // First hide the dialog
     setIsVisible(false);
 
-    // Small delay before actually closing to ensure animations complete
+    // Increased delay before actually closing
     const closeTimer = setTimeout(() => {
       if (mounted.current) {
         onClose();
@@ -98,14 +97,14 @@ const EmailVerificationDialog = ({
           navigate("/login");
         }
       }
-    }, 300);
+    }, 500);
 
     return () => {
       clearTimeout(closeTimer);
     };
   };
 
-  // Set up cleanup function to update mounted ref when component unmounts
+  // Ensure proper cleanup to prevent memory leaks
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -120,13 +119,13 @@ const EmailVerificationDialog = ({
     if (profile?.email_confirmed && mounted.current) {
       setIsVisible(false);
 
-      // Small delay before redirecting
+      // Increased delay before redirecting
       redirectTimer = setTimeout(() => {
         if (mounted.current) {
           onClose();
           navigate("/dashboard");
         }
-      }, 300);
+      }, 500);
     }
 
     return () => {
@@ -134,7 +133,7 @@ const EmailVerificationDialog = ({
     };
   }, [profile, navigate, onClose]);
 
-  // Don't render anything if not open
+  // Don't render anything if not open to prevent DOM issues
   if (!isOpen) {
     return null;
   }
