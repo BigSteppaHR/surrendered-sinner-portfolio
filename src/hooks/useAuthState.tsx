@@ -40,24 +40,53 @@ export const useAuthState = () => {
               
             if (emailProfileError) {
               console.error('Error checking email profile:', emailProfileError.message);
-              return null;
+              
+              // Still try to create a new profile even if there was an error checking
+              console.log('Creating new profile despite previous errors');
+              
+              // Create a new profile for this user
+              const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert([
+                  { 
+                    id: currentUser.id, 
+                    email: email,
+                    email_confirmed: false,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  }
+                ])
+                .select()
+                .single();
+                
+              if (createError) {
+                console.error('Error creating profile:', createError.message);
+                return null;
+              }
+              
+              return newProfile;
             }
             
             if (emailProfileData) {
               console.log('Found profile with matching email, updating its ID');
               
               // Update the existing profile with the correct user ID
-              const { error: updateError } = await supabase
+              const { error: updateError, data: updatedProfile } = await supabase
                 .from('profiles')
-                .update({ id: currentUser.id })
-                .eq('email', email);
+                .update({ 
+                  id: currentUser.id,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('email', email)
+                .select()
+                .single();
                 
               if (updateError) {
                 console.error('Error updating profile ID:', updateError.message);
-                return null;
+                return emailProfileData; // Return the existing profile data even if update failed
               }
               
-              return emailProfileData;
+              return updatedProfile || emailProfileData;
             } else {
               console.log('No profile found, creating new profile');
               
@@ -68,7 +97,9 @@ export const useAuthState = () => {
                   { 
                     id: currentUser.id, 
                     email: email,
-                    email_confirmed: false 
+                    email_confirmed: false,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                   }
                 ])
                 .select()

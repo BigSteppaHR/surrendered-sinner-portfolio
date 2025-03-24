@@ -1,243 +1,144 @@
 
-import { useEffect, useState, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { updateEmailConfirmationStatus } from '@/services/userVerificationService';
 
-const VerifyEmail = () => {
-  const [searchParams] = useSearchParams();
+export default function VerifyEmail() {
+  const location = useLocation();
   const navigate = useNavigate();
-  const { refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, isAuthenticated } = useAuth();
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | 'processing'>('processing');
+  const [statusMessage, setStatusMessage] = useState('Verifying your email...');
   const { toast } = useToast();
-  const [verificationStatus, setVerificationStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [errorMessage, setErrorMessage] = useState("");
-  const mountedRef = useRef(true);
-
+  const mounted = useRef(true);
+  
+  // Parse token and email from URL query parameters
+  const searchParams = new URLSearchParams(location.search);
+  const token = searchParams.get('token');
+  const email = searchParams.get('email');
+  
   useEffect(() => {
-    // Set up cleanup
+    // Cleanup on unmount
     return () => {
-      mountedRef.current = false;
+      mounted.current = false;
     };
   }, []);
-
+  
   useEffect(() => {
     const verifyEmail = async () => {
+      // Check if token and email are present
+      if (!token || !email) {
+        setVerificationStatus('error');
+        setStatusMessage('Missing verification parameters');
+        setIsProcessing(false);
+        console.error('Missing verification parameters', { token, email });
+        return;
+      }
+      
       try {
-        const token = searchParams.get('token');
-        const email = searchParams.get('email');
-
-        if (!token || !email) {
-          console.error("Missing verification parameters", { token, email });
-          setVerificationStatus('error');
-          setErrorMessage("Missing verification parameters");
-          return;
-        }
-
-        console.log("Verifying email with token:", token, "and email:", email);
-
-        // Check if token exists and is valid
+        console.log('Verifying token for email:', email);
+        
+        // 1. Verify token from database
         const { data: tokenData, error: tokenError } = await supabase
           .from('verification_tokens')
           .select('*')
           .eq('token', token)
           .eq('user_email', email)
-          .maybeSingle();
-
+          .single();
+        
         if (tokenError || !tokenData) {
-          console.error("Token verification failed:", tokenError);
+          console.error('Error verifying token:', tokenError || 'Token not found');
           setVerificationStatus('error');
-          setErrorMessage("Invalid or expired verification token");
+          setStatusMessage('Invalid or expired verification link');
+          setIsProcessing(false);
           return;
         }
-
-        // Check if token is expired
-        if (new Date(tokenData.expires_at) < new Date()) {
-          console.error("Token expired:", tokenData.expires_at);
+        
+        // 2. Check token expiration
+        const expiresAt = new Date(tokenData.expires_at);
+        if (expiresAt < new Date()) {
+          console.error('Token expired:', expiresAt);
           setVerificationStatus('error');
-          setErrorMessage("Verification token has expired");
+          setStatusMessage('Verification link has expired. Please request a new one.');
+          setIsProcessing(false);
           return;
         }
-
-        console.log("Token is valid, updating profile");
-
-        // Check if user exists in profiles table
-        const { data: profileData, error: profileFetchError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
-
-        if (profileFetchError) {
-          console.error("Error fetching profile:", profileFetchError);
-          setVerificationStatus('error');
-          setErrorMessage("Failed to verify user profile. Please contact support.");
-          return;
-        }
-
-        // If profile doesn't exist, we need to create it
-        if (!profileData) {
-          console.log("Profile not found, checking user in auth system");
-          
-          // First check if the user exists in auth system
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (!user) {
-            console.error("User not found in auth system");
-            setVerificationStatus('error');
-            setErrorMessage("User account not found. Please try signing up again.");
-            return;
-          }
-          
-          // Create the profile with the user ID
-          const { error: createProfileError } = await supabase
-            .from('profiles')
-            .insert([
-              { 
-                id: user.id, 
-                email: email,
-                email_confirmed: true 
-              }
-            ]);
-          
-          if (createProfileError) {
-            console.error("Failed to create profile:", createProfileError);
-            setVerificationStatus('error');
-            setErrorMessage("Failed to create user profile. Please contact support.");
-            return;
-          }
-          
-          console.log("Profile created successfully with email_confirmed=true");
+        
+        // 3. Update profile verification status
+        let profileUpdated = false;
+        
+        // If user is already authenticated
+        if (user) {
+          profileUpdated = await updateEmailConfirmationStatus(user.id, email);
         } else {
-          // Update the user's profile to mark email as confirmed
-          const { error: updateError } = await supabase
+          // Try to find user by email and update
+          const { data: profileData } = await supabase
             .from('profiles')
-            .update({ email_confirmed: true })
-            .eq('email', email);
-
-          if (updateError) {
-            console.error("Profile update failed:", updateError);
-            setVerificationStatus('error');
-            setErrorMessage("Failed to verify email. Please try again.");
-            return;
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+            
+          if (profileData?.id) {
+            profileUpdated = await updateEmailConfirmationStatus(profileData.id, email);
           }
-          
-          console.log("Profile updated successfully with email_confirmed=true");
         }
-
-        // Delete the token after successful verification
+        
+        console.log('Profile update result:', profileUpdated);
+        
+        // 4. Delete the used token
         await supabase
           .from('verification_tokens')
           .delete()
           .eq('token', token);
-
-        if (mountedRef.current) {
-          console.log("Email verification completed successfully");
+        
+        // Set success state
+        if (mounted.current) {
           setVerificationStatus('success');
+          setStatusMessage('Email verification successful!');
           
+          // Show success toast
           toast({
-            title: "Email verified",
-            description: "Your email has been successfully verified. Signing you in automatically...",
+            title: "Email Verified",
+            description: "Your email has been successfully verified.",
           });
           
-          // Get the user's password from local storage if available
-          const storedCreds = localStorage.getItem(`temp_creds_${email}`);
-          let password = null;
-          
-          if (storedCreds) {
-            try {
-              const parsedCreds = JSON.parse(storedCreds);
-              password = parsedCreds.password;
-              // Remove stored credentials after use
-              localStorage.removeItem(`temp_creds_${email}`);
-            } catch (e) {
-              console.error("Error parsing stored credentials:", e);
-            }
+          // If user is authenticated, refresh profile to update UI
+          if (isAuthenticated && user) {
+            await refreshProfile();
           }
           
-          // Try to sign in automatically if we have stored credentials
-          if (password) {
-            try {
-              console.log("Attempting automatic sign in for verified user");
-              const { error: signInError } = await supabase.auth.signInWithPassword({
-                email,
-                password
-              });
-              
-              if (signInError) {
-                console.error("Auto sign-in failed:", signInError);
-                // Still redirect to login since verification was successful
-                setTimeout(() => {
-                  if (mountedRef.current) {
-                    navigate('/login', { 
-                      state: { 
-                        message: "Email verified successfully. Please sign in with your credentials." 
-                      } 
-                    });
-                  }
-                }, 2000);
-              } else {
-                console.log("Auto sign-in successful, redirecting to dashboard");
-                // Refresh the profile to get the updated email_confirmed status
-                await refreshProfile();
-                
-                // Redirect to dashboard after successful sign-in
-                setTimeout(() => {
-                  if (mountedRef.current) {
-                    navigate('/dashboard', { 
-                      state: { fromVerification: true },
-                      replace: true 
-                    });
-                  }
-                }, 1500);
-              }
-            } catch (signInError) {
-              console.error("Exception during auto sign-in:", signInError);
-              // Redirect to login with message
-              setTimeout(() => {
-                if (mountedRef.current) {
-                  navigate('/login', { 
-                    state: { 
-                      message: "Email verified successfully. Please sign in with your credentials." 
-                    } 
-                  });
+          // Wait a moment before redirecting
+          setTimeout(() => {
+            if (mounted.current) {
+              navigate('/login', { 
+                replace: true,
+                state: { 
+                  message: "Email verified successfully! You can now log in." 
                 }
-              }, 2000);
+              });
             }
-          } else {
-            // No stored credentials, redirect to login
-            console.log("No stored credentials, redirecting to login");
-            setTimeout(() => {
-              if (mountedRef.current) {
-                navigate('/login', { 
-                  state: { 
-                    message: "Email verified successfully. Please sign in with your credentials." 
-                  } 
-                });
-              }
-            }, 2000);
-          }
+          }, 2000);
         }
       } catch (error) {
-        console.error("Email verification error:", error);
-        if (mountedRef.current) {
+        console.error('Error during verification process:', error);
+        if (mounted.current) {
           setVerificationStatus('error');
-          setErrorMessage("An unexpected error occurred during verification");
+          setStatusMessage('An error occurred during verification. Please try again.');
+        }
+      } finally {
+        if (mounted.current) {
+          setIsProcessing(false);
         }
       }
     };
-
+    
     verifyEmail();
-  }, [searchParams, navigate, refreshProfile, toast]);
-
-  // Handler to go to login page
-  const handleRedirect = () => {
-    navigate('/login');
-  };
-
+  }, [token, email, user, navigate, toast, refreshProfile, isAuthenticated]);
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-black p-4">
       <div className="w-full max-w-md">
@@ -247,60 +148,48 @@ const VerifyEmail = () => {
           </h1>
           <p className="text-gray-400 mt-2">Elite fitness coaching</p>
         </div>
-
-        <Card className="bg-gray-900 text-white border-gray-800">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center flex items-center justify-center">
-              {verificationStatus === 'loading' && (
-                <>
-                  <Loader2 className="animate-spin h-6 w-6 text-primary mr-2" />
-                  Verifying Your Email
-                </>
-              )}
-              {verificationStatus === 'success' && (
-                <>
-                  <CheckCircle className="text-green-500 mr-2 h-6 w-6" />
-                  Email Verified
-                </>
-              )}
-              {verificationStatus === 'error' && (
-                <>
-                  <XCircle className="text-red-500 mr-2 h-6 w-6" />
-                  Verification Failed
-                </>
-              )}
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="text-center">
-            {verificationStatus === 'loading' && (
-              <p className="text-gray-300">
-                Please wait while we verify your email address...
-              </p>
+        
+        <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-semibold text-white mb-4">
+            {verificationStatus === 'success' 
+              ? 'Verification Successful' 
+              : verificationStatus === 'error' 
+                ? 'Verification Failed' 
+                : 'Verifying Email'}
+          </h2>
+          
+          <div className="my-6">
+            {isProcessing ? (
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : verificationStatus === 'success' ? (
+              <div className="flex items-center justify-center mx-auto w-16 h-16 rounded-full bg-green-900/30 border-2 border-green-500">
+                <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center mx-auto w-16 h-16 rounded-full bg-red-900/30 border-2 border-red-500">
+                <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
             )}
-            {verificationStatus === 'success' && (
-              <p className="text-gray-300">
-                Your email has been successfully verified. Signing you in automatically...
-              </p>
-            )}
-            {verificationStatus === 'error' && (
-              <p className="text-gray-300">
-                {errorMessage || "We couldn't verify your email. The link may be invalid or expired."}
-              </p>
-            )}
-          </CardContent>
-
-          <CardFooter className="flex justify-center">
-            {verificationStatus === 'error' && (
-              <Button onClick={handleRedirect} className="w-full">
-                Go to Login
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
+          </div>
+          
+          <p className="text-gray-300 mb-6">{statusMessage}</p>
+          
+          <div className="mt-6">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 bg-primary text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-export default VerifyEmail;

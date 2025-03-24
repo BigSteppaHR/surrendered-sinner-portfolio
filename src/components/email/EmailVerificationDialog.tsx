@@ -47,7 +47,7 @@ const EmailVerificationDialog = ({
       // Check if email is already verified
       checkEmailVerification(emailToUse);
     }
-  }, [initialEmail, location.state?.email, user?.email]);
+  }, [initialEmail, location.state?.email, user?.email, isOpen]);
 
   // Check if email is already verified in the database
   const checkEmailVerification = async (emailToCheck: string) => {
@@ -74,7 +74,24 @@ const EmailVerificationDialog = ({
         return;
       }
       
-      // If we don't have a profile or email_confirmed is false, explicitly check the profiles table
+      // If we need to check explicitly (e.g., after verification process)
+      await refreshProfile();
+      
+      // If profile is now verified, close dialog
+      if (profile?.email_confirmed) {
+        setIsEmailVerified(true);
+        if (isOpen && mounted.current) {
+          setIsVisible(false);
+          setTimeout(() => {
+            if (mounted.current) {
+              onClose();
+            }
+          }, 300);
+        }
+        return;
+      }
+      
+      // If we still don't have confirmation, check the database directly
       const { data, error } = await supabase
         .from('profiles')
         .select('email_confirmed')
@@ -187,6 +204,20 @@ const EmailVerificationDialog = ({
       clearTimeout(timer);
     };
   }, [profile, navigate, onClose]);
+
+  // Regular check for verified status to catch updates
+  useEffect(() => {
+    if (!isOpen || !email) return;
+    
+    // Check verification status periodically
+    const intervalId = setInterval(() => {
+      if (mounted.current && isOpen && email) {
+        checkEmailVerification(email);
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [isOpen, email]);
 
   // Don't render anything if not open or if email is verified
   if (!isOpen || isEmailVerified) {
