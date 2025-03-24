@@ -97,9 +97,11 @@ export default function Signup() {
   };
 
   const handleCloseVerification = () => {
-    setShowEmailVerification(false);
-    // Navigate to login page after closing the verification dialog
-    navigate("/login");
+    if (mountedRef.current) {
+      setShowEmailVerification(false);
+      // Navigate to login page after closing the verification dialog
+      navigate("/login");
+    }
   };
 
   // Show loading state while checking auth
@@ -288,11 +290,13 @@ export default function Signup() {
         </div>
       </div>
 
-      <EmailVerificationDialog 
-        isOpen={showEmailVerification}
-        onClose={handleCloseVerification}
-        initialEmail={signupEmail}
-      />
+      {mountedRef.current && (
+        <EmailVerificationDialog 
+          isOpen={showEmailVerification}
+          onClose={handleCloseVerification}
+          initialEmail={signupEmail}
+        />
+      )}
     </div>
   );
 }

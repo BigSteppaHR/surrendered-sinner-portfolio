@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
-import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/safe-dialog";
 import { X } from "lucide-react";
 import EmailVerificationCard from "@/components/email/EmailVerificationCard";
 
@@ -37,16 +37,17 @@ const EmailVerificationDialog = ({ isOpen, onClose, initialEmail = "" }: EmailVe
     }
   }, [profile, navigate, onClose]);
 
-  if (!isOpen) return null;
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="p-0 bg-transparent border-none shadow-none max-w-md mx-auto">
+      <DialogContent className="p-0 bg-transparent border-none shadow-none max-w-md mx-auto" aria-describedby="email-verification-description">
         <DialogTitle className="sr-only">Email Verification</DialogTitle>
         <DialogClose className="absolute right-2 top-2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10">
           <X className="h-4 w-4 text-white" />
           <span className="sr-only">Close</span>
         </DialogClose>
+        <div id="email-verification-description" className="sr-only">
+          Please verify your email address to continue using the application
+        </div>
         <EmailVerificationCard 
           email={email}
           isLoading={false}
