@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import EmailVerificationCard from "@/components/email/EmailVerificationCard";
 
 interface EmailVerificationDialogProps {
@@ -38,9 +38,12 @@ const EmailVerificationDialog = ({ isOpen, onClose, initialEmail = "" }: EmailVe
     }
   }, [profile, navigate, onClose, location.pathname]);
 
+  if (!isOpen) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 bg-transparent border-none shadow-none max-w-md mx-auto">
+        <DialogTitle className="sr-only">Email Verification</DialogTitle>
         <EmailVerificationCard 
           email={email}
           isLoading={false}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -45,25 +44,24 @@ export default function Auth() {
   const location = useLocation();
 
   useEffect(() => {
-    // Show verification dialog if redirected from confirm-email
-    if (location.pathname === "/auth" && location.state?.email) {
-      setVerificationEmail(location.state.email);
-      setShowVerificationDialog(true);
-    }
+    // Check for email verification dialog triggers
+    const shouldShowVerification = location.state?.email || 
+                                  location.state?.redirectState?.email ||
+                                  (isAuthenticated && profile && !profile.email_confirmed);
     
-    // Also check for redirectState from login or signup
-    if (location.state?.redirectState?.email) {
-      setVerificationEmail(location.state.redirectState.email);
-      setShowVerificationDialog(true);
-    }
-    
-    if (isAuthenticated) {
-      if (profile && !profile.email_confirmed) {
-        setVerificationEmail(profile.email || "");
+    if (shouldShowVerification) {
+      // Get the email from wherever it's available
+      const email = location.state?.email || 
+                   location.state?.redirectState?.email || 
+                   (profile?.email || "");
+                   
+      if (email) {
+        setVerificationEmail(email);
         setShowVerificationDialog(true);
-      } else {
-        navigate("/dashboard");
       }
+    } else if (isAuthenticated && profile?.email_confirmed) {
+      // If user is authenticated and email is confirmed, go to dashboard
+      navigate("/dashboard");
     }
   }, [isAuthenticated, profile, navigate, location]);
 
@@ -94,11 +92,6 @@ export default function Auth() {
         if (result.data.redirectTo === "/confirm-email") {
           setVerificationEmail(values.email);
           setShowVerificationDialog(true);
-        } else if (result.data.redirectTo) {
-          navigate(result.data.redirectTo, { 
-            state: result.data.redirectState,
-            replace: true
-          });
         }
       }
     } finally {
@@ -115,11 +108,6 @@ export default function Auth() {
         if (result.data.redirectTo === "/confirm-email") {
           setVerificationEmail(values.email);
           setShowVerificationDialog(true);
-        } else if (result.data.redirectTo) {
-          navigate(result.data.redirectTo, { 
-            state: result.data.redirectState,
-            replace: true
-          });
         }
       }
     } finally {
@@ -129,6 +117,10 @@ export default function Auth() {
 
   const handleCloseVerification = () => {
     setShowVerificationDialog(false);
+    // Clear any state that might cause the dialog to reappear
+    if (location.state) {
+      navigate(location.pathname, { replace: true });
+    }
   };
 
   if (isAuthenticated && profile?.email_confirmed) {
