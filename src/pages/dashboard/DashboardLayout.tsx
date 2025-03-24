@@ -1,7 +1,7 @@
 
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 // We no longer need to include auth-related paths here as they're now directly at root level
@@ -13,6 +13,7 @@ const DashboardLayout = () => {
   const [isPageLoaded, setIsPageLoaded] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const { toast } = useToast();
+  const initialLoadComplete = useRef(false);
   
   const isPublicPage = publicPages.includes(location.pathname);
   
@@ -25,8 +26,9 @@ const DashboardLayout = () => {
     });
     
     // Only set page as loaded after auth is initialized
-    if (isInitialized) {
+    if (isInitialized && !initialLoadComplete.current) {
       setIsPageLoaded(true);
+      initialLoadComplete.current = true;
     }
     
     // Set a timeout to prevent infinite loading

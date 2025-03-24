@@ -11,14 +11,11 @@ import Footer from '@/components/Footer';
 import { Separator } from '@/components/ui/separator';
 import FloatingCTA from '@/components/FloatingCTA';
 import AssessmentQuiz from '@/components/AssessmentQuiz';
+import SEO from '@/components/SEO';
 
 const Index = () => {
-  useEffect(() => {
-    document.title = 'Surrendered Sinner Fitness | Elite Coaching';
-  }, []);
-
   const [quizOpen, setQuizOpen] = useState(false);
-
+  
   // Set up a hash change listener to show the quiz when the URL hash is #assessment-quiz
   useEffect(() => {
     const handleHashChange = () => {
@@ -39,8 +36,17 @@ const Index = () => {
     };
   }, []);
 
+  // Determine if we're on codecove.dev
+  const isCodecove = typeof window !== 'undefined' && 
+    (window.location.hostname === 'codecove.dev' || 
+     window.location.hostname.endsWith('.codecove.dev'));
+
   return (
     <div className="flex flex-col min-h-screen">
+      <SEO 
+        canonical={isCodecove ? 'https://codecove.dev' : 'https://surrenderedsinnerfitness.com'}
+      />
+      
       <Navbar />
       <Hero />
       

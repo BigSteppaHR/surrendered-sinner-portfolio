@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import Stripe from 'https://esm.sh/stripe@13.3.0'
 
@@ -6,6 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*', // Allow all origins including codecove.dev
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json; charset=utf-8', // Add UTF-8 charset
+  'X-Content-Type-Options': 'nosniff', // Prevent MIME-sniffing
+  'Content-Security-Policy': "frame-ancestors 'none'", // Modern alternative to X-Frame-Options
+  'Cache-Control': 'no-store, max-age=0' // Prevent caching of sensitive data
 }
 
 serve(async (req) => {
@@ -79,10 +84,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ success: true, data: result }),
       { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
+        headers: corsHeaders
       }
     )
   } catch (error) {
@@ -93,10 +95,7 @@ serve(async (req) => {
       JSON.stringify({ success: false, error: error.message }),
       { 
         status: 400,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
+        headers: corsHeaders
       }
     )
   }

@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*', // Allow all origins including codecove.dev
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json; charset=utf-8', // Add UTF-8 charset
+  'X-Content-Type-Options': 'nosniff', // Prevent MIME-sniffing
+  'Content-Security-Policy': "frame-ancestors 'none'", // Modern alternative to X-Frame-Options
+  'Cache-Control': 'no-store, max-age=0' // Prevent caching of sensitive data
 }
 
 serve(async (req) => {
@@ -74,7 +78,7 @@ serve(async (req) => {
           email: user.email,
           confirmedAt: user.email_confirmed_at
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: corsHeaders }
       )
     }
 
@@ -114,7 +118,7 @@ serve(async (req) => {
         userId: user.id,
         email: user.email
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: corsHeaders }
     )
   } catch (error) {
     console.error('Error:', error.message)
@@ -126,7 +130,7 @@ serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: corsHeaders
       }
     )
   }

@@ -26,6 +26,7 @@ const SEO: React.FC<SEOProps> = ({
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
       <link rel="canonical" href={canonical} />
+      <meta charSet="utf-8" />
       
       {/* Open Graph Tags */}
       <meta property="og:title" content={title} />
@@ -41,10 +42,17 @@ const SEO: React.FC<SEOProps> = ({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
       
+      {/* Security Headers */}
+      <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'" />
+      <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+      
       {/* Additional SEO Tags */}
       <meta name="robots" content="index, follow" />
       <meta name="author" content="Surrendered Sinner Fitness" />
       <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+      
+      {/* Cookie Information */}
+      <meta name="cookie-policy" content="This site uses essential cookies for authentication. Third-party cookies are used for analytics and may be blocked by your browser." />
       
       {/* Schema.org markup for rich results */}
       <script type="application/ld+json">
