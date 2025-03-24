@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('Initializing auth provider...');
         // Get session first to ensure we have the most up-to-date state
         const { data } = await supabase.auth.getSession();
-        console.log('Current session:', JSON.stringify(data.session, null, 2));
+        console.log('Current session:', data.session ? 'Active' : 'None');
         
         // Set up automatic session refresh - use a more conservative interval
         if (sessionRefreshInterval.current) {
@@ -39,18 +39,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Only attempt to refresh if there's a session
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-              const { data, error } = await supabase.auth.refreshSession();
-              if (error) console.error("Session refresh error:", error);
+              await supabase.auth.refreshSession();
+              console.log("Session refreshed at", new Date().toISOString());
             }
           } catch (err) {
             console.error("Error in refresh interval:", err);
           }
-        }, 5 * 60 * 1000); // Refresh every 5 minutes
+        }, 4 * 60 * 1000); // Refresh every 4 minutes
         
         setIsInitialized(true);
       } catch (error) {
         console.error('Error initializing auth:', error);
-        setIsInitialized(true);
+        setIsInitialized(true); // Still mark as initialized to not block the UI
       }
     };
 
@@ -63,6 +63,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
   }, []);
+
+  // Setup auth state change listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth state changed:', event, session ? 'Session active' : 'No session');
+        
+        // Trigger a profile refresh when authentication state changes
+        if (session?.user) {
+          authState.refreshProfile();
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [authState]);
 
   // Combine state and operations
   const value: AuthContextType = {

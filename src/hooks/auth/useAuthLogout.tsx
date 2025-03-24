@@ -45,7 +45,7 @@ export const useAuthLogout = () => {
         description: "You have been logged out successfully",
       });
       
-      // Force reload the page to clear any in-memory state - delay to allow toast to show
+      // Force reload the page to clear any in-memory state
       setTimeout(() => {
         window.location.href = '/login';
       }, 300);

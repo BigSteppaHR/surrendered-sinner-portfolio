@@ -32,18 +32,18 @@ export const useAuthSignup = () => {
     user: User | null, 
     fullName: string, 
     email: string,
-    password: string // Now we need password to store for auto-login
+    password: string
   ): Promise<SignupResult> => {
-    // Create user profile if user exists - don't rely on session for this critical operation
+    // Create user profile if user exists
     if (user) {
       try {
-        console.log(`Attempting direct profile creation for user: ${user.id}, ${email}, ${fullName}`);
+        console.log(`Creating profile for user: ${user.id}, ${email}, ${fullName}`);
         const profileResult = await createUserProfile(user.id, email, fullName);
         if (!profileResult.success) {
           console.error("Profile creation failed:", profileResult.error);
           // Continue anyway since this shouldn't block the email verification process
         } else {
-          console.log("Profile created successfully via direct method");
+          console.log("Profile created successfully");
         }
       } catch (err) {
         console.error("Error in profile creation:", err);
@@ -185,7 +185,7 @@ export const useAuthSignup = () => {
         return handleSignupError(error);
       }
       
-      // Handle successful signup process - now passing password for auto-login
+      // Handle successful signup process - passing password for auto-login
       return await handleSuccessfulSignup(user, fullName, email, password);
     } catch (error: any) {
       return handleSignupError(error);

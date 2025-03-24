@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
@@ -10,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { EyeIcon, EyeOffIcon, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 import AnimatedBackground from "@/components/auth/AnimatedBackground";
 
 // Lazy load components to improve performance
@@ -38,6 +40,7 @@ export default function Signup() {
   const [signupError, setSignupError] = useState<string | null>(null);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [signupEmail, setSignupEmail] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   const mountedRef = useRef(true);
@@ -63,6 +66,34 @@ export default function Signup() {
       fullName: "",
     },
   });
+
+  // Calculate password strength
+  const calculatePasswordStrength = (password: string): number => {
+    if (!password) return 0;
+    
+    let strength = 0;
+    
+    // Length
+    if (password.length >= 8) strength += 25;
+    
+    // Uppercase
+    if (/[A-Z]/.test(password)) strength += 25;
+    
+    // Lowercase
+    if (/[a-z]/.test(password)) strength += 25;
+    
+    // Numbers
+    if (/[0-9]/.test(password)) strength += 25;
+    
+    return strength;
+  };
+
+  // Watch password field to calculate strength
+  const watchPassword = form.watch("password");
+  
+  useEffect(() => {
+    setPasswordStrength(calculatePasswordStrength(watchPassword));
+  }, [watchPassword]);
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     if (!mountedRef.current) return;
@@ -113,6 +144,14 @@ export default function Signup() {
       setShowEmailVerification(false);
       navigate("/login");
     }
+  };
+
+  // Get strength color
+  const getStrengthColor = (strength: number) => {
+    if (strength <= 25) return "bg-red-500";
+    if (strength <= 50) return "bg-orange-500";
+    if (strength <= 75) return "bg-yellow-500";
+    return "bg-green-500";
   };
 
   if (!isInitialized) {
@@ -225,6 +264,15 @@ export default function Signup() {
                             </span>
                           </div>
                         </FormControl>
+                        {field.value && (
+                          <div className="mt-2">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span>Password strength</span>
+                              <span>{passwordStrength <= 25 ? "Weak" : passwordStrength <= 50 ? "Fair" : passwordStrength <= 75 ? "Good" : "Strong"}</span>
+                            </div>
+                            <Progress value={passwordStrength} className="h-1" indicatorClassName={getStrengthColor(passwordStrength)} />
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
