@@ -25,6 +25,7 @@ export const useAuthSignup = () => {
         return { error: { message: "Account already exists" }, data: null };
       }
 
+      // Sign up the user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -48,8 +49,24 @@ export const useAuthSignup = () => {
         throw error;
       }
       
-      // Skip verification token storage in the database since we're having RLS issues
-      // Use a simpler approach with the token encoded in the URL
+      // Ensure profile is created properly with email field
+      // This is a double-check since the trigger should handle it, but we want to be sure
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({ 
+            id: data.user.id,
+            email: email,
+            full_name: fullName,
+            email_confirmed: false
+          }, { onConflict: 'id' });
+          
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+        }
+      }
+      
+      // Create verification token
       const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
       const BASE_URL = window.location.origin;
@@ -58,6 +75,19 @@ export const useAuthSignup = () => {
       console.log("Generated verification URL:", verificationApiUrl);
       
       try {
+        // Store the verification token in the database
+        const { error: tokenError } = await supabase
+          .from('verification_tokens')
+          .insert({
+            token: verificationToken,
+            user_email: email,
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+          });
+          
+        if (tokenError) {
+          console.error("Error storing verification token:", tokenError);
+        }
+        
         const emailResult = await sendEmail({
           to: email,
           subject: "Welcome to Surrendered Sinner - Verify Your Email",
@@ -147,17 +177,19 @@ export const useAuthSignup = () => {
         });
       }
       
+      // Always sign the user out after signup to require email verification
+      await supabase.auth.signOut();
+      
       toast({
         title: "Account created",
         description: "Please check your email to verify your account",
       });
       
-      // Return data without a redirectTo property - we'll handle that in the component
       return { 
         error: null, 
         data: { 
           user: data.user, 
-          session: data.session, 
+          session: null, // No active session until email verification
           emailSent: true 
         } 
       };

@@ -56,11 +56,25 @@ const VerifyEmail = () => {
 
         console.log("Token is valid, updating profile");
 
+        // Get user profile by email
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', email)
+          .single();
+
+        if (profileError || !profile) {
+          console.error("Profile not found:", profileError || "No profile exists");
+          setVerificationStatus('error');
+          setErrorMessage("User profile not found. Please contact support.");
+          return;
+        }
+
         // Update the user's profile to mark email as confirmed
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ email_confirmed: true })
-          .eq('email', email);
+          .eq('id', profile.id);
 
         if (updateError) {
           console.error("Profile update failed:", updateError);
@@ -77,21 +91,18 @@ const VerifyEmail = () => {
           .delete()
           .eq('token', token);
 
-        // Update the auth context by refreshing the profile
-        await refreshProfile();
-
         console.log("Email verification completed successfully");
         setVerificationStatus('success');
         
         toast({
           title: "Email verified",
-          description: "Your email has been successfully verified. You can now access all features of your account.",
+          description: "Your email has been successfully verified. You can now log in to access your account.",
         });
         
-        // Automatically redirect to dashboard after successful verification
+        // Automatically redirect to login after successful verification
         setTimeout(() => {
-          navigate('/dashboard');
-        }, 1500); // Short delay to show success message before redirecting
+          navigate('/login');
+        }, 3000); // 3 second delay to show success message before redirecting
         
       } catch (error) {
         console.error("Email verification error:", error);
@@ -103,9 +114,9 @@ const VerifyEmail = () => {
     verifyEmail();
   }, [searchParams, navigate, refreshProfile, toast]);
 
-  // Modified handler to go directly to dashboard on success
+  // Handler to go to login page
   const handleRedirect = () => {
-    navigate('/dashboard');
+    navigate('/login');
   };
 
   return (
@@ -150,7 +161,7 @@ const VerifyEmail = () => {
             )}
             {verificationStatus === 'success' && (
               <p className="text-gray-300">
-                Your email has been successfully verified. Redirecting you to your dashboard...
+                Your email has been successfully verified. Redirecting you to login...
               </p>
             )}
             {verificationStatus === 'error' && (
@@ -161,9 +172,9 @@ const VerifyEmail = () => {
           </CardContent>
 
           <CardFooter className="flex justify-center">
-            {verificationStatus !== 'loading' && verificationStatus !== 'success' && (
+            {(verificationStatus === 'error' || verificationStatus === 'success') && (
               <Button onClick={handleRedirect} className="w-full">
-                Go to Dashboard
+                Go to Login
               </Button>
             )}
           </CardFooter>

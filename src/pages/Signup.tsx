@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { EyeIcon, EyeOffIcon, AlertCircleIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import EmailVerificationDialog from "@/components/email/EmailVerificationDialog";
 
 const signupSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -33,6 +34,8 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -63,18 +66,24 @@ export default function Signup() {
       if (result.error) {
         setSignupError(result.error.message || "There was a problem creating your account");
       } else {
-        // On successful signup, show message about verification email
-        toast({
-          title: "Account created",
-          description: "Please check your email to verify your account",
-        });
+        // Store email for verification dialog
+        setSignupEmail(values.email);
         
-        // Redirect to login page
-        navigate("/login");
+        // Show verification dialog
+        setShowEmailVerification(true);
+        
+        // Reset form
+        form.reset();
       }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCloseVerification = () => {
+    setShowEmailVerification(false);
+    // Navigate to login page after closing the verification dialog
+    navigate("/login");
   };
 
   // Show loading state while checking auth
@@ -250,6 +259,12 @@ export default function Signup() {
           </p>
         </div>
       </div>
+
+      <EmailVerificationDialog 
+        isOpen={showEmailVerification}
+        onClose={handleCloseVerification}
+        initialEmail={signupEmail}
+      />
     </div>
   );
 }
