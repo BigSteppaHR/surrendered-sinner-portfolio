@@ -6,24 +6,78 @@ import { Profile } from '@/hooks/useAuth';
 export const useAuthLogin = () => {
   const { toast } = useToast();
 
+  // Authenticate user with email and password
+  const authenticateUser = async (email: string, password: string) => {
+    console.log('Attempting to authenticate user:', email);
+    return supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+  };
+
+  // Fetch user profile by user ID
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error.message);
+        return { profile: null, error };
+      }
+
+      return { profile, error: null };
+    } catch (error: any) {
+      console.error('Exception in fetchUserProfile:', error.message);
+      return { profile: null, error };
+    }
+  };
+
+  // Handle email verification check
+  const handleEmailVerification = async (email: string) => {
+    console.log('Email not confirmed for user:', email);
+    // Sign out immediately if email is not confirmed
+    await supabase.auth.signOut();
+    
+    // Return error with state data for email verification dialog
+    return { 
+      error: { 
+        message: "Your email is not verified. Please check your inbox and spam folder for the verification link.",
+        code: "email_not_confirmed" 
+      }, 
+      data: {
+        email: email,
+        showVerification: true
+      }
+    };
+  };
+
+  // Handle successful login
+  const handleSuccessfulLogin = (profile: Profile) => {
+    console.log('Login successful, confirmed user');
+    toast({
+      title: "Login successful",
+      description: "Welcome back!",
+    });
+  };
+
+  // Main login function
   const login = async (email: string, password: string) => {
     try {
       console.log('Attempting login for:', email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      
+      // Step 1: Authenticate the user
+      const { data, error } = await authenticateUser(email, password);
 
       if (error) {
         throw error;
       }
 
-      // Fetch profile to check email confirmation status
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
+      // Step 2: Fetch user profile to check email confirmation status
+      const { profile, error: profileError } = await fetchUserProfile(data.user.id);
 
       if (profileError) {
         console.error('Error fetching profile:', profileError.message);
@@ -43,31 +97,15 @@ export const useAuthLogin = () => {
         };
       }
 
+      // Step 3: Check if email is confirmed
       if (!profile?.email_confirmed) {
-        console.log('Email not confirmed for user:', email);
-        // If email is not confirmed, sign out immediately
-        await supabase.auth.signOut();
-        
-        // Return the error with state data for email verification dialog
-        return { 
-          error: { 
-            message: "Your email is not verified. Please check your inbox and spam folder for the verification link.",
-            code: "email_not_confirmed" 
-          }, 
-          data: {
-            email: email,
-            showVerification: true
-          }
-        };
+        return handleEmailVerification(email);
       }
 
-      // Return navigation data for confirmed users
-      console.log('Login successful, confirmed user:', email);
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
+      // Step 4: Handle successful login
+      handleSuccessfulLogin(profile);
       
+      // Return navigation data for confirmed users
       return { 
         error: null, 
         data: { 
@@ -106,23 +144,13 @@ export const useAuthLogin = () => {
     }
   };
 
-  // This refreshProfile function should return the Profile object to match the type definition
+  // Refresh user profile data
   const refreshProfile = async (): Promise<Profile | null> => {
     try {
       const { data: session } = await supabase.auth.getSession();
       
       if (session.session?.user) {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.session.user.id)
-          .single();
-        
-        if (error) {
-          console.error('Error refreshing profile:', error.message);
-          return null;
-        }
-        
+        const { profile } = await fetchUserProfile(session.session.user.id);
         return profile;
       }
       return null;
