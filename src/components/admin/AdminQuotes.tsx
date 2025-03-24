@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Quote, Plus, Trash, RefreshCw, Filter, Edit, Star, Check } from "lucide-react";
+import { Quote, Plus, Trash, RefreshCw, Filter, Edit, Star, Check, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

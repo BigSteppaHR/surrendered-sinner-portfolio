@@ -11,6 +11,7 @@ export type Profile = {
   is_admin: boolean;
   email_confirmed?: boolean;
   email?: string;
+  debug_mode?: boolean;
 };
 
 export type AuthContextType = {

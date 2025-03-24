@@ -32,7 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const AdminSidebar = () => {
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { profile, logout } = useAuth();
 
   const getFirstLetters = (name: string) => {
     if (!name) return "U";
@@ -192,7 +192,7 @@ const AdminSidebar = () => {
         <Button 
           variant="ghost" 
           className="w-full justify-start text-gray-400 hover:text-sinner-red"
-          onClick={() => signOut()}
+          onClick={() => logout()}
         >
           <LogOut className="h-4 w-4 mr-2" />
           Logout

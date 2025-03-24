@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Settings, Save, Plus, Trash, Filter, RefreshCw, Key, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { StripeProvider } from "@/components/StripeProvider";
+import StripeProvider from "@/components/StripeProvider";
 
 type SystemSetting = {
   id: string;
