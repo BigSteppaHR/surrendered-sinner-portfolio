@@ -25,6 +25,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const mountedRef = useRef(true);
+  const redirectAttemptedRef = useRef(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -32,6 +33,17 @@ export default function Login() {
       mountedRef.current = false;
     };
   }, []);
+
+  // Debug logs
+  useEffect(() => {
+    console.log("Login page - Auth state:", { 
+      isAuthenticated, 
+      profile, 
+      isInitialized, 
+      isLoading,
+      redirectAttempted: redirectAttemptedRef.current
+    });
+  }, [isAuthenticated, profile, isInitialized, isLoading]);
 
   // Check if an email is already verified in the database
   const checkEmailVerification = async (email: string): Promise<boolean> => {
@@ -65,11 +77,6 @@ export default function Login() {
     }
   };
 
-  // Debug logs
-  useEffect(() => {
-    console.log("Login page - Auth state:", { isAuthenticated, profile, isInitialized, isLoading });
-  }, [isAuthenticated, profile, isInitialized, isLoading]);
-
   useEffect(() => {
     // Check if we have a success message from verification page
     if (location.state?.message) {
@@ -84,11 +91,14 @@ export default function Login() {
   }, [location.state, navigate, toast]);
 
   useEffect(() => {
-    // Only redirect if the user is authenticated and email is confirmed
-    if (isInitialized && isAuthenticated) {
+    // Only redirect if the user is authenticated and initialization is complete
+    if (isInitialized && isAuthenticated && !redirectAttemptedRef.current) {
+      redirectAttemptedRef.current = true;
+      console.log("Login: User authenticated, checking profile for redirect:", profile);
+      
       if (profile?.email_confirmed) {
         console.log("Login: User authenticated and email confirmed, redirecting to dashboard");
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       } else if (profile && !showEmailVerification) {
         // If authenticated but email not confirmed, show verification dialog
         console.log("Login: User authenticated but email not confirmed, showing verification dialog");
@@ -152,12 +162,19 @@ export default function Login() {
           });
         }
       } else if (result.data?.user) {
+        // Reset the redirect attempted flag to ensure we try to redirect again
+        redirectAttemptedRef.current = false;
+        
         toast({
           title: "Login successful",
           description: "Welcome back!",
         });
+        
+        // Try an explicit redirect here if the user is confirmed
+        if (result.data.profile?.email_confirmed) {
+          navigate("/dashboard", { replace: true });
+        }
       }
-      // No need to navigate here as the useEffect will handle it
     } catch (error: any) {
       if (!mountedRef.current) return;
       
