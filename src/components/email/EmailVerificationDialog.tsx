@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
@@ -24,11 +24,30 @@ const EmailVerificationDialog = ({
   const navigate = useNavigate();
   const location = useLocation();
   const mounted = useRef(true);
+  const [isVisible, setIsVisible] = useState(false);
   
   // Get email from props, location state or user object
   const email = initialEmail || location.state?.email || user?.email || "";
   
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
+
+  // Handle visibility safely with a small delay
+  useEffect(() => {
+    // Only update visibility if mounted
+    if (mounted.current) {
+      if (isOpen) {
+        // Small delay before showing to ensure proper rendering
+        const timer = setTimeout(() => {
+          if (mounted.current) {
+            setIsVisible(true);
+          }
+        }, 50);
+        return () => clearTimeout(timer);
+      } else {
+        setIsVisible(false);
+      }
+    }
+  }, [isOpen]);
 
   // Handle back to login - redirects to login page when requested
   const handleBackToLogin = () => {
@@ -41,16 +60,24 @@ const EmailVerificationDialog = ({
   // Handle dialog close
   const handleDialogClose = () => {
     if (mounted.current) {
-      onClose();
-      // Redirect to login page if redirectToLogin is true
-      if (redirectToLogin) {
-        navigate("/login");
-      }
+      setIsVisible(false);
+      
+      // Small delay before actually closing to ensure animations complete
+      setTimeout(() => {
+        if (mounted.current) {
+          onClose();
+          // Redirect to login page if redirectToLogin is true
+          if (redirectToLogin) {
+            navigate("/login");
+          }
+        }
+      }, 100);
     }
   };
 
   // Set up cleanup function to update mounted ref when component unmounts
   useEffect(() => {
+    mounted.current = true;
     return () => {
       mounted.current = false;
     };
@@ -59,8 +86,15 @@ const EmailVerificationDialog = ({
   // If user has confirmed email, close dialog and redirect to dashboard
   useEffect(() => {
     if (profile?.email_confirmed && mounted.current) {
-      onClose();
-      navigate("/dashboard");
+      setIsVisible(false);
+      
+      // Small delay before redirecting
+      setTimeout(() => {
+        if (mounted.current) {
+          onClose();
+          navigate("/dashboard");
+        }
+      }, 100);
     }
   }, [profile, navigate, onClose]);
 
@@ -70,7 +104,14 @@ const EmailVerificationDialog = ({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => open === false && handleDialogClose()}>
+    <Dialog 
+      open={isVisible} 
+      onOpenChange={(open) => {
+        if (!open && mounted.current) {
+          handleDialogClose();
+        }
+      }}
+    >
       <DialogContent 
         className="p-0 bg-transparent border-none shadow-none max-w-md mx-auto" 
         aria-describedby="email-verification-description"

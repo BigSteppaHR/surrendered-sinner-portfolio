@@ -11,7 +11,11 @@ export const useAuthLogin = () => {
   const handleEmailVerification = async (email: string) => {
     console.log('Email not confirmed for user:', email);
     // Sign out immediately if email is not confirmed
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Error signing out after email verification check:', err);
+    }
     
     // Return error with state data for email verification dialog
     return { 

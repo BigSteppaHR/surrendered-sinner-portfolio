@@ -107,6 +107,10 @@ export const signOutUser = async (): Promise<void> => {
 export const authenticateUser = async (email: string, password: string): Promise<AuthResult> => {
   try {
     console.log('Attempting to authenticate user:', email);
+    
+    // Add a small delay before authentication to ensure any previous auth operations are completed
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,

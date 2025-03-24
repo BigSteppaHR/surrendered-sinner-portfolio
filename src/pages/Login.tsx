@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -28,17 +29,27 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (isInitialized && isAuthenticated && profile?.email_confirmed) {
-      navigate("/dashboard");
-    }
+    // Add a slight delay to prevent flashing
+    const timer = setTimeout(() => {
+      if (mountedRef.current && isInitialized && isAuthenticated && profile?.email_confirmed) {
+        navigate("/dashboard");
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [isAuthenticated, profile, navigate, isInitialized]);
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    if (!mountedRef.current) return;
+    
     setIsSubmitting(true);
     setLoginError(null);
+    
     try {
       console.log("Attempting login with email:", values.email);
       const result = await login(values.email, values.password);
+      
+      if (!mountedRef.current) return;
       
       if (result.error) {
         console.log("Login error:", result.error);
@@ -51,6 +62,8 @@ export default function Login() {
         }
       } 
     } catch (error) {
+      if (!mountedRef.current) return;
+      
       console.error("Login error:", error);
       setLoginError("An unexpected error occurred. Please try again.");
     } finally {
@@ -61,7 +74,9 @@ export default function Login() {
   };
 
   const handleCloseVerification = () => {
-    setShowEmailVerification(false);
+    if (mountedRef.current) {
+      setShowEmailVerification(false);
+    }
   };
 
   if (!isInitialized) {
@@ -87,12 +102,14 @@ export default function Login() {
         <LoginFooter />
       </div>
 
-      <EmailVerificationDialog 
-        isOpen={showEmailVerification}
-        onClose={handleCloseVerification}
-        initialEmail={verificationEmail}
-        redirectToLogin={false}
-      />
+      {mountedRef.current && (
+        <EmailVerificationDialog 
+          isOpen={showEmailVerification}
+          onClose={handleCloseVerification}
+          initialEmail={verificationEmail}
+          redirectToLogin={false}
+        />
+      )}
     </div>
   );
 }
