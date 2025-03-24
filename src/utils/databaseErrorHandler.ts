@@ -38,6 +38,12 @@ export const handleDatabaseError = (
   } else if (error.code === '23503') {
     // Foreign key violation
     message = 'This action cannot be completed because it references data that doesn\'t exist.';
+  } else if (error.code === '57014') {
+    // Query canceled
+    message = 'The database request took too long and was canceled. Please try again.';
+  } else if (error.code === '08006') {
+    // Connection failure
+    message = 'Lost connection to database. Please check your internet connection and try again.';
   }
   
   toast({
@@ -48,28 +54,78 @@ export const handleDatabaseError = (
 };
 
 /**
- * Wraps a Supabase query with error handling
+ * Wraps a Supabase query with error handling and automatic retries for connection issues
  * @param queryFn Function that performs the Supabase query
  * @param errorMessage Optional custom error message
+ * @param retries Number of retry attempts for connection issues
  * @returns The result of the query
  */
 export const withErrorHandling = async <T>(
   queryFn: () => Promise<{ data: T | null; error: PostgrestError | null }>,
-  errorMessage?: string
+  errorMessage?: string,
+  retries: number = 2
 ): Promise<{ data: T | null; error: PostgrestError | null }> => {
-  try {
-    const result = await queryFn();
-    if (result.error) {
-      handleDatabaseError(result.error, errorMessage);
+  let attemptsRemaining = retries + 1; // Initial attempt + retries
+  
+  while (attemptsRemaining > 0) {
+    attemptsRemaining--;
+    
+    try {
+      const result = await queryFn();
+      
+      // If connection error and we have attempts remaining, try again
+      if (result.error && 
+         (result.error.code === '08006' || result.error.code === '57014') && 
+         attemptsRemaining > 0) {
+        console.log(`Database connection error, retrying... (${attemptsRemaining} attempts left)`);
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retries - attemptsRemaining)));
+        continue;
+      }
+      
+      // For other errors or if we're out of retries, handle the error
+      if (result.error) {
+        handleDatabaseError(result.error, errorMessage);
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('Unexpected error in database query:', err);
+      
+      // If this is not the last attempt, try again
+      if (attemptsRemaining > 0) {
+        console.log(`Unexpected error, retrying... (${attemptsRemaining} attempts left)`);
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retries - attemptsRemaining)));
+        continue;
+      }
+      
+      toast({
+        title: 'Connection Error',
+        description: errorMessage || 'Failed to connect to the database. Please check your internet connection.',
+        variant: 'destructive'
+      });
+      
+      return { 
+        data: null, 
+        error: { 
+          message: 'Unexpected error', 
+          details: '', 
+          hint: '', 
+          code: 'UNKNOWN' 
+        } 
+      };
     }
-    return result;
-  } catch (err) {
-    console.error('Unexpected error in database query:', err);
-    toast({
-      title: 'Connection Error',
-      description: errorMessage || 'Failed to connect to the database. Please check your internet connection.',
-      variant: 'destructive'
-    });
-    return { data: null, error: { message: 'Unexpected error', details: '', hint: '', code: 'UNKNOWN' } };
   }
+  
+  // This should never be reached, but TypeScript needs it
+  return { 
+    data: null, 
+    error: { 
+      message: 'Maximum retry attempts exceeded', 
+      details: '', 
+      hint: '', 
+      code: 'MAX_RETRIES' 
+    } 
+  };
 };
