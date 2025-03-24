@@ -35,6 +35,7 @@ const RemoveBadge = () => {
         '[aria-live="polite"]', // Accessibility attribute often used by toast libraries
       ];
       
+      // Instead of immediately removing elements, check their content first
       selectors.forEach(selector => {
         const elements = document.querySelectorAll(selector);
         if (elements.length) {
@@ -46,12 +47,14 @@ const RemoveBadge = () => {
                 el.setAttribute('content', content.replace(/lovable\.dev/g, 'surrenderedsinner.fitness'));
               }
             } else {
-              // Before removing, check if it contains Lovable branding text
+              // Check if it contains Lovable branding text
               const innerText = el.textContent?.toLowerCase() || '';
               const innerHTML = el.innerHTML?.toLowerCase() || '';
               
               if (innerText.includes('lovable') || 
                   innerText.includes('gpt') || 
+                  innerText.includes('created by') ||
+                  innerText.includes('generated with') ||
                   innerHTML.includes('lovable') || 
                   innerHTML.includes('gpt')) {
                 el.remove();
@@ -71,16 +74,17 @@ const RemoveBadge = () => {
         }
       });
 
-      // More aggressive approach to remove toast notifications
+      // Remove toast notifications
       const removeToastNotifications = () => {
         // Look for various toast implementations and their text content
         document.querySelectorAll('*').forEach(el => {
           const text = el.textContent?.toLowerCase() || '';
           const html = el.innerHTML?.toLowerCase() || '';
           
-          // If any element contains lovable or gpt in its text
-          if ((text.includes('lovable') || text.includes('gpt') || 
-               html.includes('lovable') || html.includes('gpt')) &&
+          // More comprehensive check for branding
+          const brandingKeywords = ['lovable', 'gpt', 'engineer', 'ai assistant', 'generated', 'created by'];
+          
+          if (brandingKeywords.some(keyword => text.includes(keyword) || html.includes(keyword)) &&
               // And it looks like a notification (small UI element)
               (el.getBoundingClientRect().width < 500 && 
                el.getBoundingClientRect().height < 200)) {
@@ -126,7 +130,7 @@ const RemoveBadge = () => {
     });
 
     // Additional interval to check for toasts that might appear after delays
-    const intervalId = setInterval(removeAllBranding, 2000);
+    const intervalId = setInterval(removeAllBranding, 1000);
 
     // Clean up
     return () => {
