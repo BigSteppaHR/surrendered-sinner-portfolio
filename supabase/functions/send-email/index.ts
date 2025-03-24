@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
@@ -28,7 +29,7 @@ serve(async (req) => {
     const SMTP_PORT = Number(Deno.env.get("SMTP_PORT"));
     const SMTP_USER = Deno.env.get("SMTP_USER");
     const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD");
-    const DEFAULT_FROM = Deno.env.get("SMTP_DEFAULT_FROM") || "noreply@surrenderedsinner.com";
+    const DEFAULT_FROM = Deno.env.get("SMTP_DEFAULT_FROM") || "support@astreyon.ai";
 
     // Validate SMTP configuration
     if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD) {
