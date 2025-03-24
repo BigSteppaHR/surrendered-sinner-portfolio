@@ -48,6 +48,10 @@ const EmailVerificationCard = ({
         
         <div className="text-center text-gray-400 text-sm">
           <p>Didn't receive the email? Check your spam folder or request a new verification link.</p>
+          <p className="mt-2 text-yellow-400">
+            <AlertTriangle className="h-4 w-4 inline-block mr-1" />
+            Important: Verification emails may appear in your spam/junk folder.
+          </p>
         </div>
       </CardContent>
       

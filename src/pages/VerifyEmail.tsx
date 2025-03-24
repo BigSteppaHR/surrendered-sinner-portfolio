@@ -88,6 +88,11 @@ const VerifyEmail = () => {
           description: "Your email has been successfully verified. You can now access all features of your account.",
         });
         
+        // Automatically redirect to dashboard after successful verification
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500); // Short delay to show success message before redirecting
+        
       } catch (error) {
         console.error("Email verification error:", error);
         setVerificationStatus('error');
@@ -98,12 +103,9 @@ const VerifyEmail = () => {
     verifyEmail();
   }, [searchParams, navigate, refreshProfile, toast]);
 
+  // Modified handler to go directly to dashboard on success
   const handleRedirect = () => {
-    if (verificationStatus === 'success') {
-      navigate('/dashboard');
-    } else {
-      navigate('/confirm-email');
-    }
+    navigate('/dashboard');
   };
 
   return (
@@ -148,7 +150,7 @@ const VerifyEmail = () => {
             )}
             {verificationStatus === 'success' && (
               <p className="text-gray-300">
-                Your email has been successfully verified. You can now access all features of your account.
+                Your email has been successfully verified. Redirecting you to your dashboard...
               </p>
             )}
             {verificationStatus === 'error' && (
@@ -159,9 +161,9 @@ const VerifyEmail = () => {
           </CardContent>
 
           <CardFooter className="flex justify-center">
-            {verificationStatus !== 'loading' && (
+            {verificationStatus !== 'loading' && verificationStatus !== 'success' && (
               <Button onClick={handleRedirect} className="w-full">
-                {verificationStatus === 'success' ? 'Go to Dashboard' : 'Try Again'}
+                Go to Dashboard
               </Button>
             )}
           </CardFooter>
