@@ -9,18 +9,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, Save, Mail, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
+const profileSchema = z.object({
+  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().email("Please enter a valid email")
+});
 
 const Account = () => {
-  const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
+  const { isAuthenticated, isLoading, profile, isInitialized, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  
+  const form = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      fullName: "",
+      email: ""
+    },
+  });
   
   useEffect(() => {
     if (!isInitialized) return;
@@ -34,27 +51,63 @@ const Account = () => {
       setFullName(profile.full_name || "");
       setEmail(profile.email || "");
       setAvatarUrl(profile.avatar_url);
+      
+      form.reset({
+        fullName: profile.full_name || "",
+        email: profile.email || ""
+      });
     }
-  }, [isAuthenticated, isLoading, profile, isInitialized]);
+  }, [isAuthenticated, isLoading, profile, isInitialized, form]);
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleUpdateProfile = async (data: z.infer<typeof profileSchema>) => {
     if (!profile?.id) return;
     
     setIsUpdating(true);
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: fullName,
-        })
-        .eq('id', profile.id);
-        
-      if (error) {
-        throw error;
+      // Only update if changes were made
+      if (data.fullName !== profile.full_name) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            full_name: data.fullName,
+          })
+          .eq('id', profile.id);
+          
+        if (error) {
+          throw error;
+        }
       }
+      
+      // Only update email if it has changed
+      if (data.email !== profile.email) {
+        setIsUpdatingEmail(true);
+        
+        const { error } = await supabase.auth.updateUser({
+          email: data.email,
+        });
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Update the profile table as well
+        await supabase
+          .from('profiles')
+          .update({
+            email: data.email,
+            email_confirmed: false // Reset confirmation status
+          })
+          .eq('id', profile.id);
+          
+        toast({
+          title: "Email update initiated",
+          description: "Please check your new email address for a confirmation link",
+        });
+      }
+      
+      // Refresh the profile data
+      await refreshProfile();
       
       toast({
         title: "Profile updated",
@@ -68,6 +121,7 @@ const Account = () => {
       });
     } finally {
       setIsUpdating(false);
+      setIsUpdatingEmail(false);
     }
   };
 
@@ -75,11 +129,34 @@ const Account = () => {
     const file = e.target.files?.[0];
     if (!file || !profile?.id) return;
     
+    // Validate file type
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    const acceptedTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    
+    if (!fileExt || !acceptedTypes.includes(fileExt)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (JPG, PNG, GIF, WEBP)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsUploading(true);
     
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      // Create a unique filename
+      const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
       
       // Upload the file
@@ -111,16 +188,30 @@ const Account = () => {
       // Update local state
       setAvatarUrl(data.publicUrl);
       
+      // Refresh the profile
+      await refreshProfile();
+      
       toast({
         title: "Avatar updated",
         description: "Your profile picture has been updated",
       });
     } catch (error: any) {
-      toast({
-        title: "Error uploading avatar",
-        description: error.message || "An error occurred while uploading your avatar",
-        variant: "destructive",
-      });
+      console.error("Avatar upload error:", error);
+      
+      // Check for storage bucket not found error
+      if (error.message?.includes('bucket not found')) {
+        toast({
+          title: "Storage not configured",
+          description: "Please contact support to enable profile pictures",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error uploading avatar",
+          description: error.message || "An error occurred while uploading your avatar",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsUploading(false);
     }
@@ -137,7 +228,7 @@ const Account = () => {
   // Loading state
   if (isLoading || !isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C]">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-sinner-red/50">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     );
@@ -149,26 +240,29 @@ const Account = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#1A1F2C] text-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-gray-900 to-sinner-red/30 text-white">
       <DashboardNav />
       
       <div className="flex-1 overflow-auto">
         <div className="p-6 max-w-3xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold">Account Settings</h1>
+            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-purple-500">Account Settings</h1>
             <p className="text-gray-400 mt-1">Manage your profile and preferences</p>
           </div>
           
           <div className="grid grid-cols-1 gap-6">
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-gray-900/80 backdrop-blur-sm border-gray-800">
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
+                <CardTitle className="flex items-center">
+                  <UserCheck className="h-5 w-5 mr-2 text-sinner-red" />
+                  Profile Information
+                </CardTitle>
                 <CardDescription className="text-gray-400">
                   Update your account information
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleUpdateProfile} className="space-y-6">
+                <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-6">
                   <div className="flex flex-col items-center space-y-3">
                     <div className="relative">
                       <Avatar className="h-24 w-24 border-2 border-gray-700">
@@ -179,7 +273,7 @@ const Account = () => {
                       </Avatar>
                       <label 
                         htmlFor="avatar-upload" 
-                        className="absolute bottom-0 right-0 bg-sinner-red rounded-full p-2 cursor-pointer border-2 border-gray-900"
+                        className="absolute bottom-0 right-0 bg-sinner-red rounded-full p-2 cursor-pointer border-2 border-gray-900 hover:bg-red-700 transition-colors"
                       >
                         {isUploading ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -204,27 +298,36 @@ const Account = () => {
                       <Label htmlFor="fullName">Full Name</Label>
                       <Input
                         id="fullName"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        {...form.register("fullName")}
                         className="bg-gray-800 border-gray-700"
                       />
+                      {form.formState.errors.fullName && (
+                        <p className="text-sm text-red-500">{form.formState.errors.fullName.message}</p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        value={email}
-                        disabled
-                        className="bg-gray-800 border-gray-700 opacity-70"
-                      />
-                      <p className="text-xs text-gray-500">Email cannot be changed</p>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                        <Input
+                          id="email"
+                          {...form.register("email")}
+                          className="bg-gray-800 border-gray-700 pl-10"
+                        />
+                      </div>
+                      {form.formState.errors.email && (
+                        <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        Changing your email will require verification of the new address
+                      </p>
                     </div>
                   </div>
                   
                   <Button 
                     type="submit" 
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900"
                     disabled={isUpdating || isUploading}
                   >
                     {isUpdating ? (
@@ -233,14 +336,17 @@ const Account = () => {
                         Updating...
                       </>
                     ) : (
-                      "Update Profile"
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
                     )}
                   </Button>
                 </form>
               </CardContent>
             </Card>
             
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-gray-900/80 backdrop-blur-sm border-gray-800">
               <CardHeader>
                 <CardTitle>Security</CardTitle>
                 <CardDescription className="text-gray-400">
@@ -250,7 +356,7 @@ const Account = () => {
               <CardContent>
                 <div className="space-y-4">
                   <p className="text-sm text-gray-400">
-                    Password changes are managed through our secure password reset flow.
+                    Update your password using our secure password reset system
                   </p>
                 </div>
               </CardContent>

@@ -1,125 +1,126 @@
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { AlertCircle, EyeIcon, EyeOffIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useNavigate } from "react-router-dom";
 
-const loginFormSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
-type LoginFormValues = z.infer<typeof loginFormSchema>;
-
 interface LoginFormProps {
-  onSubmit: (values: LoginFormValues) => void;
+  onSubmit: (values: z.infer<typeof loginSchema>) => Promise<void>;
   isSubmitting: boolean;
   isLoading: boolean;
   loginError: string | null;
 }
 
-export default function LoginForm({ onSubmit, isSubmitting, isLoading, loginError }: LoginFormProps) {
-  const [showPassword, setShowPassword] = useState(false);
-
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
+const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError }: LoginFormProps) => {
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  // Reset form error when loginError changes
-  useEffect(() => {
-    if (loginError) {
-      // Only clear form errors if there's a loginError to prevent erasing validation errors
-      form.clearErrors();
-    }
-  }, [loginError, form]);
-
-  // Disable the form while submitting
-  const isDisabled = isSubmitting || isLoading;
+  const navigate = useNavigate();
 
   return (
-    <div className="bg-gray-900 text-white p-6 rounded-lg border border-gray-800 w-full">
-      {loginError && (
-        <div className="bg-red-900/30 border border-red-800 text-white p-3 rounded-md mb-4 flex items-start">
-          <AlertCircle className="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
-          <p className="text-sm">{loginError}</p>
-        </div>
-      )}
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Enter your email" 
-                    {...field} 
-                    disabled={isDisabled}
-                    type="email"
-                    autoComplete="email"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      {...field}
-                      disabled={isDisabled}
-                      autoComplete="current-password"
+    <Card className="border-0 bg-black/70 backdrop-blur-md shadow-xl">
+      <CardContent className="p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white">Email</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="your.email@example.com" 
+                      {...field} 
+                      className="bg-zinc-900/70 border-zinc-800"
                     />
-                    <span
-                      className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                      onClick={() => !isDisabled && setShowPassword(!showPassword)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between items-center">
+                    <FormLabel className="text-white">Password</FormLabel>
+                    <Button 
+                      variant="link" 
+                      className="px-0 text-sinner-red h-auto py-0" 
+                      type="button"
+                      onClick={() => navigate("/reset-password")}
                     >
-                      {showPassword ? (
-                        <EyeOffIcon className="h-4 w-4 text-gray-500" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4 text-gray-500" />
-                      )}
-                    </span>
+                      Forgot password?
+                    </Button>
                   </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      placeholder="●●●●●●●●" 
+                      {...field} 
+                      className="bg-zinc-900/70 border-zinc-800"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {loginError && (
+              <div className="px-3 py-2 rounded bg-red-950/50 border border-red-900 text-red-400 text-sm">
+                {loginError}
+              </div>
             )}
-          />
-
-          <Button type="submit" className="w-full" disabled={isDisabled}>
-            {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                Logging in...
-              </span>
-            ) : (
-              "Sign in"
-            )}
-          </Button>
-        </form>
-      </Form>
-    </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900"
+              disabled={isSubmitting || isLoading}
+            >
+              {isSubmitting || isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                "Login"
+              )}
+            </Button>
+            
+            <div className="text-center text-sm text-gray-400">
+              Don't have an account?{" "}
+              <Button 
+                variant="link" 
+                className="px-1 text-sinner-red h-auto py-0" 
+                type="button"
+                onClick={() => navigate("/signup")}
+              >
+                Sign up
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default LoginForm;

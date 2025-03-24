@@ -1,126 +1,233 @@
 
-import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
+import AnimatedBackground from "@/components/auth/AnimatedBackground";
 
-const resetPasswordSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" })
+const emailSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
 });
 
-export default function ResetPassword() {
-  const { resetPassword } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
+const passwordSchema = z.object({
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters" }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
 
-  const form = useForm<z.infer<typeof resetPasswordSchema>>({
-    resolver: zodResolver(resetPasswordSchema),
+const ResetPassword = () => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const { resetPassword, updatePassword, profile, isAuthenticated } = useAuth();
+  const [defaultEmail, setDefaultEmail] = useState("");
+
+  const emailForm = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
     defaultValues: {
       email: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof resetPasswordSchema>) => {
-    setIsLoading(true);
+  const passwordForm = useForm<z.infer<typeof passwordSchema>>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  useEffect(() => {
+    // Set default email from profile if authenticated
+    if (isAuthenticated && profile?.email) {
+      emailForm.setValue("email", profile.email);
+      setDefaultEmail(profile.email);
+    }
+
+    // Check for reset token in URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    
+    if (token) {
+      setResetToken(token);
+    }
+  }, [isAuthenticated, profile, emailForm]);
+
+  const handleResetRequest = async (data: z.infer<typeof emailSchema>) => {
+    setLoading(true);
     try {
-      const result = await resetPassword(values.email);
-      
-      if (!result.error) {
-        setEmailSent(true);
-        toast({
-          title: "Reset email sent",
-          description: "Please check your inbox for password reset instructions",
-        });
-      }
+      await resetPassword(data.email);
+      setResetSent(true);
+    } catch (error) {
+      console.error("Password reset error:", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordUpdate = async (data: z.infer<typeof passwordSchema>) => {
+    setLoading(true);
+    try {
+      await updatePassword(data.password);
+      toast({
+        title: "Password updated",
+        description: "Your password has been updated successfully",
+      });
+      navigate("/login", { 
+        state: { message: "Your password has been updated successfully. Please login with your new password." }
+      });
+    } catch (error) {
+      console.error("Password update error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">
-            SURRENDERED<span className="text-red-600">SINNER</span>
-          </h1>
-          <p className="text-gray-400 mt-2">Elite fitness coaching</p>
-        </div>
-
-        <Card className="bg-gray-900 text-white border-gray-800">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-2xl">Reset Password</CardTitle>
-            <CardDescription className="text-gray-400">
-              {emailSent 
-                ? "Check your inbox for reset instructions" 
-                : "Enter your email to receive a password reset link"}
+    <AnimatedBackground>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-0 bg-black/70 backdrop-blur-md shadow-xl">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
+            <CardDescription className="text-center">
+              {resetToken 
+                ? "Enter your new password below" 
+                : resetSent 
+                  ? "Check your email for a reset link" 
+                  : "Enter your email to receive a password reset link"}
             </CardDescription>
           </CardHeader>
-
           <CardContent>
-            {emailSent ? (
-              <div className="text-center p-4">
-                <p className="text-gray-300 mb-4">
-                  We've sent a password reset link to your email. Please check your inbox and follow the instructions to reset your password.
+            {resetToken ? (
+              <form onSubmit={passwordForm.handleSubmit(handlePasswordUpdate)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">New Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your new password"
+                    {...passwordForm.register("password")}
+                    className="bg-zinc-900/70 border-zinc-800"
+                  />
+                  {passwordForm.formState.errors.password && (
+                    <p className="text-sm text-red-500">
+                      {passwordForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your new password"
+                    {...passwordForm.register("confirmPassword")}
+                    className="bg-zinc-900/70 border-zinc-800"
+                  />
+                  {passwordForm.formState.errors.confirmPassword && (
+                    <p className="text-sm text-red-500">
+                      {passwordForm.formState.errors.confirmPassword.message}
+                    </p>
+                  )}
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating Password...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </Button>
+              </form>
+            ) : resetSent ? (
+              <div className="space-y-4">
+                <p className="text-center text-sm">
+                  We've sent a password reset link to your email. Please check your inbox and spam folder.
                 </p>
-                <p className="text-sm text-yellow-400">
-                  If you don't see the email, check your spam folder.
-                </p>
+                <Button 
+                  onClick={() => setResetSent(false)} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  Try Again
+                </Button>
+                <Button
+                  onClick={() => navigate("/login")}
+                  variant="link"
+                  className="w-full"
+                >
+                  Back to Login
+                </Button>
               </div>
             ) : (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Enter your email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <form onSubmit={emailForm.handleSubmit(handleResetRequest)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    {...emailForm.register("email")}
+                    className="bg-zinc-900/70 border-zinc-800"
+                    disabled={!!defaultEmail}
                   />
-
-                  <Button disabled={isLoading} type="submit" className="w-full">
-                    {isLoading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        Sending Reset Link...
-                      </span>
-                    ) : (
-                      "Send Reset Link"
-                    )}
-                  </Button>
-                </form>
-              </Form>
+                  {emailForm.formState.errors.email && (
+                    <p className="text-sm text-red-500">
+                      {emailForm.formState.errors.email.message}
+                    </p>
+                  )}
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending Reset Link...
+                    </>
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </Button>
+                
+                <Button
+                  onClick={() => navigate("/login")}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Back to Login
+                </Button>
+              </form>
             )}
           </CardContent>
-
-          <CardFooter>
-            <Button 
-              variant="outline" 
-              className="w-full border-gray-700 text-gray-300"
-              onClick={() => navigate("/login")}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Login
-            </Button>
-          </CardFooter>
         </Card>
       </div>
-    </div>
+    </AnimatedBackground>
   );
-}
+};
+
+export default ResetPassword;
