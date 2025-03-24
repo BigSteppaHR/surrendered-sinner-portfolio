@@ -4,7 +4,8 @@ import React, { useEffect, useRef } from 'react';
 const RemoveBadge: React.FC = () => {
   const isMountedRef = useRef(true);
   const observerRef = useRef<MutationObserver | null>(null);
-  const timeoutIdsRef = useRef<number[]>([]);
+  // Change the type from number[] to NodeJS.Timeout[] to properly type setTimeout returns
+  const timeoutIdsRef = useRef<NodeJS.Timeout[]>([]);
 
   useEffect(() => {
     // Set mounted flag
@@ -105,10 +106,11 @@ const RemoveBadge: React.FC = () => {
       }
     }, 5000);
     
-    timeoutIdsRef.current.push(periodicRemovalTimeout as unknown as number);
+    // Modified line: Cast to NodeJS.Timeout to match our array type
+    timeoutIdsRef.current.push(periodicRemovalTimeout as unknown as NodeJS.Timeout);
 
     // Set up a more careful MutationObserver with debouncing
-    let debounceTimer: number | null = null;
+    let debounceTimer: NodeJS.Timeout | null = null;
     
     const debouncedRemoval = () => {
       if (debounceTimer !== null) {
@@ -120,7 +122,7 @@ const RemoveBadge: React.FC = () => {
         if (isMountedRef.current) {
           safelyRemoveElements(selectors);
         }
-      }, 200) as unknown as number;
+      }, 200);
       
       if (debounceTimer) {
         timeoutIdsRef.current.push(debounceTimer);
