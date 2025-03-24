@@ -36,10 +36,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Don't try to refresh profile during initialization to avoid loops
             if (session?.user && authLoaded.current && !isRefreshingProfile.current) {
               // Set a debounce to avoid rapid refresh calls
-              // FIX: Don't return the timeout from this async function
               isRefreshingProfile.current = true;
               
-              const timeout = setTimeout(async () => {
+              // Create a timeout but DON'T return it from this async function
+              const timeoutId = setTimeout(async () => {
                 try {
                   await authState.refreshProfile();
                 } catch (error) {
@@ -49,10 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
               }, 300);
               
-              // Clean up timeout if component unmounts
-              return () => {
-                clearTimeout(timeout);
-              };
+              // Setup cleanup in the parent useEffect, not here
             }
           }
         );
@@ -129,9 +126,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
+    // Hold timeout IDs to clear them if the component unmounts
+    const timeoutIds: NodeJS.Timeout[] = [];
+
+    const cleanupTimeouts = () => {
+      timeoutIds.forEach(id => clearTimeout(id));
+    };
+
     initializeAuth();
 
     return () => {
+      cleanupTimeouts();
       if (sessionRefreshInterval.current) {
         clearInterval(sessionRefreshInterval.current);
         sessionRefreshInterval.current = null;
