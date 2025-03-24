@@ -1,14 +1,24 @@
+
+# Allow all web crawlers
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://surrenderedsinnerfitness.com/sitemap.xml
+
+# Specific directives for major crawlers
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
-User-agent: Twitterbot
+User-agent: Slurp
 Allow: /
 
-User-agent: facebookexternalhit
+User-agent: DuckDuckBot
 Allow: /
 
-User-agent: *
-Allow: /
+# Disallow access to admin areas
+Disallow: /admin/
+Disallow: */admin

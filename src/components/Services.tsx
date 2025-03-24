@@ -15,8 +15,10 @@ const Services: React.FC = () => {
       description: "Personalized training sessions tailored to your specific goals, fitness level, and preferences.",
       features: ["Customized workout plans", "Form correction & technique", "Progress tracking", "Flexible scheduling"],
       highlighted: true,
-      price: "$75",
-      duration: "per session"
+      showPrice: false,
+      price: "",
+      duration: "Contact for pricing",
+      buttonText: "Take Assessment Quiz"
     },
     {
       title: "Nutrition Plan",
@@ -24,8 +26,10 @@ const Services: React.FC = () => {
       description: "Comprehensive meal planning designed around your fitness goals and dietary preferences.",
       features: ["Calorie & macro calculations", "Custom meal suggestions", "Grocery shopping lists", "Supplement guidance"],
       highlighted: false,
+      showPrice: true,
       price: "$250",
-      duration: "one-time"
+      duration: "one-time",
+      buttonText: "Get Started"
     },
     {
       title: "Lifting Programs",
@@ -33,8 +37,10 @@ const Services: React.FC = () => {
       description: "Structured training programs tailored to your goals, whether building muscle, strength, or athletic performance.",
       features: ["Periodized training cycles", "Exercise progressions", "Video technique guides", "Weekly adjustments"],
       highlighted: false,
+      showPrice: true,
       price: "$225",
-      duration: "one-time"
+      duration: "one-time",
+      buttonText: "Get Started"
     },
     {
       title: "Complete Package",
@@ -42,8 +48,10 @@ const Services: React.FC = () => {
       description: "The ultimate transformation package combining personalized lifting program and nutrition guidance.",
       features: ["Custom lifting program", "Detailed nutrition plan", "Email support", "Two bi-weekly check-ins included"],
       highlighted: false,
-      price: "$475",
-      duration: "one-time + $25/month for ongoing check-ins"
+      showPrice: false,
+      price: "",
+      duration: "Contact for pricing",
+      buttonText: "Take Assessment Quiz"
     }
   ];
 
@@ -97,18 +105,24 @@ const Services: React.FC = () => {
                 
                 <div className="flex items-end justify-between">
                   <div>
-                    <span className="block text-2xl font-bold">{service.price}</span>
-                    <span className="text-white/60 text-sm">{service.duration}</span>
+                    {service.showPrice ? (
+                      <>
+                        <span className="block text-2xl font-bold">{service.price}</span>
+                        <span className="text-white/60 text-sm">{service.duration}</span>
+                      </>
+                    ) : (
+                      <span className="text-white/60 text-sm">{service.duration}</span>
+                    )}
                   </div>
                   <a 
-                    href="#contact" 
+                    href={service.showPrice ? "#contact" : "#assessment-quiz"}
                     className={`text-sm font-semibold py-2 px-4 rounded ${
                       service.highlighted 
                         ? 'bg-sinner-red hover:bg-sinner-red/90 pulse-glow' 
                         : 'bg-sinner-red/80 hover:bg-sinner-red/90'
                     } transition-colors`}
                   >
-                    Get Started
+                    {service.buttonText}
                   </a>
                 </div>
               </div>
