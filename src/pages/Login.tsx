@@ -36,14 +36,7 @@ export default function Login() {
   // Redirect if already authenticated - use conditional checking with a ref to prevent state updates after unmount
   useEffect(() => {
     if (isInitialized && isAuthenticated && profile?.email_confirmed) {
-      // Use setTimeout to give React time to complete current render cycle
-      const redirectTimer = setTimeout(() => {
-        if (mountedRef.current) {
-          navigate("/dashboard");
-        }
-      }, 0);
-      
-      return () => clearTimeout(redirectTimer);
+      navigate("/dashboard");
     }
   }, [isAuthenticated, profile, navigate, isInitialized]);
 
@@ -76,17 +69,8 @@ export default function Login() {
     }
   };
 
-  // Show loading state while initializing auth
-  if (!isInitialized || (isLoading && !isSubmitting)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
-
-  // Skip rendering login page if already authenticated and about to redirect
-  if (isAuthenticated && profile?.email_confirmed) {
+  // Display a simplified loading state while auth is initializing
+  if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -166,7 +150,7 @@ export default function Login() {
                   )}
                 />
 
-                <Button disabled={isSubmitting} type="submit" className="w-full">
+                <Button disabled={isSubmitting || isLoading} type="submit" className="w-full">
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
