@@ -56,6 +56,65 @@ serve(async (req) => {
         })
         break
       
+      // Handle dashboard data request for admin
+      case 'get-dashboard-data':
+        // For development, return mock data instead of actual Stripe API calls
+        result = {
+          stats: [
+            {
+              id: '1',
+              stat_name: 'Total Users',
+              stat_value: 254,
+              stat_change: 12,
+              time_period: 'monthly',
+              is_positive: true,
+              icon: 'Users'
+            },
+            {
+              id: '2',
+              stat_name: 'Monthly Revenue',
+              stat_value: 8940,
+              stat_change: 8,
+              time_period: 'monthly',
+              is_positive: true,
+              icon: 'DollarSign'
+            },
+            {
+              id: '3',
+              stat_name: 'Active Sessions',
+              stat_value: 45,
+              stat_change: -5,
+              time_period: 'monthly',
+              is_positive: false,
+              icon: 'Calendar'
+            },
+            {
+              id: '4',
+              stat_name: 'Support Tickets',
+              stat_value: 12,
+              stat_change: 25,
+              time_period: 'monthly',
+              is_positive: false,
+              icon: 'MessageSquare'
+            }
+          ],
+          revenueData: [
+            { month: 'Jan', revenue: 4500 },
+            { month: 'Feb', revenue: 5300 },
+            { month: 'Mar', revenue: 6200 },
+            { month: 'Apr', revenue: 7800 },
+            { month: 'May', revenue: 8200 },
+            { month: 'Jun', revenue: 8940 }
+          ],
+          subscriptionDistribution: [
+            { name: 'Basic Plan', value: 45, color: '#9b87f5' },
+            { name: 'Premium Plan', value: 30, color: '#7E69AB' },
+            { name: 'Elite Plan', value: 15, color: '#6E59A5' },
+            { name: 'Custom Plan', value: 10, color: '#5C4A9F' }
+          ]
+        }
+        break
+      
       // Handle other actions
       case 'createPaymentIntent':
         const { amount, currency } = params
