@@ -1,5 +1,5 @@
 
-import React, { ReactNode, createContext, useState, useEffect } from 'react';
+import React, { ReactNode, createContext, useState, useEffect, useRef } from 'react';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useAuthOperations } from '@/hooks/auth';
 import { AuthContextType } from '@/hooks/useAuth';
@@ -12,12 +12,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const authState = useAuthState();
   const authOperations = useAuthOperations();
   const [isInitialized, setIsInitialized] = useState(false);
+  const initializeAttempted = useRef(false);
 
   // Setup supabase client to use localStorage
   useEffect(() => {
-    // Initialize auth session
+    // Initialize auth session only once
     const initializeAuth = async () => {
+      if (initializeAttempted.current) return;
+      
+      initializeAttempted.current = true;
+      
       try {
+        console.log('Initializing auth provider...');
         // Get session first to ensure we have the most up-to-date state
         await supabase.auth.getSession();
         

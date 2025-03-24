@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/hooks/useAuth';
@@ -9,10 +9,20 @@ export const useAuthState = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const initializeAttempted = useRef(false);
+  const refreshProfileAttempted = useRef(false);
 
   // Handle profile updates
   const refreshProfileData = async (currentUser: User | null) => {
     if (!currentUser) return null;
+    
+    // Prevent duplicate profile refreshes
+    if (refreshProfileAttempted.current) {
+      console.log('Profile refresh already attempted in this session');
+      return profile;
+    }
+    
+    refreshProfileAttempted.current = true;
     
     try {
       // Use the email to query the profile, as the ID might not match in some cases
@@ -126,6 +136,10 @@ export const useAuthState = () => {
   };
 
   useEffect(() => {
+    // Prevent multiple initializations which can cause loops
+    if (initializeAttempted.current) return;
+    initializeAttempted.current = true;
+    
     // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log('Auth state changed:', event, currentSession?.user?.email);
@@ -139,24 +153,28 @@ export const useAuthState = () => {
         timestamp: new Date().toISOString()
       });
       
+      // Set session and user state
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
+      // Update profile if user exists
       if (currentSession?.user) {
         const profileData = await refreshProfileData(currentSession.user);
-        setProfile(profileData);
+        if (profileData) setProfile(profileData);
       } else {
         setProfile(null);
       }
       
+      // Always complete loading after auth change
       setIsLoading(false);
     });
 
-    // Then initialize the auth state
+    // Then initialize the auth state just once
     const initializeAuth = async () => {
-      setIsLoading(true);
       try {
         console.log('Initializing auth state...');
+        
+        // Get the current session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         console.log('Current session:', currentSession?.user?.email);
         
@@ -169,22 +187,27 @@ export const useAuthState = () => {
           });
         }
         
+        // Set session and user state
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
+        // Update profile if user exists
         if (currentSession?.user) {
           const profileData = await refreshProfileData(currentSession.user);
-          setProfile(profileData);
+          if (profileData) setProfile(profileData);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
+        // Always complete loading
         setIsLoading(false);
       }
     };
 
+    // Initialize
     initializeAuth();
 
+    // Clean up subscription
     return () => {
       subscription.unsubscribe();
     };
@@ -192,6 +215,8 @@ export const useAuthState = () => {
 
   // This public refreshProfile function matches the expected signature in AuthContextType
   const refreshProfile = async (): Promise<Profile | null> => {
+    refreshProfileAttempted.current = false; // Reset flag to allow refresh
+    
     if (user) {
       const profileData = await refreshProfileData(user);
       if (profileData) {

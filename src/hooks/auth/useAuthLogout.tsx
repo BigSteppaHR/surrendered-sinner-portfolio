@@ -7,7 +7,39 @@ export const useAuthLogout = () => {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      // Sign out from Supabase auth
+      await supabase.auth.signOut({ scope: 'local' });
+      
+      // Clear any auth-related data from localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('supabase') || 
+          key.startsWith('sb-') || 
+          key.startsWith('temp_creds_') ||
+          key.includes('auth')
+        )) {
+          localStorage.removeItem(key);
+        }
+      }
+      
+      // Clear any session cookies
+      document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.trim().split('=');
+        if (name && (
+          name.includes('auth') || 
+          name.includes('supabase') || 
+          name.startsWith('sb-')
+        )) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+      });
+      
+      toast({
+        title: "Logout successful",
+        description: "You have been logged out successfully",
+      });
+      
       return { success: true, redirectTo: '/' };
     } catch (error: any) {
       console.error('Logout error:', error.message);
