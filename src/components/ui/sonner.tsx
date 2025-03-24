@@ -7,22 +7,6 @@ type ToasterProps = React.ComponentProps<typeof Sonner>
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
-  // Filter function to prevent Lovable-branded toasts
-  const filterToast = (toast: any) => {
-    if (!toast) return false;
-    
-    // Check title and message for Lovable mentions
-    const title = typeof toast.title === 'string' ? toast.title.toLowerCase() : '';
-    const message = typeof toast.message === 'string' ? toast.message.toLowerCase() : '';
-    
-    return !(
-      title.includes('lovable') || 
-      title.includes('gpt') || 
-      message.includes('lovable') || 
-      message.includes('gpt')
-    );
-  };
-
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
@@ -37,8 +21,25 @@ const Toaster = ({ ...props }: ToasterProps) => {
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
         },
+        // Use the onToast callback to filter out Lovable-branded toasts
+        onToast: (toast) => {
+          if (!toast || !toast.title || !toast.message) return toast;
+          
+          // Check title and message for Lovable mentions
+          const title = typeof toast.title === 'string' ? toast.title.toLowerCase() : '';
+          const message = typeof toast.message === 'string' ? toast.message.toLowerCase() : '';
+          
+          if (title.includes('lovable') || 
+              title.includes('gpt') || 
+              message.includes('lovable') || 
+              message.includes('gpt')) {
+            // Return null to prevent the toast from showing
+            return null;
+          }
+          
+          return toast;
+        }
       }}
-      filter={filterToast}
       {...props}
     />
   )

@@ -27,6 +27,12 @@ const RemoveBadge = () => {
         '[class*="Toaster"]', // Target toaster elements
         '[id*="toast"]', // Target toast by ID
         '[role="status"]', // Often used for toast notifications
+        '.sonner-toast-container', // Sonner specific
+        '.sonner-toast', // Sonner specific
+        '.sonner-toast-message', // Sonner specific
+        '.react-hot-toast', // React Hot Toast
+        '.Toastify', // React Toastify
+        '[aria-live="polite"]', // Accessibility attribute often used by toast libraries
       ];
       
       selectors.forEach(selector => {
@@ -40,7 +46,16 @@ const RemoveBadge = () => {
                 el.setAttribute('content', content.replace(/lovable\.dev/g, 'surrenderedsinner.fitness'));
               }
             } else {
-              el.remove();
+              // Before removing, check if it contains Lovable branding text
+              const innerText = el.textContent?.toLowerCase() || '';
+              const innerHTML = el.innerHTML?.toLowerCase() || '';
+              
+              if (innerText.includes('lovable') || 
+                  innerText.includes('gpt') || 
+                  innerHTML.includes('lovable') || 
+                  innerHTML.includes('gpt')) {
+                el.remove();
+              }
             }
           });
         }
@@ -56,31 +71,30 @@ const RemoveBadge = () => {
         }
       });
 
-      // Remove any toast notifications that might appear
+      // More aggressive approach to remove toast notifications
       const removeToastNotifications = () => {
-        // Look for various toast implementations
-        const toastSelectors = [
-          '.toast',
-          '.Toaster',
-          '[role="alert"]',
-          '[role="status"]',
-          '.notification',
-          '.alert',
-          '.sonner-toast',
-          '.react-toast-notifications',
-          '[class*="toast"]',
-          '[id*="toast"]'
-        ];
-        
-        toastSelectors.forEach(selector => {
-          document.querySelectorAll(selector).forEach(el => {
-            if (el.innerHTML.toLowerCase().includes('lovable') || 
-                el.innerHTML.toLowerCase().includes('gpt') ||
-                el.textContent?.toLowerCase().includes('lovable') ||
-                el.textContent?.toLowerCase().includes('gpt')) {
-              el.remove();
+        // Look for various toast implementations and their text content
+        document.querySelectorAll('*').forEach(el => {
+          const text = el.textContent?.toLowerCase() || '';
+          const html = el.innerHTML?.toLowerCase() || '';
+          
+          // If any element contains lovable or gpt in its text
+          if ((text.includes('lovable') || text.includes('gpt') || 
+               html.includes('lovable') || html.includes('gpt')) &&
+              // And it looks like a notification (small UI element)
+              (el.getBoundingClientRect().width < 500 && 
+               el.getBoundingClientRect().height < 200)) {
+            
+            // Remove the element and potentially its parent if it's a toast container
+            el.remove();
+            
+            // If parent might be a toast container, remove it too
+            if (el.parentElement && 
+                (el.parentElement.className.toLowerCase().includes('toast') || 
+                 el.parentElement.id.toLowerCase().includes('toast'))) {
+              el.parentElement.remove();
             }
-          });
+          }
         });
       };
       
@@ -111,10 +125,14 @@ const RemoveBadge = () => {
       attributeFilter: ['class', 'id', 'style', 'src', 'href', 'content']
     });
 
+    // Additional interval to check for toasts that might appear after delays
+    const intervalId = setInterval(removeAllBranding, 2000);
+
     // Clean up
     return () => {
       observer.disconnect();
       clearTimeout(timeoutId);
+      clearInterval(intervalId);
     };
   }, []);
 

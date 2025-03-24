@@ -12,17 +12,34 @@ import {
 export function Toaster() {
   const { toasts } = useToast()
 
-  // Filter out any toast that contains Lovable branding
+  // Enhanced filter for toast notifications to catch any Lovable or GPT references
   const filteredToasts = toasts.filter(toast => {
-    if (typeof toast.title === 'string' && 
-        (toast.title.toLowerCase().includes('lovable') || 
-         toast.title.toLowerCase().includes('gpt'))) {
-      return false;
+    // Check toast title
+    if (typeof toast.title === 'string') {
+      const titleLower = toast.title.toLowerCase();
+      if (titleLower.includes('lovable') || 
+          titleLower.includes('gpt') || 
+          titleLower.includes('engineer') ||
+          titleLower.includes('ai assistant')) {
+        return false;
+      }
     }
     
-    if (typeof toast.description === 'string' && 
-        (toast.description.toLowerCase().includes('lovable') || 
-         toast.description.toLowerCase().includes('gpt'))) {
+    // Check toast description
+    if (typeof toast.description === 'string') {
+      const descLower = toast.description.toLowerCase();
+      if (descLower.includes('lovable') || 
+          descLower.includes('gpt') || 
+          descLower.includes('engineer') ||
+          descLower.includes('ai assistant')) {
+        return false;
+      }
+    }
+    
+    // Check if toast contains any React elements with text content
+    if (React.isValidElement(toast.title) || React.isValidElement(toast.description)) {
+      // This is a more complex case where we can't easily check content
+      // For safety, we'll only allow simple string toasts
       return false;
     }
     
