@@ -10,7 +10,7 @@ export const useAuthState = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const initializeAttempted = useRef(false);
-  const refreshProfileAttempted = useRef(false);
+  const profileFetchAttempted = useRef(false);
 
   // Handle profile updates - improved with better error handling
   const refreshProfileData = async (currentUser: User | null) => {
@@ -56,7 +56,13 @@ export const useAuthState = () => {
           
         if (createError) {
           console.error('Failed to create basic profile:', createError);
-          return null;
+          // Return a minimal profile to prevent UI errors even if DB operation fails
+          return {
+            id: currentUser.id,
+            email: currentUser.email,
+            email_confirmed: !!currentUser.email_confirmed_at,
+            is_admin: false
+          };
         }
         
         console.log('Created basic profile successfully:', newProfile);
@@ -75,7 +81,13 @@ export const useAuthState = () => {
       };
     } catch (error: any) {
       console.error('Exception in refreshProfileData:', error.message);
-      return null;
+      // Return a minimal profile to prevent UI errors
+      return {
+        id: currentUser.id,
+        email: currentUser.email,
+        email_confirmed: !!currentUser.email_confirmed_at,
+        is_admin: false
+      };
     }
   };
 
@@ -84,12 +96,15 @@ export const useAuthState = () => {
     if (initializeAttempted.current) return;
     initializeAttempted.current = true;
     
+    let authStateSubscription: { data?: { subscription: any } } = {};
+    
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth state...');
+        setIsLoading(true);
         
         // Set up the auth state listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        authStateSubscription = supabase.auth.onAuthStateChange(async (event, currentSession) => {
           console.log('Auth state changed:', event, currentSession?.user?.email);
           
           // Process synchronously to avoid race conditions
@@ -133,10 +148,6 @@ export const useAuthState = () => {
         
         // Always complete loading even if there's no session
         setIsLoading(false);
-        
-        return () => {
-          subscription.unsubscribe();
-        };
       } catch (error) {
         console.error('Error initializing auth:', error);
         setIsLoading(false); // Complete loading to not block the UI
@@ -145,20 +156,31 @@ export const useAuthState = () => {
 
     // Initialize
     initializeAuth();
+    
+    // Clean up subscription on unmount
+    return () => {
+      if (authStateSubscription.data?.subscription) {
+        authStateSubscription.data.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   // This public refreshProfile function matches the expected signature in AuthContextType
   const refreshProfile = async (): Promise<Profile | null> => {
-    refreshProfileAttempted.current = true; // Mark as attempted
+    profileFetchAttempted.current = true; // Mark as attempted
     
     if (user) {
-      const profileData = await refreshProfileData(user);
-      if (profileData) {
-        setProfile(profileData);
-        return profileData;
+      try {
+        const profileData = await refreshProfileData(user);
+        if (profileData) {
+          setProfile(profileData);
+          return profileData;
+        }
+      } catch (err) {
+        console.error("Error in refreshProfile:", err);
       }
     }
-    return null;
+    return profile; // Return current profile if refresh fails
   };
 
   return {

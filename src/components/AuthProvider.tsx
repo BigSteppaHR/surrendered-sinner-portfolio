@@ -74,6 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               // Check if we still have a session before attempting refresh
               const { data: currentSession } = await supabase.auth.getSession();
               if (currentSession.session) {
+                console.log("Refreshing session at", new Date().toISOString());
                 const { data, error } = await supabase.auth.refreshSession();
                 if (error) {
                   console.error("Session refresh failed:", error);

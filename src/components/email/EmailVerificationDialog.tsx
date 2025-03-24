@@ -31,6 +31,7 @@ const EmailVerificationDialog = ({
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [dialogDescription, setDialogDescription] = useState("");
   const descriptionId = "email-verification-description";
+  const verificationCheckAttempted = useRef(false);
 
   const { isSendingEmail, resendCooldown, handleResendEmail } = useEmailVerification(email);
 
@@ -44,10 +45,26 @@ const EmailVerificationDialog = ({
       // Update dialog description when email changes
       setDialogDescription(`Please verify your email address ${emailToUse ? `(${emailToUse})` : ""} to continue using your account`);
       
-      // Check if email is already verified
-      checkEmailVerification(emailToUse);
+      // Don't check verification automatically on every re-render
+      if (!verificationCheckAttempted.current) {
+        verificationCheckAttempted.current = true;
+        checkEmailVerification(emailToUse);
+      }
     }
-  }, [initialEmail, location.state?.email, user?.email, isOpen]);
+  }, [initialEmail, location.state?.email, user?.email]);
+
+  // Close dialog helper function
+  const closeDialog = () => {
+    if (!mounted.current) return;
+    setIsVisible(false);
+    
+    // Small delay to ensure animation completes
+    setTimeout(() => {
+      if (mounted.current) {
+        onClose();
+      }
+    }, 300);
+  };
 
   // Check if email is already verified in the database
   const checkEmailVerification = async (emailToCheck: string) => {
@@ -61,33 +78,19 @@ const EmailVerificationDialog = ({
         console.log("Email already verified according to profile:", profile);
         setIsEmailVerified(true);
         setIsCheckingVerification(false);
-        
-        // Close dialog if email is verified
-        if (isOpen && mounted.current) {
-          setIsVisible(false);
-          setTimeout(() => {
-            if (mounted.current) {
-              onClose();
-            }
-          }, 300);
-        }
+        closeDialog();
         return;
       }
       
       // If we need to check explicitly (e.g., after verification process)
-      await refreshProfile();
+      const updatedProfile = await refreshProfile();
       
       // If profile is now verified, close dialog
-      if (profile?.email_confirmed) {
+      if (updatedProfile?.email_confirmed) {
+        console.log("Email confirmed after profile refresh");
         setIsEmailVerified(true);
-        if (isOpen && mounted.current) {
-          setIsVisible(false);
-          setTimeout(() => {
-            if (mounted.current) {
-              onClose();
-            }
-          }, 300);
-        }
+        setIsCheckingVerification(false);
+        closeDialog();
         return;
       }
       
@@ -108,14 +111,7 @@ const EmailVerificationDialog = ({
         await refreshProfile();
         
         // Close dialog if email is verified
-        if (isOpen && mounted.current) {
-          setIsVisible(false);
-          setTimeout(() => {
-            if (mounted.current) {
-              onClose();
-            }
-          }, 300);
-        }
+        closeDialog();
       } else {
         console.log("Email not verified in database:", error || "No verified profile found");
         setIsEmailVerified(false);
