@@ -1,22 +1,18 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import DailyQuote from "@/components/dashboard/DailyQuote";
 import ScheduleSession from "@/components/dashboard/ScheduleSession";
 import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
-import WeightChart from "@/components/dashboard/WeightChart";
-import WeightTracker from "@/components/dashboard/WeightTracker";
 import WorkoutPlans from "@/components/dashboard/WorkoutPlans";
 import DashboardNav from "@/components/dashboard/DashboardNav";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { 
-  Star, Calendar, TrendingUp, Dumbbell, Target, Medal, Clock, 
-  Zap, Trophy, Heart, FlameIcon, ActivityIcon, BarChart2
+  Calendar, Dumbbell, Target, Clock, 
+  Zap, FileText
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -70,8 +66,8 @@ const Dashboard = () => {
   // Show loading state while checking auth
   if (isLoading || !isInitialized || !isPageLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-sinner-red/50">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C]">
+        <div className="animate-spin h-8 w-8 border-4 border-[#9b87f5] border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -82,19 +78,19 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-[#1A1F2C] to-[#2A2F3C] text-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#1A1F2C] text-white">
       <DashboardNav />
       
       <div className="flex-1 overflow-auto">
         <div className="p-6 max-w-7xl mx-auto">
           {/* Welcome section with animated gradient border */}
-          <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-[#9b87f5] after:via-purple-500 after:to-[#9b87f5] after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-[#252A38]/90 backdrop-blur-sm">
+          <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-[#9b87f5] after:via-purple-500 after:to-[#9b87f5] after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-[#252A38] backdrop-blur-sm">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#9b87f5] to-purple-400">
                   Welcome Back, {profile?.full_name || 'Athlete'}!
                 </h1>
-                <p className="text-gray-400 mt-1">Track your progress and stay connected with your coach</p>
+                <p className="text-gray-400 mt-1">Your training journey continues today</p>
               </div>
               <div className="mt-4 md:mt-0 w-full md:w-auto">
                 <DailyQuote />
@@ -102,120 +98,107 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Quick stats section */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <StatCard 
-              icon={<Calendar className="h-5 w-5 text-green-400" />} 
-              title="Next Session" 
-              value="Tomorrow, 9:00 AM"
-              color="from-green-500/20 to-green-700/20"
-            />
-            <StatCard 
-              icon={<TrendingUp className="h-5 w-5 text-[#9b87f5]" />} 
-              title="Weight Change" 
-              value="-2.5 lbs"
-              color="from-[#9b87f5]/20 to-purple-700/20"
-            />
-            <StatCard 
-              icon={<Dumbbell className="h-5 w-5 text-[#7E69AB]" />} 
-              title="Workouts" 
-              value="16 Completed"
-              color="from-[#7E69AB]/20 to-[#6E59A5]/20"
-            />
-            <StatCard 
-              icon={<Target className="h-5 w-5 text-red-400" />} 
-              title="Goal" 
-              value="75% Complete"
-              color="from-red-500/20 to-red-700/20"
-            />
-          </div>
+          {/* Next session highlight card */}
+          <Card className="bg-[#252A38] border-[#353A48] mb-6 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#9b87f5]/10 to-purple-800/10 rounded-bl-full"></div>
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
+                <div className="flex items-center mb-4 md:mb-0">
+                  <div className="p-3 bg-[#9b87f5]/10 text-[#9b87f5] rounded-lg mr-4">
+                    <Calendar className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Next Training Session</h3>
+                    <p className="text-[#9b87f5] font-medium">Tomorrow, 9:00 AM</p>
+                    <p className="text-gray-400 text-sm mt-1">Personal Training with Coach Michael</p>
+                  </div>
+                </div>
+                <div className="flex space-x-3">
+                  <Button 
+                    className="bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                    onClick={() => navigate('/schedule')}
+                  >
+                    View Details
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <PerformanceCard 
-                  title="Cardio Performance" 
-                  value="↑ 12%" 
-                  description="Improved since last month"
-                  icon={<Heart className="h-5 w-5" />}
-                  color="from-pink-500/20 to-red-700/20"
-                />
-                <PerformanceCard 
-                  title="Strength Progress" 
-                  value="↑ 8%" 
-                  description="Bench press max increased"
-                  icon={<ActivityIcon className="h-5 w-5" />}
-                  color="from-[#9b87f5]/20 to-[#7E69AB]/20"
-                />
-              </div>
+              <UpcomingSessions />
               
-              <div className="grid grid-cols-1 gap-6">
-                <WeightChart />
-                <UpcomingSessions />
-                <WorkoutPlans />
-              </div>
+              {/* Featured training plan section */}
+              <Card className="bg-[#252A38] border-[#353A48] overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-[#9b87f5]" />
+                    Featured Training Plan
+                  </CardTitle>
+                  <CardDescription>Your latest training program</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-6">
+                  <div className="bg-[#1E2435] border border-[#353A48] rounded-lg p-5 mb-4">
+                    <h3 className="text-lg font-bold mb-2">12-Week Strength Building Program</h3>
+                    <p className="text-sm text-gray-400 mb-4">
+                      A comprehensive program designed to build strength and muscle mass over a 12-week period. 
+                      Focus on compound movements with progressive overload.
+                    </p>
+                    <div className="flex space-x-3">
+                      <Button 
+                        className="bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                        onClick={() => navigate('/plans')}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        View Plan
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Button variant="ghost" className="text-[#9b87f5] hover:text-[#8a76e4] hover:bg-[#9b87f5]/5" onClick={() => navigate('/plans')}>
+                      View All Plans
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <WorkoutPlans />
             </div>
             
             <div className="lg:col-span-4 space-y-6">
-              <WeightTracker />
               <ScheduleSession />
 
-              {/* Achievement Card */}
+              {/* Membership card */}
               <Card className="bg-[#252A38] border-[#353A48] overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-yellow-500/20 to-orange-600/20 rounded-bl-full"></div>
+                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#9b87f5]/20 to-purple-600/20 rounded-bl-full"></div>
                 <CardHeader>
                   <CardTitle className="flex items-center">
-                    <Medal className="h-5 w-5 text-yellow-500 mr-2" />
-                    Recent Achievements
+                    <Zap className="h-5 w-5 text-[#9b87f5] mr-2" />
+                    Your Membership
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <Achievement 
-                    title="Consistency King" 
-                    description="Completed 5 workouts in a row" 
-                    date="2 days ago"
-                    icon={<FlameIcon className="h-3 w-3 text-orange-500" />} 
-                  />
-                  <Achievement 
-                    title="Weight Milestone" 
-                    description="Lost 10 lbs since starting" 
-                    date="1 week ago"
-                    icon={<TrendingUp className="h-3 w-3 text-green-500" />} 
-                  />
-                  <Achievement 
-                    title="Personal Best" 
-                    description="New squat max: 225 lbs" 
-                    date="2 weeks ago"
-                    icon={<Trophy className="h-3 w-3 text-yellow-500" />} 
-                  />
-                  
-                  {/* Goal Progress */}
-                  <div className="mt-4 pt-4 border-t border-gray-700">
-                    <h4 className="text-sm font-semibold mb-2">Goal Progress</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span>Weight Loss</span>
-                          <span>75%</span>
-                        </div>
-                        <Progress value={75} className="h-2" indicatorClassName="bg-[#9b87f5]" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span>Strength</span>
-                          <span>60%</span>
-                        </div>
-                        <Progress value={60} className="h-2" indicatorClassName="bg-[#7E69AB]" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span>Cardio</span>
-                          <span>45%</span>
-                        </div>
-                        <Progress value={45} className="h-2" indicatorClassName="bg-green-500" />
-                      </div>
+                <CardContent className="space-y-4">
+                  <div className="bg-[#1E2435] border border-[#353A48] rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-medium">Elite Training Package</h4>
+                      <span className="text-xs px-2 py-1 bg-[#9b87f5]/20 text-[#9b87f5] rounded-full">Active</span>
+                    </div>
+                    <p className="text-sm text-gray-400 mb-2">Includes 12 personal training sessions per month</p>
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center text-gray-400">
+                        <Clock className="h-3 w-3 mr-1" /> Renews in 18 days
+                      </span>
+                      <span className="text-[#9b87f5]">$199/month</span>
                     </div>
                   </div>
+                  
+                  <Button 
+                    className="w-full bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                    onClick={() => navigate('/payment')}
+                  >
+                    Manage Membership
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -230,21 +213,21 @@ const Dashboard = () => {
               onClick={() => navigate('/schedule')}
             />
             <ActionButton 
-              text="View Workouts"
-              icon={<Dumbbell className="h-5 w-5" />}
+              text="Training Plans"
+              icon={<FileText className="h-5 w-5" />}
               color="bg-gradient-to-br from-[#7E69AB] to-[#6E59A5]"
-              onClick={() => navigate('/workouts')}
+              onClick={() => navigate('/plans')}
             />
             <ActionButton 
               text="Track Progress"
-              icon={<BarChart2 className="h-5 w-5" />}
-              color="bg-gradient-to-br from-green-600 to-green-800"
+              icon={<Target className="h-5 w-5" />}
+              color="bg-gradient-to-br from-[#8a76e4] to-[#7a66d4]"
               onClick={() => navigate('/progress')}
             />
             <ActionButton 
               text="Payment Plans"
               icon={<Zap className="h-5 w-5" />}
-              color="bg-gradient-to-br from-red-600 to-red-800"
+              color="bg-gradient-to-br from-purple-600 to-purple-800"
               onClick={() => navigate('/payment')}
             />
           </div>
@@ -253,66 +236,6 @@ const Dashboard = () => {
     </div>
   );
 };
-
-const StatCard = ({ icon, title, value, color }: { icon: React.ReactNode, title: string, value: string, color: string }) => (
-  <Card className="bg-gray-900/80 border-gray-800 overflow-hidden relative">
-    <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-50`}></div>
-    <CardContent className="p-4 relative">
-      <div className="flex items-center">
-        <div className="p-2 bg-gray-800/70 rounded-lg mr-3">
-          {icon}
-        </div>
-        <div>
-          <p className="text-xs font-medium text-gray-400">{title}</p>
-          <p className="text-lg font-bold">{value}</p>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const PerformanceCard = ({ title, value, description, icon, color }: { 
-  title: string, 
-  value: string, 
-  description: string, 
-  icon: React.ReactNode,
-  color: string
-}) => (
-  <Card className="bg-gray-900/80 border-gray-800 overflow-hidden relative">
-    <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-50`}></div>
-    <CardContent className="p-4 relative">
-      <div className="flex items-start">
-        <div className="p-2 bg-gray-800/70 rounded-lg mr-3">
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm font-medium">{title}</p>
-          <p className="text-2xl font-bold mt-1">{value}</p>
-          <p className="text-xs text-gray-400 mt-1">{description}</p>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const Achievement = ({ title, description, date, icon }: { 
-  title: string, 
-  description: string, 
-  date: string,
-  icon: React.ReactNode 
-}) => (
-  <div className="flex items-start border-l-2 border-yellow-600 pl-3 py-1">
-    <div>
-      <h4 className="text-sm font-semibold flex items-center">
-        {icon} <span className="ml-1">{title}</span>
-      </h4>
-      <p className="text-xs text-gray-400">{description}</p>
-      <div className="flex items-center mt-1 text-xs text-gray-500">
-        <Clock className="h-3 w-3 mr-1" /> {date}
-      </div>
-    </div>
-  </div>
-);
 
 const ActionButton = ({ text, icon, color, onClick }: {
   text: string,

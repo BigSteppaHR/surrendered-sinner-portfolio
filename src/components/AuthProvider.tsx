@@ -25,9 +25,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       try {
         console.log('Initializing auth provider...');
-        // Get session first to ensure we have the most up-to-date state
+        
+        // Set up the auth state listener first to catch any events during initialization
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event, session ? 'Session active' : 'No session');
+            
+            // Trigger a profile refresh when authentication state changes
+            if (session?.user) {
+              await authState.refreshProfile();
+            }
+          }
+        );
+        
+        // Get session to ensure we have the most up-to-date state
         const { data } = await supabase.auth.getSession();
         console.log('Current session:', data.session ? 'Active' : 'None');
+        
+        // Always mark as initialized even if there's no session
+        setIsInitialized(true);
         
         // Set up automatic session refresh - use a more conservative interval
         if (sessionRefreshInterval.current) {
@@ -47,7 +63,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }, 4 * 60 * 1000); // Refresh every 4 minutes
         
-        setIsInitialized(true);
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
         console.error('Error initializing auth:', error);
         setIsInitialized(true); // Still mark as initialized to not block the UI
@@ -61,24 +79,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearInterval(sessionRefreshInterval.current);
         sessionRefreshInterval.current = null;
       }
-    };
-  }, []);
-
-  // Setup auth state change listener
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session ? 'Session active' : 'No session');
-        
-        // Trigger a profile refresh when authentication state changes
-        if (session?.user) {
-          authState.refreshProfile();
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
     };
   }, [authState]);
 

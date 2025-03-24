@@ -21,6 +21,7 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Progress from "./pages/Progress";
 import Account from "./pages/Account";
+import TrainingPlans from "./pages/TrainingPlans";
 import { useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient({
@@ -120,8 +121,8 @@ const AuthNavigation = () => {
   
   // Only return a loading component when auth is not initialized
   return isLoading ? (
-    <div className="fixed inset-0 flex items-center justify-center bg-gray-900 z-50">
-      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+    <div className="fixed inset-0 flex items-center justify-center bg-[#1A1F2C] z-50">
+      <div className="animate-spin h-8 w-8 border-4 border-[#9b87f5] border-t-transparent rounded-full"></div>
     </div>
   ) : null;
 };
@@ -144,6 +145,7 @@ const AppRoutes = () => {
         <Route path="/payment" element={<Payment />} />
         <Route path="/payment-portal" element={<PaymentPortal />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/plans" element={<TrainingPlans />} />
         {/* Redirect /confirm-email to /login for backward compatibility */}
         <Route path="/confirm-email" element={<Navigate to="/login" replace />} />
         {/* Redirect /auth to /login for backward compatibility */}
