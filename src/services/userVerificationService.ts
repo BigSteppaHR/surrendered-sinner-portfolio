@@ -177,13 +177,17 @@ export const updateEmailConfirmationStatus = async (userId: string, email: strin
       if (emailUpdateError) {
         console.error("Error updating profile by email:", emailUpdateError);
         
-        // One last attempt - look up user by email in auth.users
+        // One last attempt - look up user by email using a query
         try {
-          const { data: userData } = await supabase.auth.admin.getUserByEmail(email);
-          
-          if (userData?.user) {
-            const userId = userData.user.id;
-            console.log("Found user ID from email:", userId);
+          // Find user by email in auth.users indirectly through profiles
+          const { data: userData } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+            
+          if (userData?.id) {
+            console.log("Found user ID from email query:", userData.id);
             
             const { error: finalError } = await supabase
               .from('profiles')
@@ -191,7 +195,7 @@ export const updateEmailConfirmationStatus = async (userId: string, email: strin
                 email_confirmed: true,
                 updated_at: new Date().toISOString()
               })
-              .eq('id', userId);
+              .eq('id', userData.id);
               
             if (finalError) {
               console.error("Final attempt to update profile failed:", finalError);
@@ -200,8 +204,8 @@ export const updateEmailConfirmationStatus = async (userId: string, email: strin
             
             return true;
           }
-        } catch (adminError) {
-          console.error("Error with admin getUserByEmail:", adminError);
+        } catch (lookupError) {
+          console.error("Error looking up user by email:", lookupError);
           return false;
         }
         
