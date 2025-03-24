@@ -5,6 +5,7 @@ import Hero from '@/components/Hero';
 import About from '@/components/About';
 import Services from '@/components/Services';
 import Testimonials from '@/components/Testimonials';
+import VeteransWall from '@/components/VeteransWall';
 import Contact from '@/components/Contact';
 import Footer from '@/components/Footer';
 import { Separator } from '@/components/ui/separator';
@@ -38,6 +39,12 @@ const Index = () => {
       </div>
       
       <Testimonials />
+      
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
+      <VeteransWall />
       
       <div className="section-divider">
         <Separator className="bg-sinner-red/20 h-0.5" />
