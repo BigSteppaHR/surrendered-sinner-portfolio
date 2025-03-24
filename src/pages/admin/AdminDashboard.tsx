@@ -21,10 +21,10 @@ const AdminDashboard = () => {
     }
   }, []);
 
-  const handleLogin = (password: string) => {
+  const handleLogin = (username: string, password: string) => {
     // In a real app, this would be a secure authentication process
-    // For demo purposes, we'll use a simple password check
-    if (password === "surrenderedsinner") {
+    // For demo purposes, we'll use a simple credential check
+    if (username === "barnold" && password === "test123") {
       localStorage.setItem("admin-auth", "authenticated");
       setIsAuthenticated(true);
     }
