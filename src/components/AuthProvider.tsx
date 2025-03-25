@@ -236,6 +236,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, currentSession) => {
             logDebug('Auth state changed:', event);
+            console.log('Auth state changed:', event, currentSession); // Debugging line
             
             // Update session state
             setSession(currentSession);
@@ -258,6 +259,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Then check if we have an existing session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        // Log session on mount for debugging
+        console.log('Session on mount:', currentSession); // Debugging line
         
         // Update session state
         setSession(currentSession);
