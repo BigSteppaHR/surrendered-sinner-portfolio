@@ -78,15 +78,11 @@ export default function Login() {
         .eq('email', email)
         .maybeSingle();
       
-      const timeoutId = setTimeout(() => {
-        if (mountedRef.current) {
-          setIsCheckingVerification(false);
-        }
-      }, 3000);
+      if (mountedRef.current) {
+        setIsCheckingVerification(false);
+      }
       
       console.log("Profile verification check result:", { data, error });
-      
-      clearTimeout(timeoutId);
       
       if (!error && data && data.email_confirmed) {
         console.log("Email already verified according to database check:", data);
@@ -96,11 +92,10 @@ export default function Login() {
       return false;
     } catch (err) {
       console.error("Error checking email verification:", err);
-      return false;
-    } finally {
       if (mountedRef.current) {
         setIsCheckingVerification(false);
       }
+      return false;
     }
   };
 

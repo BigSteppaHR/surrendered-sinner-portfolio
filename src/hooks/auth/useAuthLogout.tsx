@@ -56,14 +56,13 @@ export const useAuthLogout = () => {
       toast({
         title: "Logout successful",
         description: "You have been logged out successfully",
-        variant: "default",
       });
       
       // Force reload the page to clear any in-memory state
       // Use a small delay to ensure toast is visible
       setTimeout(() => {
         window.location.href = '/login';
-      }, 300);
+      }, 500);
       
       return { success: true, redirectTo: '/login' };
     } catch (error: any) {

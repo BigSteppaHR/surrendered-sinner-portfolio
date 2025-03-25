@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, LogIn, User } from 'lucide-react';
+import { Menu, X, LogIn, User, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -41,13 +41,14 @@ const Navbar: React.FC = () => {
   ];
 
   const handleLogout = async () => {
-    const result = await logout();
-    if (result && result.success) {
-      if (result.redirectTo) {
-        navigate(result.redirectTo);
-      } else {
-        navigate('/');
-      }
+    try {
+      console.log("Logout initiated from Navbar");
+      const result = await logout();
+      console.log("Logout result:", result);
+      
+      // Note: We no longer need to navigate here since the logout function now handles it
+    } catch (error) {
+      console.error("Error during logout:", error);
     }
   };
 
@@ -59,7 +60,7 @@ const Navbar: React.FC = () => {
     >
       <div className="container-custom flex items-center justify-between">
         <a href="#home" className="flex items-center">
-          <span className="text-xl font-extrabold tracking-tight text-sinner-red">
+          <span className="text-xl font-extrabold tracking-tight text-[#ea384c]">
             SURRENDERED<span className="text-white ml-2">SINNER</span>
           </span>
         </a>
@@ -71,7 +72,7 @@ const Navbar: React.FC = () => {
               <li key={link.name}>
                 <a
                   href={link.href}
-                  className="text-white hover:text-sinner-red transition-colors relative after:absolute after:w-full after:scale-x-0 after:h-0.5 after:-bottom-1 after:left-0 after:bg-sinner-red after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+                  className="text-white hover:text-[#ea384c] transition-colors relative after:absolute after:w-full after:scale-x-0 after:h-0.5 after:-bottom-1 after:left-0 after:bg-[#ea384c] after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
                 >
                   {link.name}
                 </a>
@@ -82,31 +83,41 @@ const Navbar: React.FC = () => {
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white hover:text-sinner-red">
+                <Button variant="ghost" size="sm" className="text-white hover:text-[#ea384c]">
                   <User className="h-5 w-5 mr-1" />
                   {profile?.full_name || 'Account'}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-white">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                <DropdownMenuItem 
+                  onClick={() => navigate('/dashboard')}
+                  className="hover:bg-zinc-800 cursor-pointer"
+                >
                   Dashboard
                 </DropdownMenuItem>
                 {isAdmin && (
-                  <DropdownMenuItem onClick={() => navigate('/admin')}>
+                  <DropdownMenuItem 
+                    onClick={() => navigate('/admin')}
+                    className="hover:bg-zinc-800 cursor-pointer"
+                  >
                     Admin Panel
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="hover:bg-zinc-800 text-[#ea384c] cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link to="/auth">
-              <Button variant="ghost" size="sm" className="text-white hover:text-sinner-red">
+            <Link to="/login">
+              <Button variant="ghost" size="sm" className="text-white hover:text-[#ea384c]">
                 <LogIn className="h-5 w-5 mr-1" />
                 Login
               </Button>
@@ -140,7 +151,7 @@ const Navbar: React.FC = () => {
               <li key={link.name}>
                 <a
                   href={link.href}
-                  className="text-2xl font-bold text-white hover:text-sinner-red transition-colors"
+                  className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   {link.name}
@@ -152,7 +163,7 @@ const Navbar: React.FC = () => {
                 <li>
                   <Link
                     to="/dashboard"
-                    className="text-2xl font-bold text-white hover:text-sinner-red transition-colors"
+                    className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
                     onClick={() => setIsOpen(false)}
                   >
                     Dashboard
@@ -162,7 +173,7 @@ const Navbar: React.FC = () => {
                   <li>
                     <Link
                       to="/admin"
-                      className="text-2xl font-bold text-white hover:text-sinner-red transition-colors"
+                      className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
                       onClick={() => setIsOpen(false)}
                     >
                       Admin Panel
@@ -175,7 +186,7 @@ const Navbar: React.FC = () => {
                       handleLogout();
                       setIsOpen(false);
                     }}
-                    className="text-2xl font-bold text-white hover:text-sinner-red transition-colors"
+                    className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
                   >
                     Logout
                   </button>
@@ -184,8 +195,8 @@ const Navbar: React.FC = () => {
             ) : (
               <li>
                 <Link
-                  to="/auth"
-                  className="text-2xl font-bold text-white hover:text-sinner-red transition-colors"
+                  to="/login"
+                  className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Login

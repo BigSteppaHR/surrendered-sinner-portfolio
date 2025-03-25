@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,6 +25,7 @@ interface LoginFormProps {
 
 const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPassword }: LoginFormProps) => {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
   
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -78,12 +79,23 @@ const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPass
                     </Button>
                   </div>
                   <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="●●●●●●●●" 
-                      {...field} 
-                      className="bg-zinc-900/70 border-zinc-800"
-                    />
+                    <div className="relative">
+                      <Input 
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="●●●●●●●●" 
+                        {...field} 
+                        className="bg-zinc-900/70 border-zinc-800 pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
