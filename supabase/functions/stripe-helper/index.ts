@@ -2,9 +2,9 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import Stripe from 'https://esm.sh/stripe@13.3.0'
 
-// Set up proper CORS headers that allow requests from your domain
+// Set up proper CORS headers that allow requests from all origins (for testing)
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Allow all origins including codecove.dev
+  'Access-Control-Allow-Origin': '*', // Allow all origins - replace with your domain in production
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json; charset=utf-8',
@@ -63,7 +63,7 @@ serve(async (req) => {
       case 'createPaymentIntent':
         console.log('Creating payment intent with params:', params)
         const { amount, currency, description } = params
-        const payment_id = params.payment_id
+        const paymentPaymentId = params.payment_id
         
         if (!amount || !currency) {
           throw new Error('Missing required parameters for creating a payment intent')
@@ -78,7 +78,7 @@ serve(async (req) => {
             },
             description: description || 'Payment',
             metadata: {
-              payment_id: payment_id || 'unknown'
+              payment_id: paymentPaymentId || 'unknown'
             }
           })
           
