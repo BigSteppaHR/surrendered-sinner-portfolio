@@ -934,6 +934,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      get_profile: {
+        Args: {
+          user_id: string
+        }
+        Returns: Json
+      }
       get_quote_of_the_day: {
         Args: Record<PropertyKey, never>
         Returns: {

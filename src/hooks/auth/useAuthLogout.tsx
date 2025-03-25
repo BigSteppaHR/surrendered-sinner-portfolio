@@ -27,6 +27,7 @@ export const useAuthLogout = () => {
         if (key && (
           key.startsWith('supabase') || 
           key === 'supabase_session' ||
+          key === 'minimal_session_data' ||
           key.startsWith('sb-') || 
           key.startsWith('temp_creds_') ||
           key.includes('auth')
