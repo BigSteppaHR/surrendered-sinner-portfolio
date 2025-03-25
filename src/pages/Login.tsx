@@ -46,8 +46,8 @@ export default function Login() {
       redirectAttempted: redirectAttemptedRef.current
     });
     
-    // Handle redirection when authentication changes
-    if (isInitialized && isAuthenticated && profile) {
+    // Only proceed with redirects if auth is initialized and not loading
+    if (isInitialized && !isLoading && isAuthenticated && profile) {
       console.log("Login: User authenticated, redirecting based on profile:", profile);
       
       // If the user's email is confirmed, redirect them to the appropriate dashboard
@@ -64,7 +64,7 @@ export default function Login() {
         setShowEmailVerification(true);
       }
     }
-  }, [isAuthenticated, profile, navigate, isInitialized, showEmailVerification]);
+  }, [isAuthenticated, profile, navigate, isInitialized, isLoading, showEmailVerification]);
 
   const checkEmailVerification = async (email: string): Promise<boolean> => {
     if (!email) return false;
@@ -206,7 +206,8 @@ export default function Login() {
     navigate("/reset-password");
   };
 
-  if (!isInitialized) {
+  // Show loading state while auth is initializing
+  if (isLoading || !isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>

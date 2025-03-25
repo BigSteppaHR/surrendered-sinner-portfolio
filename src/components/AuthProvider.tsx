@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const authState = useAuthState();
   const authOperations = useAuthOperations();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const initializeAttempted = useRef(false);
   const sessionRefreshInterval = useRef<number | null>(null);
   const authLoaded = useRef(false);
@@ -31,6 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (initializeAttempted.current) return;
       
       initializeAttempted.current = true;
+      setIsLoading(true);
       
       try {
         logDebug('Initializing auth provider...');
@@ -104,6 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Always mark as initialized and loaded even if there's no session
         setIsInitialized(true);
         authLoaded.current = true;
+        setIsLoading(false);
         
         // Set up automatic session refresh with a more conservative interval
         if (sessionRefreshInterval.current) {
@@ -167,6 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error initializing auth:', error);
         setIsInitialized(true); // Still mark as initialized to not block the UI
         authLoaded.current = true;
+        setIsLoading(false);
       }
     };
 
@@ -195,7 +199,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Override with the refreshProfile from authState which has the correct signature
     refreshProfile: authState.refreshProfile,
     isInitialized,
+    isLoading, // Make sure isLoading is exposed in the context
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

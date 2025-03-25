@@ -3,6 +3,7 @@ import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
@@ -76,7 +77,7 @@ const DashboardLayout = () => {
   }, [isInitialized, isAuthenticated, profile, isLoading, toast, isDebugMode]);
   
   // Show loading state while checking auth, but with a timeout
-  if ((isLoading || !isInitialized || !isPageLoaded) && !loadingTimeout) {
+  if (isLoading || !isInitialized || !isPageLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
         <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
@@ -84,16 +85,9 @@ const DashboardLayout = () => {
     );
   }
   
-  // If loading timed out but we're not authenticated, redirect to login
-  if (loadingTimeout && !isAuthenticated) {
-    logDebug("Loading timed out, redirecting to login");
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-  
-  // For dashboard routes, we require authentication
+  // If user is not authenticated, redirect to login
   if (!isAuthenticated) {
     logDebug("User not authenticated, redirecting to login");
-    // Make sure to redirect to the root /login path, not /dashboard/login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
