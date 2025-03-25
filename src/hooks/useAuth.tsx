@@ -34,7 +34,8 @@ export type AuthContextType = {
   updatePassword: (newPassword: string) => Promise<{ error: any | null }>;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Import the AuthContext from AuthProvider component
+import { AuthContext } from '@/components/AuthProvider';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

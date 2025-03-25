@@ -141,94 +141,97 @@ const PageLoader = () => (
 // This component must be used INSIDE AuthProvider AND Router context
 const AppRoutes = () => {
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      
-      {/* Direct login routes */}
-      <Route path="/login" element={
-        <Suspense fallback={<PageLoader />}>
-          <Login />
-        </Suspense>
-      } />
-      <Route path="/signup" element={
-        <Suspense fallback={<PageLoader />}>
-          <Signup />
-        </Suspense>
-      } />
-      <Route path="/reset-password" element={
-        <Suspense fallback={<PageLoader />}>
-          <ResetPassword />
-        </Suspense>
-      } />
-      <Route path="/verify-email" element={
-        <Suspense fallback={<PageLoader />}>
-          <VerifyEmail />
-        </Suspense>
-      } />
-      
-      {/* Dashboard routes - all nested under /dashboard */}
-      <Route path="/dashboard" element={<DashboardLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="sessions" element={
+    <>
+      <AuthNavigation />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        
+        {/* Direct login routes */}
+        <Route path="/login" element={
           <Suspense fallback={<PageLoader />}>
-            <Sessions />
+            <Login />
           </Suspense>
         } />
-        <Route path="schedule" element={
+        <Route path="/signup" element={
           <Suspense fallback={<PageLoader />}>
-            <Schedule />
+            <Signup />
           </Suspense>
         } />
-        <Route path="plans" element={
+        <Route path="/reset-password" element={
           <Suspense fallback={<PageLoader />}>
-            <TrainingPlans />
+            <ResetPassword />
           </Suspense>
         } />
-        <Route path="payment" element={
+        <Route path="/verify-email" element={
           <Suspense fallback={<PageLoader />}>
-            <DashboardPayment />
+            <VerifyEmail />
           </Suspense>
         } />
-        <Route path="progress" element={
-          <Suspense fallback={<PageLoader />}>
-            <Progress />
-          </Suspense>
-        } />
-        <Route path="account" element={
-          <Suspense fallback={<PageLoader />}>
-            <Account />
-          </Suspense>
-        } />
-        {/* Keep auth related routes in dashboard for backward compatibility */}
-        <Route path="login" element={<Navigate to="/login" replace />} />
-        <Route path="signup" element={<Navigate to="/signup" replace />} />
-        <Route path="reset-password" element={<Navigate to="/reset-password" replace />} />
-        <Route path="verify-email" element={<Navigate to="/verify-email" replace />} />
-        <Route path="payment-portal" element={
-          <Suspense fallback={<PageLoader />}>
-            <PaymentPortal />
-          </Suspense>
-        } />
-      </Route>
-      
-      {/* Redirect old routes to new dashboard routes */}
-      <Route path="/dashboard" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/schedule" element={<Navigate to="/dashboard/schedule" replace />} />
-      <Route path="/progress" element={<Navigate to="/dashboard/progress" replace />} />
-      <Route path="/account" element={<Navigate to="/dashboard/account" replace />} />
-      <Route path="/payment" element={<Navigate to="/dashboard/payment" replace />} />
-      <Route path="/payment-portal" element={<Navigate to="/dashboard/payment-portal" replace />} />
-      <Route path="/plans" element={<Navigate to="/dashboard/plans" replace />} />
-      
-      {/* Redirect /confirm-email to /login for backward compatibility */}
-      <Route path="/confirm-email" element={<Navigate to="/login" replace />} />
-      {/* Redirect /auth to /login for backward compatibility */}
-      <Route path="/auth" element={<Navigate to="/login" replace />} />
-      
-      <Route path="/admin/*" element={<AdminDashboard />} />
-      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        
+        {/* Dashboard routes - all nested under /dashboard */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="sessions" element={
+            <Suspense fallback={<PageLoader />}>
+              <Sessions />
+            </Suspense>
+          } />
+          <Route path="schedule" element={
+            <Suspense fallback={<PageLoader />}>
+              <Schedule />
+            </Suspense>
+          } />
+          <Route path="plans" element={
+            <Suspense fallback={<PageLoader />}>
+              <TrainingPlans />
+            </Suspense>
+          } />
+          <Route path="payment" element={
+            <Suspense fallback={<PageLoader />}>
+              <DashboardPayment />
+            </Suspense>
+          } />
+          <Route path="progress" element={
+            <Suspense fallback={<PageLoader />}>
+              <Progress />
+            </Suspense>
+          } />
+          <Route path="account" element={
+            <Suspense fallback={<PageLoader />}>
+              <Account />
+            </Suspense>
+          } />
+          {/* Keep auth related routes in dashboard for backward compatibility */}
+          <Route path="login" element={<Navigate to="/login" replace />} />
+          <Route path="signup" element={<Navigate to="/signup" replace />} />
+          <Route path="reset-password" element={<Navigate to="/reset-password" replace />} />
+          <Route path="verify-email" element={<Navigate to="/verify-email" replace />} />
+          <Route path="payment-portal" element={
+            <Suspense fallback={<PageLoader />}>
+              <PaymentPortal />
+            </Suspense>
+          } />
+        </Route>
+        
+        {/* Redirect old routes to new dashboard routes */}
+        <Route path="/dashboard" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/schedule" element={<Navigate to="/dashboard/schedule" replace />} />
+        <Route path="/progress" element={<Navigate to="/dashboard/progress" replace />} />
+        <Route path="/account" element={<Navigate to="/dashboard/account" replace />} />
+        <Route path="/payment" element={<Navigate to="/dashboard/payment" replace />} />
+        <Route path="/payment-portal" element={<Navigate to="/dashboard/payment-portal" replace />} />
+        <Route path="/plans" element={<Navigate to="/dashboard/plans" replace />} />
+        
+        {/* Redirect /confirm-email to /login for backward compatibility */}
+        <Route path="/confirm-email" element={<Navigate to="/login" replace />} />
+        {/* Redirect /auth to /login for backward compatibility */}
+        <Route path="/auth" element={<Navigate to="/login" replace />} />
+        
+        <Route path="/admin/*" element={<AdminDashboard />} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 };
 
@@ -241,7 +244,6 @@ const App = () => {
           <AuthProvider>
             <StripeProvider>
               <TooltipProvider>
-                <AuthNavigation />
                 <AppRoutes />
                 {/* Place Toaster components after the Routes */}
                 <Toaster />
