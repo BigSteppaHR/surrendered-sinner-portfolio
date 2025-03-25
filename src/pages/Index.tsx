@@ -50,7 +50,11 @@ const Index = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <SEO canonical={canonicalUrl} />
+      <SEO 
+        title="Surrendered Sinner Fitness | Elite Coaching"
+        description="Transform your body and mind with elite coaching from Surrendered Sinner Fitness."
+        canonical={canonicalUrl}
+      />
       
       <Navbar />
       <Hero />
