@@ -1,116 +1,77 @@
 
-import { useState, useEffect } from "react";
-import { Quote, RefreshCw } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { Quote, RefreshCw } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
 
-type DailyQuoteType = {
-  id: string;
-  quote: string;
-  author: string | null;
-};
+interface DailyQuoteProps {
+  onRefresh?: () => void;
+  refreshTrigger?: boolean;
+}
 
-const DailyQuote = () => {
-  const [quote, setQuote] = useState<DailyQuoteType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+const DailyQuote: React.FC<DailyQuoteProps> = ({ onRefresh, refreshTrigger }) => {
+  const [quote, setQuote] = useState({
+    text: "You have achieved failure. The only way now, is to win!",
+    author: "Tom Platz"
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchQuote = async () => {
+    setIsLoading(true);
     try {
-      setIsRefreshing(true);
+      const { data, error } = await supabase.functions.invoke('get-daily-quote');
       
-      // First try to get a featured quote
-      let { data: featuredQuotes, error: featuredError } = await supabase
-        .from("daily_quotes")
-        .select("id, quote, author")
-        .eq("is_active", true)
-        .eq("is_featured", true)
-        .limit(10);
+      if (error) {
+        console.error('Error fetching quote:', error);
+        return;
+      }
       
-      if (featuredError) throw featuredError;
-      
-      if (featuredQuotes && featuredQuotes.length > 0) {
-        // If we have featured quotes, pick a random one from the featured set
-        const randomFeatured = featuredQuotes[Math.floor(Math.random() * featuredQuotes.length)];
-        setQuote(randomFeatured);
-      } else {
-        // Fall back to any active quote if no featured quotes are available
-        const { data, error } = await supabase
-          .from("daily_quotes")
-          .select("id, quote, author")
-          .eq("is_active", true)
-          .limit(20);
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          const randomQuote = data[Math.floor(Math.random() * data.length)];
-          setQuote(randomQuote);
-        }
+      if (data?.quote) {
+        setQuote(data.quote);
       }
     } catch (error) {
-      console.error("Error fetching quote:", error);
+      console.error('Error fetching daily quote:', error);
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchQuote();
-  }, []);
+  }, [refreshTrigger]);
 
-  const handleRefreshQuote = () => {
+  const handleRefresh = () => {
     fetchQuote();
+    if (onRefresh) {
+      onRefresh();
+    }
   };
-
-  if (isLoading) {
-    return (
-      <Card className="bg-[#111111] border-[#333333]">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center">
-            <Quote className="h-5 w-5 text-sinner-red mr-2" />
-            Daily Motivation
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-center items-center py-8">
-          <RefreshCw className="h-8 w-8 animate-spin text-sinner-red" />
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="bg-[#111111] border-[#333333]">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between">
           <div className="flex items-center">
             <Quote className="h-5 w-5 text-sinner-red mr-2" />
             Daily Motivation
           </div>
-          <Button
-            variant="outline"
-            size="icon"
+          <Button 
+            variant="outline" 
+            size="icon" 
             className="h-6 w-6 rounded-full border-[#333333]"
-            onClick={handleRefreshQuote}
-            disabled={isRefreshing}
+            onClick={handleRefresh}
+            disabled={isLoading}
           >
-            <RefreshCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
+            <RefreshCw className="h-3 w-3" />
           </Button>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {quote ? (
-          <div className="flex flex-col space-y-2">
-            <p className="italic text-base">"{quote.quote}"</p>
-            {quote.author && (
-              <p className="text-sm text-gray-400 self-end">- {quote.author}</p>
-            )}
-          </div>
-        ) : (
-          <p className="text-center text-gray-400 py-4">No quotes available</p>
-        )}
+      <CardContent className="pt-0">
+        <div className="flex flex-col space-y-2">
+          <p className="italic text-base">""{quote.text}""</p>
+          <p className="text-sm text-gray-400 self-end">- {quote.author}</p>
+        </div>
       </CardContent>
     </Card>
   );
