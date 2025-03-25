@@ -97,6 +97,17 @@ const Payment = () => {
     setStripeError(null);
     
     try {
+      // Attempt to reconnect to the database first if needed
+      if (dbConnectionStatus === false) {
+        const reconnected = await attemptSupabaseReconnection();
+        setDbConnectionStatus(reconnected);
+        
+        if (!reconnected) {
+          throw new Error("Could not connect to the database. Payment functions may be limited.");
+        }
+      }
+      
+      // Now try to connect to Stripe
       const { data, error } = await supabase.functions.invoke('stripe-helper', {
         body: { 
           action: 'get-dashboard-data',
@@ -141,6 +152,11 @@ const Payment = () => {
           title: "Connection Restored",
           description: "Successfully connected to the database",
         });
+        
+        // After reconnecting to the database, also try to reconnect to Stripe
+        if (!stripeInitialized) {
+          retryStripeConnection();
+        }
       } else {
         toast({
           title: "Connection Failed",

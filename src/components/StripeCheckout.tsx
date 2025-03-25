@@ -7,7 +7,7 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCcw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface StripeCheckoutProps {
@@ -36,6 +36,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   const maxRetries = 2;
 
   // Update email state when customerEmail prop changes
@@ -96,7 +97,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           } else {
             throw new Error('No client secret received from the server');
           }
-        } catch (stripeError) {
+        } catch (stripeError: any) {
           console.error('Stripe API error:', stripeError);
           
           // Update the payment record to indicate the error
@@ -142,6 +143,74 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       createPaymentIntent();
     }
   }, [amount, toast, user, description, retryCount]);
+
+  const retryPaymentSetup = async () => {
+    setIsRetrying(true);
+    setError(null);
+    setRetryCount(0);
+    
+    try {
+      // Create a new payment record and attempt setup again
+      const { data: paymentRecord, error: dbError } = await supabase
+        .from('payments')
+        .insert({
+          user_id: user?.id || null,
+          amount: amount,
+          currency: 'usd',
+          status: 'pending',
+          metadata: { description }
+        })
+        .select()
+        .maybeSingle();
+        
+      if (dbError) throw new Error(`Database error: ${dbError.message}`);
+      if (!paymentRecord) throw new Error('Could not create payment record');
+      
+      setPaymentId(paymentRecord.id);
+      
+      // Then create a payment intent via our edge function
+      const { data, error } = await supabase.functions.invoke('stripe-helper', {
+        body: { 
+          action: 'createPaymentIntent',
+          params: { 
+            amount: amount,
+            currency: 'usd',
+            payment_id: paymentRecord.id,
+            description: description
+          }
+        }
+      });
+
+      if (error) {
+        throw new Error(`Payment initialization failed: ${error.message}`);
+      }
+
+      if (data?.client_secret) {
+        setClientSecret(data.client_secret);
+        toast({
+          title: "Connection Restored",
+          description: "Successfully connected to the payment system",
+        });
+      } else {
+        throw new Error('No client secret received from the server');
+      }
+    } catch (error: any) {
+      console.error('Error retrying payment setup:', error);
+      setError(error.message || "Payment setup failed");
+      
+      toast({
+        title: "Payment Setup Failed",
+        description: error.message || "There was an error setting up the payment. Please try again later.",
+        variant: "destructive",
+      });
+      
+      if (onError) {
+        onError(error.message || "Payment setup retry failed");
+      }
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -191,7 +260,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           });
 
           if (updateError) throw new Error(`Failed to update payment: ${updateError.message}`);
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error updating payment status:', error);
           // Continue anyway since the payment succeeded, just log the error
         }
@@ -248,7 +317,31 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         <Alert variant="destructive" className="bg-red-950 border-red-800">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Payment Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="flex flex-col space-y-2">
+            <span>{error}</span>
+            {!clientSecret && (
+              <Button 
+                onClick={retryPaymentSetup}
+                disabled={isRetrying}
+                variant="destructive" 
+                className="text-white bg-red-800 hover:bg-red-700 self-start mt-2 flex items-center"
+              >
+                {isRetrying ? (
+                  <>
+                    <span className="animate-spin mr-2">
+                      <RefreshCcw className="h-4 w-4" />
+                    </span>
+                    Retrying...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Retry Connection
+                  </>
+                )}
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
       

@@ -62,7 +62,9 @@ serve(async (req) => {
       
       case 'createPaymentIntent':
         console.log('Creating payment intent with params:', params)
-        const { amount, currency, payment_id, description } = params
+        const { amount, currency, description } = params
+        const payment_id = params.payment_id
+        
         if (!amount || !currency) {
           throw new Error('Missing required parameters for creating a payment intent')
         }
@@ -93,19 +95,24 @@ serve(async (req) => {
         break
       
       case 'updatePaymentStatus':
-        const { payment_id, status, payment_intent_id, payment_method } = params
-        if (!payment_id || !status) {
+        const updateParams = params
+        const updatePaymentId = updateParams.payment_id
+        const status = updateParams.status
+        const payment_intent_id = updateParams.payment_intent_id
+        const payment_method = updateParams.payment_method
+        
+        if (!updatePaymentId || !status) {
           throw new Error('Missing required parameters for updating payment status')
         }
         
         // In a real implementation, you'd update the payment status in the database
-        console.log(`Updating payment ${payment_id} status to ${status}`)
+        console.log(`Updating payment ${updatePaymentId} status to ${status}`)
         
         // This action doesn't interact directly with Stripe, just our database
         // The client will handle this via supabase directly
         result = {
           success: true,
-          payment_id,
+          payment_id: updatePaymentId,
           status
         }
         break
