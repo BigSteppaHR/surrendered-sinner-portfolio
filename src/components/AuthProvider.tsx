@@ -1,4 +1,3 @@
-
 import React, { ReactNode, createContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -220,13 +219,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Initialize auth on mount
+  // Initialize auth on mount with session fixing
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
       
       try {
         logDebug('Initializing auth');
+        
+        // First attempt to fix any session issues by signing out and clearing storage
+        try {
+          // Clear all auth-related data from localStorage
+          const keysToRemove: string[] = [];
+          
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+              key.startsWith('supabase') || 
+              key === 'supabase_session' ||
+              key === 'minimal_session_data' ||
+              key.startsWith('sb-') || 
+              key.includes('auth')
+            )) {
+              keysToRemove.push(key);
+            }
+          }
+          
+          keysToRemove.forEach(key => localStorage.removeItem(key));
+          console.log('Cleared auth-related localStorage items for fresh start');
+          
+          // Force sign out to clear any server-side session too
+          await supabase.auth.signOut({ scope: 'global' });
+          console.log('Forced sign out to reset session state');
+        } catch (clearError) {
+          console.error('Error clearing old sessions:', clearError);
+        }
         
         // First set up the auth state listener
         if (authSubscription.current) {
