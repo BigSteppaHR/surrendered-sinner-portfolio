@@ -85,7 +85,6 @@ export const useAuthLogin = () => {
             id: user.id,
             email: user.email,
             email_confirmed: true,
-            updated_at: new Date().toISOString()
           });
             
           if (newProfile) {
@@ -107,7 +106,6 @@ export const useAuthLogin = () => {
             const { profile: updatedProfile } = await upsertUserProfile({
               id: user.id,
               email_confirmed: true, 
-              updated_at: new Date().toISOString()
             });
             
             if (updatedProfile) {

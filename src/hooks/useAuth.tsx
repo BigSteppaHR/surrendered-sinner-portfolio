@@ -12,6 +12,7 @@ export type Profile = {
   email_confirmed?: boolean;
   email?: string;
   debug_mode?: boolean;
+  updated_at?: string;
 };
 
 export const useAuth = (): AuthContextType => {
