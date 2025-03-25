@@ -13,11 +13,13 @@ import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const AdminDashboard = () => {
   const { isAuthenticated, isAdmin, isLoading, profile } = useAuth();
   const location = useLocation();
   const isDebugMode = profile?.debug_mode || false;
+  const { toast } = useToast();
 
   console.log("AdminDashboard: Auth state check", { 
     isAuthenticated, 
@@ -26,6 +28,17 @@ const AdminDashboard = () => {
     profileId: profile?.id,
     path: location.pathname
   });
+
+  useEffect(() => {
+    // Show toast for unauthorized access attempts
+    if (isAuthenticated && !isLoading && !isAdmin) {
+      toast({
+        title: "Unauthorized Access",
+        description: "You don't have permission to access the admin dashboard.",
+        variant: "destructive"
+      });
+    }
+  }, [isAuthenticated, isAdmin, isLoading, toast]);
 
   // If still loading, show loading spinner
   if (isLoading) {

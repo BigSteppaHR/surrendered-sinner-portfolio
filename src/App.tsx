@@ -17,9 +17,7 @@ import Account from '@/pages/dashboard/Account';
 import Settings from '@/pages/dashboard/Settings';
 import Payment from '@/pages/dashboard/Payment';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
-import AdminAnalytics from '@/pages/admin/AdminAnalytics';
-import AdminPayments from '@/pages/admin/AdminPayments';
-import AdminInvoices from '@/pages/admin/AdminInvoices';
+import VerifyEmail from '@/pages/VerifyEmail';
 
 // The App component structure is simplified to ensure proper context management
 const App: React.FC = () => {
@@ -49,7 +47,7 @@ const UserRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (isAdmin) {
-    console.log("User trying to access admin-only route, redirecting to admin dashboard");
+    console.log("User trying to access user-only route, redirecting to admin dashboard");
     return <Navigate to="/admin" replace />;
   }
   
@@ -72,7 +70,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!isAdmin) {
-    console.log("Admin trying to access user-only route, redirecting to user dashboard");
+    console.log("Non-admin trying to access admin-only route, redirecting to user dashboard");
     return <Navigate to="/dashboard" replace />;
   }
   
@@ -137,6 +135,7 @@ const AppRoutes = () => {
       <Route path="/signup" element={<Signup />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/confirm-email" element={<ConfirmEmail />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       
       {/* User dashboard routes - protected with UserRoute */}
       <Route path="/dashboard" element={<UserRoute><Dashboard /></UserRoute>} />

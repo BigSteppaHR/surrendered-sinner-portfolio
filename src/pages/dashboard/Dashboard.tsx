@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import UserAccountStatus from "@/components/dashboard/UserAccountStatus";
 import WeightTracker from "@/components/dashboard/WeightTracker";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardNav from "@/components/dashboard/DashboardNav";
+import { useToast } from "@/hooks/use-toast";
 
 // Helper function to format last active time
 const formatLastActive = (date: Date | null): string => {
@@ -33,17 +35,45 @@ const formatLastActive = (date: Date | null): string => {
 };
 
 const Dashboard = () => {
-  const { profile, loginCount, lastActive, isAdmin, isAuthenticated } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { profile, loginCount, lastActive, isAdmin, isAuthenticated, isLoading } = useAuth();
+  const [isPageLoading, setIsLoading] = useState(true);
   const [refreshQuote, setRefreshQuote] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   useEffect(() => {
-    if (isAuthenticated && isAdmin) {
+    // Allow a brief delay for auth state to settle
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  useEffect(() => {
+    if (!isLoading && !isPageLoading && isAuthenticated && isAdmin) {
       console.log("Dashboard: User is admin, redirecting to admin dashboard");
+      
+      toast({
+        title: "Admin Access",
+        description: "Redirecting you to the admin dashboard.",
+      });
+      
       navigate("/admin", { replace: true });
     }
-  }, [isAuthenticated, isAdmin, navigate]);
+  }, [isAuthenticated, isAdmin, navigate, isLoading, isPageLoading, toast]);
+  
+  // If still loading, show a loading spinner
+  if (isLoading || isPageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+  
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    console.log("Dashboard: Not authenticated, redirecting to login");
+    return navigate("/login", { replace: true });
+  }
   
   const handleRefreshQuote = () => {
     setRefreshQuote(prev => !prev);
