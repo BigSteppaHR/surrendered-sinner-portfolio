@@ -1,191 +1,177 @@
 
-import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  CreditCard, 
-  User, 
-  BarChart, 
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import {
+  Home,
+  Calendar,
   FileText,
-  LogOut, 
+  User,
+  Settings,
+  LogOut,
   Menu,
-  X
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
-import { useAuthLogout } from "@/hooks/auth/useAuthLogout";
-import UserAccountStatus from "./UserAccountStatus";
-
-const navItems = [
-  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { name: "Sessions", path: "/dashboard/sessions", icon: Calendar },
-  { name: "Training Plans", path: "/dashboard/plans", icon: FileText },
-  { name: "Payments", path: "/dashboard/payment", icon: CreditCard },
-  { name: "Progress", path: "/dashboard/progress", icon: BarChart },
-  { name: "Account", path: "/dashboard/account", icon: User },
-];
+  X,
+  BarChart2,
+  HelpCircle,
+  Bell,
+  MessageSquare
+} from 'lucide-react';
 
 const DashboardNav = () => {
-  const { profile } = useAuth();
+  const { logout, profile } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
-  const [isOpen, setIsOpen] = useState(false);
-  const { logout } = useAuthLogout();
-
-  const getInitials = (name: string) => {
-    if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-  };
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
+    const result = await logout();
+    if (result.success && result.redirectTo) {
+      navigate(result.redirectTo);
+    }
   };
 
-  const NavItem = ({ item, isMobile = false }: { item: typeof navItems[0], isMobile?: boolean }) => {
-    const isActive = location.pathname === item.path;
-    
-    return (
-      <Link 
-        to={item.path}
-        onClick={() => isMobile && setIsOpen(false)}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
-          isActive 
-            ? "bg-sinner-red/20 text-white" 
-            : "text-gray-400 hover:text-white hover:bg-sinner-red/10"
-        )}
-      >
-        <item.icon className="h-5 w-5" />
-        <span>{item.name}</span>
-      </Link>
-    );
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const navigateTo = (path: string) => {
+    navigate(path);
+    setIsMenuOpen(false);
+  };
+
+  const navItems = [
+    { name: 'Dashboard', path: '/dashboard', icon: <Home size={20} /> },
+    { name: 'Schedule', path: '/schedule', icon: <Calendar size={20} /> },
+    { name: 'Training Plans', path: '/plans', icon: <FileText size={20} /> },
+    { name: 'Progress', path: '/progress', icon: <BarChart2 size={20} /> },
+    { name: 'Support', path: '/support', icon: <MessageSquare size={20} /> },
+    { name: 'Account', path: '/account', icon: <User size={20} /> },
+    { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
+  ];
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
   };
 
   return (
     <>
       {/* Mobile Nav */}
-      <div className="md:hidden flex items-center justify-between bg-[#111111] p-4 border-b border-[#333333]">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9 border border-[#333333]">
-            <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || "User"} />
-            <AvatarFallback className="bg-sinner-red text-white">
-              {profile?.full_name ? getInitials(profile.full_name) : "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="font-medium text-white">{profile?.full_name || "User"}</h2>
-            <p className="text-xs text-gray-400">{profile?.email || ""}</p>
-          </div>
+      <div className="flex md:hidden justify-between items-center p-4 bg-black text-white border-b border-[#ea384c]/20">
+        <div className="flex items-center">
+          <h2 className="text-xl font-bold text-white">
+            SURRENDERED<span className="text-[#ea384c]">SINNER</span>
+          </h2>
         </div>
-        
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-white">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64 bg-[#111111] p-0 border-r border-[#333333]">
-            <div className="flex flex-col h-full">
-              <div className="p-4 border-b border-[#333333]">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 border border-[#333333]">
-                    <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || "User"} />
-                    <AvatarFallback className="bg-sinner-red text-white">
-                      {profile?.full_name ? getInitials(profile.full_name) : "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h2 className="font-medium text-white">{profile?.full_name || "User"}</h2>
-                    <p className="text-xs text-gray-400">{profile?.email || ""}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-auto py-6 px-4">
-                <div className="flex justify-center mb-6">
-                  <img 
-                    src="/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" 
-                    alt="Surrendered Sinner Fitness" 
-                    className="h-16 w-16"
-                  />
-                </div>
-                <nav className="space-y-2">
-                  {navItems.map((item) => (
-                    <NavItem key={item.path} item={item} isMobile />
-                  ))}
-                </nav>
-              </div>
-              
-              <div className="p-4 border-t border-[#333333]">
-                <UserAccountStatus />
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-gray-400 hover:text-white hover:bg-sinner-red/10"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="h-5 w-5 mr-3" />
-                  Sign Out
-                </Button>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleMenu}
+          className="text-white hover:bg-[#ea384c]/10"
+        >
+          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </Button>
       </div>
 
-      {/* Desktop Nav */}
-      <div className="hidden md:flex flex-col w-64 bg-[#111111] border-r border-[#333333] min-h-screen">
-        <div className="p-6 border-b border-[#333333]">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12 border border-[#333333]">
-              <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || "User"} />
-              <AvatarFallback className="bg-sinner-red text-white">
-                {profile?.full_name ? getInitials(profile.full_name) : "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="font-medium text-white">{profile?.full_name || "User"}</h2>
-              <p className="text-xs text-gray-400">{profile?.email || ""}</p>
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black pt-16">
+          <div className="flex flex-col p-4 space-y-2 overflow-y-auto max-h-screen">
+            {profile && (
+              <div className="flex items-center p-4 border-b border-[#ea384c]/20 mb-4">
+                <div className="w-10 h-10 rounded-full bg-[#ea384c]/20 flex items-center justify-center text-[#ea384c] font-bold mr-3">
+                  {profile.full_name ? profile.full_name.charAt(0) : '?'}
+                </div>
+                <div>
+                  <p className="font-medium text-white">{profile.full_name || 'Athlete'}</p>
+                  <p className="text-sm text-gray-400">{profile.email}</p>
+                </div>
+              </div>
+            )}
+
+            {navItems.map((item) => (
+              <Button
+                key={item.path}
+                variant="ghost"
+                className={`w-full justify-start pl-4 ${
+                  isActive(item.path)
+                    ? 'bg-[#ea384c]/10 text-[#ea384c] font-medium'
+                    : 'text-white hover:bg-[#ea384c]/5 hover:text-[#ea384c]'
+                }`}
+                onClick={() => navigateTo(item.path)}
+              >
+                <span className="mr-2">{item.icon}</span>
+                {item.name}
+              </Button>
+            ))}
+
+            <div className="border-t border-[#ea384c]/20 mt-4 pt-4">
+              <Button
+                variant="ghost"
+                className="w-full justify-start pl-4 text-white hover:bg-[#ea384c]/5 hover:text-[#ea384c]"
+                onClick={handleLogout}
+              >
+                <span className="mr-2">
+                  <LogOut size={20} />
+                </span>
+                Logout
+              </Button>
             </div>
           </div>
         </div>
-        
-        <div className="flex-1 overflow-auto">
-          <div className="flex justify-center py-6">
-            <img 
-              src="/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" 
-              alt="Surrendered Sinner Fitness" 
-              className="h-28 w-28"
-            />
-          </div>
-          
-          <div className="px-4 py-6">
-            <nav className="space-y-2">
-              {navItems.map((item) => (
-                <NavItem key={item.path} item={item} />
-              ))}
-            </nav>
-          </div>
+      )}
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex h-screen w-64 flex-col bg-black border-r border-[#ea384c]/20 fixed">
+        <div className="p-4 border-b border-[#ea384c]/20">
+          <h2 className="text-xl font-bold text-white text-center">
+            SURRENDERED<span className="text-[#ea384c]">SINNER</span>
+          </h2>
         </div>
-        
-        <div className="p-4 border-t border-[#333333]">
-          <UserAccountStatus />
+
+        {profile && (
+          <div className="flex items-center p-4 border-b border-[#ea384c]/20">
+            <div className="w-10 h-10 rounded-full bg-[#ea384c]/20 flex items-center justify-center text-[#ea384c] font-bold mr-3">
+              {profile.full_name ? profile.full_name.charAt(0) : '?'}
+            </div>
+            <div>
+              <p className="font-medium text-white">{profile.full_name || 'Athlete'}</p>
+              <p className="text-sm text-gray-400 truncate max-w-[140px]">{profile.email}</p>
+            </div>
+          </div>
+        )}
+
+        <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+          {navItems.map((item) => (
+            <Button
+              key={item.path}
+              variant="ghost"
+              className={`w-full justify-start ${
+                isActive(item.path)
+                  ? 'bg-[#ea384c]/10 text-[#ea384c] font-medium'
+                  : 'text-white hover:bg-[#ea384c]/5 hover:text-[#ea384c]'
+              }`}
+              onClick={() => navigateTo(item.path)}
+            >
+              <span className="mr-2">{item.icon}</span>
+              {item.name}
+            </Button>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-[#ea384c]/20">
           <Button 
             variant="ghost" 
-            className="w-full justify-start text-gray-400 hover:text-white hover:bg-sinner-red/10"
+            className="w-full justify-start text-white hover:bg-[#ea384c]/5 hover:text-[#ea384c]"
             onClick={handleLogout}
           >
-            <LogOut className="h-5 w-5 mr-3" />
-            Sign Out
+            <span className="mr-2">
+              <LogOut size={20} />
+            </span>
+            Logout
           </Button>
         </div>
-      </div>
+      </aside>
     </>
   );
 };

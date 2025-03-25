@@ -40,21 +40,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           async (event, session) => {
             logDebug('Auth state changed:', event, session ? 'Session active' : 'No session');
             
-            // Save session data to localStorage for persistence across refreshes
+            // Minimize localStorage usage - only cache minimal session data
             if (session) {
               try {
-                localStorage.setItem('supabase_session', JSON.stringify(session));
-                logDebug('Session saved to localStorage on auth state change');
+                // Only store essential session info
+                const minimalSession = {
+                  expires_at: session.expires_at,
+                  user_id: session.user.id
+                };
+                localStorage.setItem('minimal_session_data', JSON.stringify(minimalSession));
+                logDebug('Minimal session data saved on auth state change');
               } catch (e) {
-                console.warn('Failed to save session to localStorage:', e);
+                console.warn('Failed to save minimal session data:', e);
               }
             } else {
               // Remove session data if logged out
               try {
-                localStorage.removeItem('supabase_session');
-                logDebug('Session removed from localStorage on logout');
+                localStorage.removeItem('minimal_session_data');
+                logDebug('Session data removed on logout');
               } catch (e) {
-                console.warn('Failed to remove session from localStorage:', e);
+                console.warn('Failed to remove session data:', e);
               }
             }
             
@@ -126,12 +131,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   } else if (data.session) {
                     logDebug("Session refreshed successfully at", new Date().toISOString());
                     
-                    // Save refreshed session to localStorage
+                    // Save minimal refreshed session data
                     try {
-                      localStorage.setItem('supabase_session', JSON.stringify(data.session));
-                      logDebug('Refreshed session saved to localStorage');
+                      const minimalSession = {
+                        expires_at: data.session.expires_at,
+                        user_id: data.session.user.id
+                      };
+                      localStorage.setItem('minimal_session_data', JSON.stringify(minimalSession));
+                      logDebug('Minimal session data updated after refresh');
                     } catch (e) {
-                      console.warn('Failed to save refreshed session to localStorage:', e);
+                      console.warn('Failed to save minimal session data:', e);
                     }
                   }
                 } else {

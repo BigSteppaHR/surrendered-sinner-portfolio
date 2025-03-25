@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -122,8 +123,8 @@ const Dashboard = () => {
   // Show loading state while checking auth
   if (isLoading || !isInitialized || !isPageLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
-        <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -134,16 +135,16 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#1A1F2C] text-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-black text-white">
       <DashboardNav />
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto md:ml-64">
         <div className="p-6 max-w-7xl mx-auto">
           {/* Welcome section with animated gradient border */}
-          <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-[#9b87f5] after:via-purple-500 after:to-[#9b87f5] after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-[#252A38] backdrop-blur-sm">
+          <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-[#ea384c] after:via-red-500 after:to-[#ea384c] after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-zinc-900 backdrop-blur-sm">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#9b87f5] to-purple-400">
+                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ea384c] to-red-400">
                   Welcome Back, {profile?.full_name || 'Athlete'}!
                 </h1>
                 <p className="text-gray-400 mt-1">Your training journey continues today</p>
@@ -156,17 +157,17 @@ const Dashboard = () => {
           
           {/* Next session highlight card */}
           {upcomingSessions && upcomingSessions.length > 0 ? (
-            <Card className="bg-[#252A38] border-[#353A48] mb-6 overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#9b87f5]/10 to-purple-800/10 rounded-bl-full"></div>
+            <Card className="bg-zinc-900 border-zinc-800 mb-6 overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#ea384c]/10 to-red-800/10 rounded-bl-full"></div>
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
                   <div className="flex items-center mb-4 md:mb-0">
-                    <div className="p-3 bg-[#9b87f5]/10 text-[#9b87f5] rounded-lg mr-4">
+                    <div className="p-3 bg-[#ea384c]/10 text-[#ea384c] rounded-lg mr-4">
                       <Calendar className="h-8 w-8" />
                     </div>
                     <div>
                       <h3 className="text-xl font-bold">Next Training Session</h3>
-                      <p className="text-[#9b87f5] font-medium">
+                      <p className="text-[#ea384c] font-medium">
                         {new Date(upcomingSessions[0].session_time).toLocaleString('en-US', { 
                           weekday: 'long',
                           hour: 'numeric',
@@ -181,7 +182,7 @@ const Dashboard = () => {
                   </div>
                   <div className="flex space-x-3">
                     <Button 
-                      className="bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                      className="bg-[#ea384c] hover:bg-red-600 transition-colors"
                       onClick={() => navigate('/schedule')}
                     >
                       View Details
@@ -191,12 +192,12 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           ) : (
-            <Card className="bg-[#252A38] border-[#353A48] mb-6 overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#9b87f5]/10 to-purple-800/10 rounded-bl-full"></div>
+            <Card className="bg-zinc-900 border-zinc-800 mb-6 overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#ea384c]/10 to-red-800/10 rounded-bl-full"></div>
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
                   <div className="flex items-center mb-4 md:mb-0">
-                    <div className="p-3 bg-[#9b87f5]/10 text-[#9b87f5] rounded-lg mr-4">
+                    <div className="p-3 bg-[#ea384c]/10 text-[#ea384c] rounded-lg mr-4">
                       <Calendar className="h-8 w-8" />
                     </div>
                     <div>
@@ -206,7 +207,7 @@ const Dashboard = () => {
                   </div>
                   <div className="flex space-x-3">
                     <Button 
-                      className="bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                      className="bg-[#ea384c] hover:bg-red-600 transition-colors"
                       onClick={() => navigate('/schedule')}
                     >
                       Schedule Now
@@ -223,23 +224,23 @@ const Dashboard = () => {
               
               {/* Featured training plan section */}
               {workoutPlans && workoutPlans.length > 0 ? (
-                <Card className="bg-[#252A38] border-[#353A48] overflow-hidden">
+                <Card className="bg-zinc-900 border-zinc-800 overflow-hidden">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-[#9b87f5]" />
+                      <FileText className="h-5 w-5 text-[#ea384c]" />
                       Featured Training Plan
                     </CardTitle>
                     <CardDescription>Your latest training program</CardDescription>
                   </CardHeader>
                   <CardContent className="pb-6">
-                    <div className="bg-[#1E2435] border border-[#353A48] rounded-lg p-5 mb-4">
+                    <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-5 mb-4">
                       <h3 className="text-lg font-bold mb-2">{workoutPlans[0].title}</h3>
                       <p className="text-sm text-gray-400 mb-4">
                         {workoutPlans[0].description || 'No description provided.'}
                       </p>
                       <div className="flex space-x-3">
                         <Button 
-                          className="bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                          className="bg-[#ea384c] hover:bg-red-600 transition-colors"
                           onClick={() => navigate('/plans')}
                         >
                           <FileText className="h-4 w-4 mr-2" />
@@ -248,30 +249,30 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <Button variant="ghost" className="text-[#9b87f5] hover:text-[#8a76e4] hover:bg-[#9b87f5]/5" onClick={() => navigate('/plans')}>
+                      <Button variant="ghost" className="text-[#ea384c] hover:text-red-400 hover:bg-[#ea384c]/5" onClick={() => navigate('/plans')}>
                         View All Plans
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-[#252A38] border-[#353A48] overflow-hidden">
+                <Card className="bg-zinc-900 border-zinc-800 overflow-hidden">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-[#9b87f5]" />
+                      <FileText className="h-5 w-5 text-[#ea384c]" />
                       Training Plans
                     </CardTitle>
                     <CardDescription>Get customized workout programs</CardDescription>
                   </CardHeader>
                   <CardContent className="pb-6">
-                    <div className="bg-[#1E2435] border border-[#353A48] rounded-lg p-5 mb-4 text-center">
+                    <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-5 mb-4 text-center">
                       <h3 className="text-lg font-bold mb-2">No Training Plans Yet</h3>
                       <p className="text-sm text-gray-400 mb-4">
                         Get personalized training plans tailored to your goals and fitness level.
                       </p>
                       <div className="flex justify-center">
                         <Button 
-                          className="bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                          className="bg-[#ea384c] hover:bg-red-600 transition-colors"
                           onClick={() => navigate('/plans')}
                         >
                           <Plus className="h-4 w-4 mr-2" />
@@ -291,19 +292,19 @@ const Dashboard = () => {
 
               {/* Membership card */}
               {subscriptionData ? (
-                <Card className="bg-[#252A38] border-[#353A48] overflow-hidden relative">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#9b87f5]/20 to-purple-600/20 rounded-bl-full"></div>
+                <Card className="bg-zinc-900 border-zinc-800 overflow-hidden relative">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#ea384c]/20 to-red-600/20 rounded-bl-full"></div>
                   <CardHeader>
                     <CardTitle className="flex items-center">
-                      <Zap className="h-5 w-5 text-[#9b87f5] mr-2" />
+                      <Zap className="h-5 w-5 text-[#ea384c] mr-2" />
                       Your Membership
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="bg-[#1E2435] border border-[#353A48] rounded-lg p-4">
+                    <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
                       <div className="flex justify-between items-center mb-2">
                         <h4 className="font-medium">Elite Training Package</h4>
-                        <span className="text-xs px-2 py-1 bg-[#9b87f5]/20 text-[#9b87f5] rounded-full">Active</span>
+                        <span className="text-xs px-2 py-1 bg-[#ea384c]/20 text-[#ea384c] rounded-full">Active</span>
                       </div>
                       <p className="text-sm text-gray-400 mb-2">Includes 12 personal training sessions per month</p>
                       <div className="flex justify-between text-sm">
@@ -315,12 +316,12 @@ const Dashboard = () => {
                               : 'N/A'
                           } days
                         </span>
-                        <span className="text-[#9b87f5]">$199/month</span>
+                        <span className="text-[#ea384c]">$199/month</span>
                       </div>
                     </div>
                     
                     <Button 
-                      className="w-full bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                      className="w-full bg-[#ea384c] hover:bg-red-600 transition-colors"
                       onClick={() => navigate('/payment')}
                     >
                       Manage Membership
@@ -328,25 +329,25 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-[#252A38] border-[#353A48] overflow-hidden relative">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#9b87f5]/20 to-purple-600/20 rounded-bl-full"></div>
+                <Card className="bg-zinc-900 border-zinc-800 overflow-hidden relative">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#ea384c]/20 to-red-600/20 rounded-bl-full"></div>
                   <CardHeader>
                     <CardTitle className="flex items-center">
-                      <Zap className="h-5 w-5 text-[#9b87f5] mr-2" />
+                      <Zap className="h-5 w-5 text-[#ea384c] mr-2" />
                       Membership Options
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="bg-[#1E2435] border border-[#353A48] rounded-lg p-4">
+                    <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
                       <div className="text-center mb-3">
-                        <h4 className="font-medium text-[#9b87f5]">No Active Membership</h4>
+                        <h4 className="font-medium text-[#ea384c]">No Active Membership</h4>
                         <p className="text-sm text-gray-400 mt-1">Upgrade to unlock premium features</p>
                       </div>
                       
-                      <div className="flex items-center mt-4 p-3 bg-[#252A38] rounded-lg">
+                      <div className="flex items-center mt-4 p-3 bg-zinc-900 rounded-lg">
                         <div className="flex-shrink-0 mr-3">
-                          <div className="w-8 h-8 bg-[#9b87f5]/20 rounded-full flex items-center justify-center">
-                            <Dumbbell className="h-4 w-4 text-[#9b87f5]" />
+                          <div className="w-8 h-8 bg-[#ea384c]/20 rounded-full flex items-center justify-center">
+                            <Dumbbell className="h-4 w-4 text-[#ea384c]" />
                           </div>
                         </div>
                         <div className="flex-1">
@@ -358,7 +359,7 @@ const Dashboard = () => {
                     </div>
                     
                     <Button 
-                      className="w-full bg-[#9b87f5] hover:bg-[#8a76e4] transition-colors"
+                      className="w-full bg-[#ea384c] hover:bg-red-600 transition-colors"
                       onClick={() => navigate('/payment')}
                     >
                       View Plans
@@ -374,25 +375,25 @@ const Dashboard = () => {
             <ActionButton 
               text="Schedule Session"
               icon={<Calendar className="h-5 w-5" />}
-              color="bg-gradient-to-br from-[#9b87f5] to-[#7E69AB]"
+              color="bg-gradient-to-br from-[#ea384c] to-red-700"
               onClick={() => navigate('/schedule')}
             />
             <ActionButton 
               text="Training Plans"
               icon={<FileText className="h-5 w-5" />}
-              color="bg-gradient-to-br from-[#7E69AB] to-[#6E59A5]"
+              color="bg-gradient-to-br from-red-700 to-red-800"
               onClick={() => navigate('/plans')}
             />
             <ActionButton 
               text="Track Progress"
               icon={<Target className="h-5 w-5" />}
-              color="bg-gradient-to-br from-[#8a76e4] to-[#7a66d4]"
+              color="bg-gradient-to-br from-red-600 to-red-700"
               onClick={() => navigate('/progress')}
             />
             <ActionButton 
               text="Payment Plans"
               icon={<Zap className="h-5 w-5" />}
-              color="bg-gradient-to-br from-purple-600 to-purple-800"
+              color="bg-gradient-to-br from-red-800 to-red-900"
               onClick={() => navigate('/payment')}
             />
           </div>
