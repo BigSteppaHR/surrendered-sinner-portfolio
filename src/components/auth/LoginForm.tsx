@@ -70,7 +70,7 @@ const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPass
                     <FormLabel className="text-white">Password</FormLabel>
                     <Button 
                       variant="link" 
-                      className="px-0 text-sinner-red h-auto py-0" 
+                      className="px-0 text-[#ea384c] h-auto py-0" 
                       type="button"
                       onClick={onForgotPassword}
                     >
@@ -98,7 +98,7 @@ const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPass
             
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900"
+              className="w-full bg-gradient-to-r from-[#ea384c] to-[#d31e38] hover:from-[#d31e38] hover:to-[#b01a30]"
               disabled={isSubmitting || isLoading}
             >
               {isSubmitting || isLoading ? (
@@ -115,7 +115,7 @@ const LoginForm = ({ onSubmit, isSubmitting, isLoading, loginError, onForgotPass
               Don't have an account?{" "}
               <Button 
                 variant="link" 
-                className="px-1 text-sinner-red h-auto py-0" 
+                className="px-1 text-[#ea384c] h-auto py-0" 
                 type="button"
                 onClick={() => navigate("/signup")}
               >
