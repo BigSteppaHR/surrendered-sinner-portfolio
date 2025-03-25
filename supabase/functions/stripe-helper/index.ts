@@ -63,7 +63,7 @@ serve(async (req) => {
       case 'createPaymentIntent':
         console.log('Creating payment intent with params:', params)
         const { amount, currency, description } = params
-        const paymentPaymentId = params.payment_id
+        const paymentId = params.payment_id
         
         if (!amount || !currency) {
           throw new Error('Missing required parameters for creating a payment intent')
@@ -78,7 +78,7 @@ serve(async (req) => {
             },
             description: description || 'Payment',
             metadata: {
-              payment_id: paymentPaymentId || 'unknown'
+              payment_id: paymentId || 'unknown'
             }
           })
           

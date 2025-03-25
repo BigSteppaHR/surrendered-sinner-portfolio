@@ -116,6 +116,7 @@ const Payment = () => {
       });
       
       if (error) {
+        console.warn("Stripe connection error:", error.message);
         throw new Error(error.message || "Failed to connect to Stripe");
       }
       

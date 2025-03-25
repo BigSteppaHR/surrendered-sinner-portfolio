@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { 
   Users, 
   ArrowUpRight, 
@@ -70,26 +70,30 @@ const AdminOverview = () => {
         if (trafficError) throw trafficError;
         
         // Get dashboard data from Stripe via our edge function
-        const { data: stripeData, error } = await supabase.functions.invoke('stripe-helper', {
-          body: { action: 'get-dashboard-data' },
-        });
-        
-        if (error) {
-          throw new Error(`Error fetching Stripe data: ${error.message}`);
+        try {
+          const { data: stripeData, error } = await supabase.functions.invoke('stripe-helper', {
+            body: { action: 'get-dashboard-data', params: {} },
+          });
+          
+          if (error) {
+            console.warn(`Error fetching Stripe data: ${error.message}`);
+            // Continue without Stripe data
+          } else if (stripeData) {
+            setStatistics(stripeData.stats || []);
+            setRevenueData(stripeData.revenueData || []);
+            setSubscriptionDist(stripeData.subscriptionDistribution || []);
+          }
+        } catch (stripeError) {
+          console.warn("Error with Stripe data:", stripeError);
+          // Continue without Stripe data
         }
         
-        if (stripeData) {
-          setStatistics(stripeData.stats || []);
-          setRevenueData(stripeData.revenueData || []);
-          setSubscriptionDist(stripeData.subscriptionDistribution || []);
-        }
-        
-        setVisitData(trafficData);
+        setVisitData(trafficData || []);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         toast({
-          title: "Error loading dashboard data",
-          description: "Please check your connection and try again.",
+          title: "Error loading some dashboard data",
+          description: "Some data might be unavailable. Please check your connection and try again.",
           variant: "destructive"
         });
       } finally {
