@@ -21,7 +21,7 @@ import AdminAnalytics from '@/pages/admin/AdminAnalytics';
 import AdminPayments from '@/pages/admin/AdminPayments';
 import AdminInvoices from '@/pages/admin/AdminInvoices';
 
-// The AdminRedirect component needs to be inside the AuthProvider context
+// The App component structure is simplified to ensure proper context management
 const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -32,7 +32,7 @@ const App: React.FC = () => {
   );
 };
 
-// Move AdminRedirect inside AppRoutes so it's within the AuthProvider context
+// AppRoutes component, within the AuthProvider context
 const AppRoutes = () => {
   const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
@@ -43,20 +43,26 @@ const AppRoutes = () => {
     }
   }, [isInitialized]);
   
-  // AdminRedirect is now defined here inside the AuthProvider context
+  // AdminRedirect component, defined within the AuthProvider context
   const AdminRedirect = () => {
-    const { profile } = useAuth();
+    const { isAdmin } = useAuth();
     
     useEffect(() => {
-      console.log("AdminRedirect - Profile:", profile);
-      if (profile?.is_admin) {
+      console.log("AdminRedirect - Checking admin status:", { isAdmin });
+      if (isAdmin) {
+        console.log("AdminRedirect - Redirecting to admin overview");
         window.location.href = '/admin/overview';
       } else {
+        console.log("AdminRedirect - Redirecting to user dashboard");
         window.location.href = '/dashboard';
       }
-    }, [profile]);
+    }, [isAdmin]);
     
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+      </div>
+    );
   };
   
   if (isLoading || !isInitialized || !isPageLoaded) {
@@ -88,10 +94,7 @@ const AppRoutes = () => {
       
       {/* Admin routes */}
       <Route path="/admin" element={<AdminRedirect />} />
-      <Route path="/admin/overview" element={<AdminDashboard />} />
-      <Route path="/admin/analytics" element={<AdminAnalytics />} />
-      <Route path="/admin/payments" element={<AdminPayments />} />
-      <Route path="/admin/invoices" element={<AdminInvoices />} />
+      <Route path="/admin/*" element={<AdminDashboard />} />
       
       {/* Fallback for unknown routes */}
       <Route path="*" element={<Navigate to="/" replace />} />

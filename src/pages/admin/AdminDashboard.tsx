@@ -18,6 +18,14 @@ const AdminDashboard = () => {
   const location = useLocation();
   const isDebugMode = profile?.debug_mode || false;
 
+  console.log("AdminDashboard: Auth state check", { 
+    isAuthenticated, 
+    isAdmin, 
+    isLoading, 
+    profileId: profile?.id,
+    path: location.pathname
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
@@ -34,11 +42,14 @@ const AdminDashboard = () => {
 
   // Redirect to dashboard if authenticated but not admin
   if (!isAdmin) {
-    console.log("AdminDashboard: Not admin, redirecting to dashboard");
+    console.log("AdminDashboard: Not admin, redirecting to dashboard", { 
+      profile, 
+      isAdmin 
+    });
     return <Navigate to="/dashboard" replace />;
   }
 
-  console.log("AdminDashboard: Rendering for admin user", profile?.id);
+  console.log("AdminDashboard: Rendering admin UI for user", profile?.id);
 
   return (
     <SidebarProvider>
