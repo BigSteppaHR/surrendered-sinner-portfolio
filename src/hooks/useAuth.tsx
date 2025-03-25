@@ -1,6 +1,7 @@
 
 import { createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { AuthContext } from '@/components/AuthProvider';
 
 export type Profile = {
   id: string;
@@ -33,9 +34,6 @@ export type AuthContextType = {
   resetPassword: (email: string) => Promise<{ error: any | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: any | null }>;
 };
-
-// Import the AuthContext from AuthProvider component
-import { AuthContext } from '@/components/AuthProvider';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

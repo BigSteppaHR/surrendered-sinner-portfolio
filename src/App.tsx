@@ -36,9 +36,16 @@ const queryClient = new QueryClient({
   },
 });
 
-// Create a navigation handler component that will be inside Router context
-// AND inside AuthProvider context
-const AuthNavigation = () => {
+// Loading component for suspense fallback
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-[#000000]">
+    <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
+  </div>
+);
+
+// Routes component that includes routes
+// This component must be used INSIDE AuthProvider AND Router context
+const AppRoutes = () => {
   const { isInitialized } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -123,26 +130,16 @@ const AuthNavigation = () => {
   }, [location.pathname, location.state]);
   
   // Only return a loading component when auth is not initialized
-  return isLoading ? (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#000000] z-50">
-      <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
-    </div>
-  ) : null;
-};
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-[#000000] z-50">
+        <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
-// Loading component for suspense fallback
-const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-[#000000]">
-    <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
-  </div>
-);
-
-// Routes component that includes routes
-// This component must be used INSIDE AuthProvider AND Router context
-const AppRoutes = () => {
   return (
     <>
-      <AuthNavigation />
       <Routes>
         <Route path="/" element={<Index />} />
         
