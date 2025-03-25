@@ -15,6 +15,7 @@ export const useAuthState = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const initializeAttempted = useRef(false);
   const profileFetchAttempted = useRef(false);
   const authSubscription = useRef<{ unsubscribe: () => void } | null>(null);
@@ -26,60 +27,48 @@ export const useAuthState = () => {
     try {
       logDebug('Refreshing profile data for user:', currentUser.id);
       
-      // Try to get profile directly first
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id)
-          .maybeSingle();
-        
-        if (!error && data) {
-          logDebug('Profile found:', data);
-          return data;
-        }
-        
-        if (error && !error.message.includes('infinite recursion')) {
-          console.error('Error in initial profile fetch:', error);
-        }
-      } catch (e) {
-        console.error('Exception in initial profile fetch:', e);
+      // Try to get profile directly with simplified query
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+      
+      if (!error && data) {
+        logDebug('Profile found:', data);
+        return data;
       }
       
-      // If we get here, either no profile exists or we hit an RLS error
-      // Try to create a basic profile as fallback
-      try {
-        logDebug('Attempting to create basic profile for user:', currentUser.id);
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: currentUser.id,
-            email: currentUser.email,
-            email_confirmed: !!currentUser.email_confirmed_at,
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-          
-        if (createError) {
-          console.error('Failed to create basic profile:', createError);
-          // Return a minimal profile to prevent UI errors even if DB operation fails
-          return {
-            id: currentUser.id,
-            email: currentUser.email,
-            email_confirmed: !!currentUser.email_confirmed_at,
-            is_admin: false
-          };
-        }
+      if (error) {
+        console.error('Error in profile fetch:', error);
         
-        logDebug('Created basic profile successfully:', newProfile);
-        return newProfile;
-      } catch (e) {
-        console.error('Exception creating basic profile:', e);
+        // If profile doesn't exist, create a basic one
+        if (error.code === 'PGRST116') { // No rows returned
+          try {
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: currentUser.id,
+                email: currentUser.email,
+                email_confirmed: !!currentUser.email_confirmed_at,
+                updated_at: new Date().toISOString()
+              })
+              .select()
+              .single();
+              
+            if (createError) {
+              console.error('Failed to create basic profile:', createError);
+            } else {
+              logDebug('Created basic profile successfully:', newProfile);
+              return newProfile;
+            }
+          } catch (e) {
+            console.error('Exception creating basic profile:', e);
+          }
+        }
       }
       
-      // Final fallback - just create a minimal profile object for the UI
-      // This doesn't persist to the database but prevents UI errors
+      // Final fallback - create a minimal profile object for the UI
       return {
         id: currentUser.id,
         email: currentUser.email,
@@ -134,66 +123,17 @@ export const useAuthState = () => {
             setProfile(null);
           }
           
-          // Save session to localStorage for persistence during hard refreshes
-          if (currentSession) {
-            try {
-              localStorage.setItem('supabase_session', JSON.stringify(currentSession));
-              logDebug('Session saved to localStorage during auth change');
-            } catch (e) {
-              console.warn('Failed to save session to localStorage:', e);
-            }
-          }
-          
           // Complete loading
           setIsLoading(false);
+          setIsInitialized(true);
         });
         
         authSubscription.current = data.subscription;
 
-        // Try to get session from localStorage first (faster than network request)
-        try {
-          const savedSession = localStorage.getItem('supabase_session');
-          if (savedSession) {
-            const parsedSession = JSON.parse(savedSession) as Session;
-            if (parsedSession && parsedSession.expires_at) {
-              // Check if session is not expired
-              const expiresAt = new Date(parsedSession.expires_at * 1000);
-              if (expiresAt > new Date()) {
-                logDebug('Using saved session from localStorage');
-                setSession(parsedSession);
-                setUser(parsedSession.user);
-                
-                // Load profile data based on saved session
-                if (parsedSession.user) {
-                  const profileData = await refreshProfileData(parsedSession.user);
-                  if (profileData) {
-                    setProfile(profileData);
-                    logDebug('Profile loaded from saved session:', profileData);
-                  }
-                }
-              } else {
-                logDebug('Saved session is expired, removing from localStorage');
-                localStorage.removeItem('supabase_session');
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Error reading session from localStorage:', e);
-          localStorage.removeItem('supabase_session');
-        }
-
-        // THEN get the current session from Supabase (network request)
+        // Then get the current session from Supabase (network request)
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         if (currentSession) {
-          // Save session to localStorage for persistence
-          try {
-            localStorage.setItem('supabase_session', JSON.stringify(currentSession));
-            logDebug('Session saved to localStorage after getSession');
-          } catch (e) {
-            console.warn('Failed to save session to localStorage:', e);
-          }
-        
           // Set session and user state
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
@@ -212,9 +152,11 @@ export const useAuthState = () => {
         
         // Always complete loading even if there's no session
         setIsLoading(false);
+        setIsInitialized(true);
       } catch (error) {
         console.error('Error initializing auth:', error);
         setIsLoading(false); // Complete loading to not block the UI
+        setIsInitialized(true);
       }
     };
 
@@ -252,6 +194,7 @@ export const useAuthState = () => {
     profile,
     session,
     isLoading,
+    isInitialized,
     isAuthenticated: !!user,
     isAdmin: !!profile?.is_admin,
     refreshProfile,

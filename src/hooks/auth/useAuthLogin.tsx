@@ -1,7 +1,7 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { Profile } from '@/hooks/useAuth';
-import { authenticateUser, fetchUserProfile } from '@/services/userAccountService';
+import { authenticateUser, fetchUserProfile, upsertUserProfile } from '@/services/userAccountService';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAuthLogin = () => {
@@ -81,53 +81,37 @@ export const useAuthLogin = () => {
           console.warn('Profile fetch error or missing profile, attempting to create profile');
           
           // Try to create a profile if it doesn't exist
-          try {
-            const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
-              .upsert({
-                id: user.id,
-                email: user.email,
-                email_confirmed: true,
-                updated_at: new Date().toISOString()
-              })
-              .select()
-              .single();
+          const { profile: newProfile } = await upsertUserProfile({
+            id: user.id,
+            email: user.email,
+            email_confirmed: true,
+            updated_at: new Date().toISOString()
+          });
             
-            if (createError) {
-              console.error('Error creating profile:', createError);
-            } else if (newProfile) {
-              console.log('Created new profile:', newProfile);
-              handleSuccessfulLogin(newProfile);
-              return { 
-                error: null, 
-                data: { 
-                  user,
-                  session,
-                  redirectTo: '/dashboard',
-                  profile: newProfile
-                } 
-              };
-            }
-          } catch (createErr) {
-            console.error('Exception creating profile:', createErr);
+          if (newProfile) {
+            console.log('Created new profile:', newProfile);
+            handleSuccessfulLogin(newProfile);
+            return { 
+              error: null, 
+              data: { 
+                user,
+                session,
+                redirectTo: '/dashboard',
+                profile: newProfile
+              } 
+            };
           }
         } else {
           // Ensure profile has email_confirmed = true
           if (!profile.email_confirmed) {
-            try {
-              const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ 
-                  email_confirmed: true,
-                  updated_at: new Date().toISOString() 
-                })
-                .eq('id', user.id);
-                
-              if (updateError) {
-                console.warn('Error updating profile confirmation status:', updateError);
-              }
-            } catch (updateErr) {
-              console.error('Exception updating profile:', updateErr);
+            const { profile: updatedProfile } = await upsertUserProfile({
+              id: user.id,
+              email_confirmed: true, 
+              updated_at: new Date().toISOString()
+            });
+            
+            if (updatedProfile) {
+              profile.email_confirmed = true;
             }
           }
           
@@ -148,7 +132,8 @@ export const useAuthLogin = () => {
         handleSuccessfulLogin({
           id: user.id,
           email: user.email,
-          email_confirmed: true
+          email_confirmed: true,
+          is_admin: false
         } as Profile);
         
         return {
