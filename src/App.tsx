@@ -22,25 +22,17 @@ import AdminPayments from '@/pages/admin/AdminPayments';
 import AdminInvoices from '@/pages/admin/AdminInvoices';
 
 const AdminRedirect = () => {
-  const { profile, isLoading } = useAuth();
+  const { profile } = useAuth();
   
   useEffect(() => {
-    if (!isLoading) {
-      if (profile?.is_admin) {
-        console.log("Admin redirect: Redirecting admin to overview page");
-        window.location.href = '/admin/overview';
-      } else {
-        console.log("Admin redirect: Redirecting non-admin to dashboard");
-        window.location.href = '/dashboard';
-      }
+    if (profile?.is_admin) {
+      window.location.href = '/admin/overview';
+    } else {
+      window.location.href = '/dashboard';
     }
-  }, [profile, isLoading]);
+  }, [profile]);
   
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
-    </div>
-  );
+  return null;
 };
 
 const AppRoutes = () => {

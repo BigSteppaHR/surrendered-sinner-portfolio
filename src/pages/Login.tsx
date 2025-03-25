@@ -50,7 +50,7 @@ const Login = () => {
       if (profile.email_confirmed) {
         console.log("User has confirmed email, redirecting to dashboard");
         if (profile.is_admin) {
-          navigate("/admin/overview", { replace: true });
+          navigate("/admin", { replace: true });
         } else {
           navigate("/dashboard", { replace: true });
         }
@@ -165,7 +165,7 @@ const Login = () => {
         if (result.data.profile?.email_confirmed) {
           console.log("Redirecting immediately after successful login");
           if (result.data.profile?.is_admin) {
-            navigate("/admin/overview", { replace: true });
+            navigate("/admin", { replace: true });
           } else {
             navigate("/dashboard", { replace: true });
           }

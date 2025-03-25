@@ -40,7 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   
   const authSubscription = useRef<{ unsubscribe: () => void } | null>(null);
-  const initializationComplete = useRef(false);
 
   const fetchProfile = async (currentUser: User) => {
     try {
@@ -227,12 +226,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      if (initializationComplete.current) return;
-      
       setIsLoading(true);
       
       try {
         logDebug('Initializing auth');
+        
+        try {
+          const keysToRemove: string[] = [];
+          
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+              key.startsWith('supabase') || 
+              key === 'supabase_session' ||
+              key === 'minimal_session_data' ||
+              key.startsWith('sb-') || 
+              key.includes('auth')
+            )) {
+              keysToRemove.push(key);
+            }
+          }
+          
+          keysToRemove.forEach(key => localStorage.removeItem(key));
+          console.log('Cleared auth-related localStorage items for fresh start');
+          
+          await supabase.auth.signOut({ scope: 'global' });
+          console.log('Forced sign out to reset session state');
+        } catch (clearError) {
+          console.error('Error clearing old sessions:', clearError);
+        }
         
         if (authSubscription.current) {
           authSubscription.current.unsubscribe();
@@ -241,7 +263,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, currentSession) => {
             logDebug('Auth state changed:', event);
-            console.log('Auth state changed:', event, currentSession?.user?.email);
+            console.log('Auth state changed:', event, currentSession);
             
             setSession(currentSession);
             
@@ -272,7 +294,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await fetchProfile(currentUser);
         }
         
-        initializationComplete.current = true;
         setIsInitialized(true);
         setIsLoading(false);
         
