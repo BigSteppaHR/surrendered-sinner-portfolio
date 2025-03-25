@@ -28,13 +28,17 @@ const AdminDashboard = () => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    console.log("AdminDashboard: Not authenticated, redirecting to login");
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Redirect to dashboard if authenticated but not admin
   if (!isAdmin) {
+    console.log("AdminDashboard: Not admin, redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
+
+  console.log("AdminDashboard: Rendering for admin user", profile?.id);
 
   return (
     <SidebarProvider>

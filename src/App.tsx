@@ -21,20 +21,18 @@ import AdminAnalytics from '@/pages/admin/AdminAnalytics';
 import AdminPayments from '@/pages/admin/AdminPayments';
 import AdminInvoices from '@/pages/admin/AdminInvoices';
 
-const AdminRedirect = () => {
-  const { profile } = useAuth();
-  
-  useEffect(() => {
-    if (profile?.is_admin) {
-      window.location.href = '/admin/overview';
-    } else {
-      window.location.href = '/dashboard';
-    }
-  }, [profile]);
-  
-  return null;
+// The AdminRedirect component needs to be inside the AuthProvider context
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
+  );
 };
 
+// Move AdminRedirect inside AppRoutes so it's within the AuthProvider context
 const AppRoutes = () => {
   const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
@@ -44,6 +42,22 @@ const AppRoutes = () => {
       setIsPageLoaded(true);
     }
   }, [isInitialized]);
+  
+  // AdminRedirect is now defined here inside the AuthProvider context
+  const AdminRedirect = () => {
+    const { profile } = useAuth();
+    
+    useEffect(() => {
+      console.log("AdminRedirect - Profile:", profile);
+      if (profile?.is_admin) {
+        window.location.href = '/admin/overview';
+      } else {
+        window.location.href = '/dashboard';
+      }
+    }, [profile]);
+    
+    return null;
+  };
   
   if (isLoading || !isInitialized || !isPageLoaded) {
     return (
@@ -82,16 +96,6 @@ const AppRoutes = () => {
       {/* Fallback for unknown routes */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  );
-};
-
-const App: React.FC = () => {
-  return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
   );
 };
 
