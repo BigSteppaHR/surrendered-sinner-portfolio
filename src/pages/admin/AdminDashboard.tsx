@@ -12,6 +12,7 @@ import AdminNotifications from "@/components/admin/AdminNotifications";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 const AdminDashboard = () => {
   const { isAuthenticated, isAdmin, isLoading, profile } = useAuth();
@@ -26,10 +27,11 @@ const AdminDashboard = () => {
     path: location.pathname
   });
 
+  // If still loading, show loading spinner
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
-        <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -44,7 +46,8 @@ const AdminDashboard = () => {
   if (!isAdmin) {
     console.log("AdminDashboard: Not admin, redirecting to dashboard", { 
       profile, 
-      isAdmin 
+      isAdmin,
+      is_admin: profile?.is_admin 
     });
     return <Navigate to="/dashboard" replace />;
   }
@@ -55,7 +58,7 @@ const AdminDashboard = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-[#000000] text-white">
         {isDebugMode && (
-          <div className="fixed top-0 left-0 right-0 bg-sinner-red/20 border border-sinner-red/40 p-2 text-xs text-white z-50">
+          <div className="fixed top-0 left-0 right-0 bg-[#ea384c]/20 border border-[#ea384c]/40 p-2 text-xs text-white z-50">
             <strong>DEBUG MODE</strong>: Admin User ID: {profile?.id}, Debug Enabled
           </div>
         )}

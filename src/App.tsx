@@ -81,7 +81,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 
 // AppRoutes component, within the AuthProvider context
 const AppRoutes = () => {
-  const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
+  const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
   
   useEffect(() => {
@@ -92,24 +92,33 @@ const AppRoutes = () => {
   
   // AdminRedirect component, defined within the AuthProvider context
   const AdminRedirect = () => {
-    const { isAdmin } = useAuth();
+    const { isAdmin, isAuthenticated, isLoading } = useAuth();
     
-    useEffect(() => {
-      console.log("AdminRedirect - Checking admin status:", { isAdmin });
-      if (isAdmin) {
-        console.log("AdminRedirect - Redirecting to admin overview");
-        window.location.href = '/admin/overview';
-      } else {
-        console.log("AdminRedirect - Redirecting to user dashboard");
-        window.location.href = '/dashboard';
-      }
-    }, [isAdmin]);
+    console.log("AdminRedirect - Checking authentication status:", { 
+      isAdmin, 
+      isAuthenticated, 
+      isLoading,
+      profileIsAdmin: profile?.is_admin
+    });
     
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
-      </div>
-    );
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-[#000000]">
+          <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+        </div>
+      );
+    }
+    
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
+    
+    if (isAdmin) {
+      return <Navigate to="/admin/overview" replace />;
+    } else {
+      console.log("AdminRedirect - Not admin, redirecting to user dashboard");
+      return <Navigate to="/dashboard" replace />;
+    }
   };
   
   if (isLoading || !isInitialized || !isPageLoaded) {
@@ -139,9 +148,9 @@ const AppRoutes = () => {
       <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
       <Route path="/payment" element={<UserRoute><Payment /></UserRoute>} />
       
-      {/* Admin routes - first route is a redirect handler */}
+      {/* Admin routes */}
       <Route path="/admin" element={<AdminRedirect />} />
-      <Route path="/admin/*" element={<AdminDashboard />} />
+      <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       
       {/* Fallback for unknown routes */}
       <Route path="*" element={<Navigate to="/" replace />} />

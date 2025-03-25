@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, CalendarDays, BarChart3, RefreshCw } from "lucide-react";
@@ -33,15 +33,22 @@ const formatLastActive = (date: Date | null): string => {
 };
 
 const Dashboard = () => {
-  const { profile, loginCount, lastActive } = useAuth();
+  const { profile, loginCount, lastActive, isAdmin, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [refreshQuote, setRefreshQuote] = useState(false);
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (isAuthenticated && isAdmin) {
+      console.log("Dashboard: User is admin, redirecting to admin dashboard");
+      navigate("/admin", { replace: true });
+    }
+  }, [isAuthenticated, isAdmin, navigate]);
   
   const handleRefreshQuote = () => {
     setRefreshQuote(prev => !prev);
   };
   
-  // Function to get greeting based on time of day
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -55,7 +62,6 @@ const Dashboard = () => {
       
       <div className="flex-1 overflow-auto md:ml-64">
         <div className="p-6 max-w-7xl mx-auto">
-          {/* Welcome Section with Gradient Border */}
           <div className="mb-8 p-6 rounded-lg relative overflow-hidden bg-zinc-900 backdrop-blur-sm border border-[#333333] hover:border-[#ea384c] transition-colors">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div>
