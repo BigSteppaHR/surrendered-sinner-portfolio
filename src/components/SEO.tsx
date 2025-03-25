@@ -43,8 +43,8 @@ const SEO: React.FC<SEOProps> = ({
       <meta name="twitter:image" content={ogImage} />
       
       {/* Security Headers */}
-      <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'" />
-      <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+      <meta httpEquiv="Content-Security-Policy" content="frame-ancestors 'none'" />
+      <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
       
       {/* Additional SEO Tags */}
       <meta name="robots" content="index, follow" />
@@ -53,36 +53,6 @@ const SEO: React.FC<SEOProps> = ({
       
       {/* Cookie Information */}
       <meta name="cookie-policy" content="This site uses essential cookies for authentication. Third-party cookies are used for analytics and may be blocked by your browser." />
-      
-      {/* Schema.org markup for rich results */}
-      <script type="application/ld+json">
-        {`
-          {
-            "@context": "https://schema.org",
-            "@type": "FitnessCenter",
-            "name": "Surrendered Sinner Fitness",
-            "description": "${description}",
-            "image": "${ogImage}",
-            "url": "${canonical}",
-            "telephone": "+1-800-FITNESS",
-            "address": {
-              "@type": "PostalAddress",
-              "streetAddress": "123 Fitness Street",
-              "addressLocality": "Muscle City",
-              "addressRegion": "FL",
-              "postalCode": "33101",
-              "addressCountry": "US"
-            },
-            "priceRange": "$$",
-            "openingHours": "Mo-Fr 06:00-22:00",
-            "sameAs": [
-              "https://www.facebook.com/surrenderedsinnerfitness",
-              "https://www.instagram.com/surrenderedsinnerfitness",
-              "https://www.youtube.com/surrenderedsinnerfitness"
-            ]
-          }
-        `}
-      </script>
     </Helmet>
   );
 };
