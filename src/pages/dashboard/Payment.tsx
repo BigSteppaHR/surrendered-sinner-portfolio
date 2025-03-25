@@ -6,10 +6,11 @@ import AddFundsForm from "@/components/payment/AddFundsForm";
 import { subscriptionPlans } from "@/components/payment/SubscriptionData";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCcw } from "lucide-react";
 import { checkSupabaseConnection, attemptSupabaseReconnection } from "@/utils/supabaseConnectionChecker";
 import { withErrorHandling } from "@/utils/databaseErrorHandler";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 const Payment = () => {
   const [activeTab, setActiveTab] = useState("subscription");
@@ -17,16 +18,34 @@ const Payment = () => {
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [dbConnectionStatus, setDbConnectionStatus] = useState<boolean | null>(null);
   const [stripeInitialized, setStripeInitialized] = useState<boolean>(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   
   // Check if Stripe is properly initialized
   useEffect(() => {
-    // Basic check - if window.Stripe exists, we assume the library loaded
-    const checkStripeInitialization = () => {
+    const checkStripeInitialization = async () => {
       if (typeof window !== 'undefined') {
         try {
           const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
           const isValidKey = stripeKey && stripeKey.startsWith('pk_');
-          setStripeInitialized(isValidKey);
+          
+          if (isValidKey) {
+            // Test a simple call to see if Stripe API is responding
+            try {
+              const { data, error } = await supabase.functions.invoke('stripe-helper', {
+                body: { 
+                  action: 'get-dashboard-data',
+                  params: {}
+                }
+              });
+              
+              setStripeInitialized(!error && data !== null);
+            } catch (e) {
+              console.error("Error checking Stripe API:", e);
+              setStripeInitialized(false);
+            }
+          } else {
+            setStripeInitialized(false);
+          }
         } catch (e) {
           console.error("Error checking Stripe initialization:", e);
           setStripeInitialized(false);
@@ -59,6 +78,8 @@ const Payment = () => {
     
     // Check if error might be related to database connection
     const isConnected = await checkSupabaseConnection();
+    setDbConnectionStatus(isConnected);
+    
     if (!isConnected) {
       await attemptSupabaseReconnection();
     }
@@ -70,11 +91,73 @@ const Payment = () => {
     });
   };
   
-  // Function to retry database operations
+  // Function to retry Stripe connection
+  const retryStripeConnection = async () => {
+    setIsRetrying(true);
+    setStripeError(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-helper', {
+        body: { 
+          action: 'get-dashboard-data',
+          params: {}
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message || "Failed to connect to Stripe");
+      }
+      
+      setStripeInitialized(true);
+      toast({
+        title: "Connection Restored",
+        description: "Successfully connected to the payment system",
+      });
+    } catch (error: any) {
+      console.error("Error retrying Stripe connection:", error);
+      setStripeError(error.message || "Failed to connect to payment system");
+      setStripeInitialized(false);
+      
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to payment system",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+  
+  // Function to retry database connection
   const retryDatabaseConnection = async () => {
     setDbConnectionStatus(null); // Set to loading state
-    const reconnected = await attemptSupabaseReconnection();
-    setDbConnectionStatus(reconnected);
+    
+    try {
+      const reconnected = await attemptSupabaseReconnection();
+      setDbConnectionStatus(reconnected);
+      
+      if (reconnected) {
+        toast({
+          title: "Connection Restored",
+          description: "Successfully connected to the database",
+        });
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: "Could not connect to the database. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error reconnecting to database:", error);
+      setDbConnectionStatus(false);
+      
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to database",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
@@ -91,10 +174,29 @@ const Payment = () => {
           {!stripeInitialized && (
             <Alert variant="destructive" className="mb-6 bg-red-950 border-red-800">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Payment Configuration Issue</AlertTitle>
-              <AlertDescription>
-                The payment system is not properly configured. Some payment features may be limited to test mode only.
-                {import.meta.env.DEV && " In development mode, a test Stripe key is being used."}
+              <AlertTitle>Payment System Unavailable</AlertTitle>
+              <AlertDescription className="flex flex-col space-y-2">
+                <span>The payment system is currently unavailable. Some payment features may be limited.</span>
+                <Button 
+                  onClick={retryStripeConnection}
+                  disabled={isRetrying}
+                  variant="destructive" 
+                  className="text-white bg-red-800 hover:bg-red-700 self-start mt-2 flex items-center"
+                >
+                  {isRetrying ? (
+                    <>
+                      <span className="animate-spin mr-2">
+                        <RefreshCcw className="h-4 w-4" />
+                      </span>
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      Retry Connection
+                    </>
+                  )}
+                </Button>
               </AlertDescription>
             </Alert>
           )}
@@ -105,12 +207,25 @@ const Payment = () => {
               <AlertTitle>Database Connection Error</AlertTitle>
               <AlertDescription className="flex flex-col space-y-2">
                 <span>Unable to connect to the database. Some features may not work properly.</span>
-                <button 
+                <Button 
                   onClick={retryDatabaseConnection}
-                  className="text-white bg-red-800 hover:bg-red-700 px-3 py-1 rounded text-sm self-start mt-2"
+                  disabled={dbConnectionStatus === null} // Disabled when loading
+                  className="text-white bg-red-800 hover:bg-red-700 px-3 py-1 rounded text-sm self-start mt-2 flex items-center"
                 >
-                  Retry Connection
-                </button>
+                  {dbConnectionStatus === null ? (
+                    <>
+                      <span className="animate-spin mr-2">
+                        <RefreshCcw className="h-4 w-4" />
+                      </span>
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      Retry Connection
+                    </>
+                  )}
+                </Button>
               </AlertDescription>
             </Alert>
           )}

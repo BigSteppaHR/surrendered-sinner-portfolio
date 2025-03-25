@@ -42,17 +42,22 @@ serve(async (req) => {
           throw new Error('Missing required parameters for creating a checkout session')
         }
 
-        result = await stripe.checkout.sessions.create({
-          line_items: [
-            {
-              price,
-              quantity,
-            },
-          ],
-          mode: 'payment',
-          success_url,
-          cancel_url,
-        })
+        try {
+          result = await stripe.checkout.sessions.create({
+            line_items: [
+              {
+                price,
+                quantity,
+              },
+            ],
+            mode: 'payment',
+            success_url,
+            cancel_url,
+          })
+        } catch (error) {
+          console.error('Stripe checkout session creation error:', error)
+          throw new Error(`Failed to create checkout session: ${error.message}`)
+        }
         break
       
       case 'createPaymentIntent':
@@ -62,23 +67,28 @@ serve(async (req) => {
           throw new Error('Missing required parameters for creating a payment intent')
         }
 
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount,
-          currency,
-          automatic_payment_methods: {
-            enabled: true,
-          },
-          description: description || 'Payment',
-          metadata: {
-            payment_id: payment_id || 'unknown'
+        try {
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount,
+            currency,
+            automatic_payment_methods: {
+              enabled: true,
+            },
+            description: description || 'Payment',
+            metadata: {
+              payment_id: payment_id || 'unknown'
+            }
+          })
+          
+          console.log('Payment intent created:', paymentIntent.id)
+          
+          result = {
+            client_secret: paymentIntent.client_secret,
+            payment_intent_id: paymentIntent.id
           }
-        })
-        
-        console.log('Payment intent created:', paymentIntent.id)
-        
-        result = {
-          client_secret: paymentIntent.client_secret,
-          payment_intent_id: paymentIntent.id
+        } catch (error) {
+          console.error('Stripe payment intent creation error:', error)
+          throw new Error(`Failed to create payment intent: ${error.message}`)
         }
         break
       
@@ -106,7 +116,12 @@ serve(async (req) => {
           throw new Error('Missing payment intent ID')
         }
         
-        result = await stripe.paymentIntents.retrieve(paymentIntentId)
+        try {
+          result = await stripe.paymentIntents.retrieve(paymentIntentId)
+        } catch (error) {
+          console.error('Error retrieving payment intent:', error)
+          throw new Error(`Failed to retrieve payment intent: ${error.message}`)
+        }
         break
         
       case 'listPaymentMethods':
@@ -115,10 +130,15 @@ serve(async (req) => {
           throw new Error('Missing customer ID')
         }
         
-        result = await stripe.paymentMethods.list({
-          customer: customerId,
-          type: 'card',
-        })
+        try {
+          result = await stripe.paymentMethods.list({
+            customer: customerId,
+            type: 'card',
+          })
+        } catch (error) {
+          console.error('Error listing payment methods:', error)
+          throw new Error(`Failed to list payment methods: ${error.message}`)
+        }
         break
       
       // Handle dashboard data request for admin
@@ -173,10 +193,10 @@ serve(async (req) => {
             { month: 'Jun', revenue: 8940 }
           ],
           subscriptionDistribution: [
-            { name: 'Basic Plan', value: 45, color: '#9b87f5' },
-            { name: 'Premium Plan', value: 30, color: '#7E69AB' },
-            { name: 'Elite Plan', value: 15, color: '#6E59A5' },
-            { name: 'Custom Plan', value: 10, color: '#5C4A9F' }
+            { name: 'Basic Plan', value: 45, color: '#ea384c' },
+            { name: 'Premium Plan', value: 30, color: '#c42e3e' },
+            { name: 'Elite Plan', value: 15, color: '#9c2531' },
+            { name: 'Custom Plan', value: 10, color: '#6e1a22' }
           ]
         }
         break
@@ -201,7 +221,11 @@ serve(async (req) => {
     
     // Return error response with CORS headers
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+        errorCode: error.code || 'unknown_error'
+      }),
       { 
         status: 400,
         headers: corsHeaders
