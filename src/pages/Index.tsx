@@ -50,9 +50,7 @@ const Index = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <SEO 
-        canonical={canonicalUrl}
-      />
+      <SEO canonical={canonicalUrl} />
       
       <Navbar />
       <Hero />
