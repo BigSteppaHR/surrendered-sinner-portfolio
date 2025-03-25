@@ -32,6 +32,53 @@ const App: React.FC = () => {
   );
 };
 
+// Protected route components for user and admin routes
+const UserRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (isAdmin) {
+    console.log("User trying to access admin-only route, redirecting to admin dashboard");
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!isAdmin) {
+    console.log("Admin trying to access user-only route, redirecting to user dashboard");
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 // AppRoutes component, within the AuthProvider context
 const AppRoutes = () => {
   const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
@@ -82,17 +129,17 @@ const AppRoutes = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/confirm-email" element={<ConfirmEmail />} />
       
-      {/* Dashboard routes */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/schedule" element={<Schedule />} />
-      <Route path="/plans" element={<TrainingPlans />} />
-      <Route path="/progress" element={<Progress />} />
-      <Route path="/support" element={<Support />} />
-      <Route path="/account" element={<Account />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/payment" element={<Payment />} />
+      {/* User dashboard routes - protected with UserRoute */}
+      <Route path="/dashboard" element={<UserRoute><Dashboard /></UserRoute>} />
+      <Route path="/schedule" element={<UserRoute><Schedule /></UserRoute>} />
+      <Route path="/plans" element={<UserRoute><TrainingPlans /></UserRoute>} />
+      <Route path="/progress" element={<UserRoute><Progress /></UserRoute>} />
+      <Route path="/support" element={<UserRoute><Support /></UserRoute>} />
+      <Route path="/account" element={<UserRoute><Account /></UserRoute>} />
+      <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
+      <Route path="/payment" element={<UserRoute><Payment /></UserRoute>} />
       
-      {/* Admin routes */}
+      {/* Admin routes - first route is a redirect handler */}
       <Route path="/admin" element={<AdminRedirect />} />
       <Route path="/admin/*" element={<AdminDashboard />} />
       

@@ -34,7 +34,8 @@ const Dashboard = () => {
   useEffect(() => {
     if (!isInitialized) return;
     
-    if (!isLoading && isAuthenticated && profile?.is_admin) {
+    if (!isLoading && isAuthenticated && isAdmin) {
+      console.log("Dashboard: User is admin, redirecting to admin dashboard");
       navigate("/admin", { replace: true });
       return;
     }
