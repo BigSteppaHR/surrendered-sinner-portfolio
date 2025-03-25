@@ -1,28 +1,25 @@
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@/hooks/useAuth';
-import HomePage from '@/pages/HomePage';
+import { AuthProvider } from '@/components/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
+import Index from '@/pages/Index';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import ResetPassword from '@/pages/ResetPassword';
 import ConfirmEmail from '@/pages/ConfirmEmail';
 import Dashboard from '@/pages/dashboard/Dashboard';
 import Schedule from '@/pages/dashboard/Schedule';
-import Plans from '@/pages/dashboard/Plans';
+import TrainingPlans from '@/pages/dashboard/TrainingPlans';
 import Progress from '@/pages/dashboard/Progress';
 import Support from '@/pages/dashboard/Support';
 import Account from '@/pages/dashboard/Account';
 import Settings from '@/pages/dashboard/Settings';
 import Payment from '@/pages/dashboard/Payment';
-import AdminOverview from '@/pages/admin/AdminOverview';
-import AdminSessions from '@/pages/admin/AdminSessions';
-import AdminQuotes from '@/pages/admin/AdminQuotes';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminAnalytics from '@/pages/admin/AdminAnalytics';
 import AdminPayments from '@/pages/admin/AdminPayments';
 import AdminInvoices from '@/pages/admin/AdminInvoices';
-import AdminTickets from '@/pages/admin/AdminTickets';
-import AdminNotifications from '@/pages/admin/AdminNotifications';
-import AdminAnalytics from '@/pages/admin/AdminAnalytics';
-import AdminSettings from '@/pages/admin/AdminSettings';
 
 const AdminRedirect = () => {
   const { profile } = useAuth();
@@ -59,7 +56,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<Index />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -68,7 +65,7 @@ const AppRoutes = () => {
       {/* Dashboard routes */}
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/schedule" element={<Schedule />} />
-      <Route path="/plans" element={<Plans />} />
+      <Route path="/plans" element={<TrainingPlans />} />
       <Route path="/progress" element={<Progress />} />
       <Route path="/support" element={<Support />} />
       <Route path="/account" element={<Account />} />
@@ -77,15 +74,10 @@ const AppRoutes = () => {
       
       {/* Admin routes */}
       <Route path="/admin" element={<AdminRedirect />} />
-      <Route path="/admin/overview" element={<AdminOverview />} />
-      <Route path="/admin/sessions" element={<AdminSessions />} />
-      <Route path="/admin/quotes" element={<AdminQuotes />} />
+      <Route path="/admin/overview" element={<AdminDashboard />} />
+      <Route path="/admin/analytics" element={<AdminAnalytics />} />
       <Route path="/admin/payments" element={<AdminPayments />} />
       <Route path="/admin/invoices" element={<AdminInvoices />} />
-      <Route path="/admin/tickets" element={<AdminTickets />} />
-      <Route path="/admin/notifications" element={<AdminNotifications />} />
-      <Route path="/admin/analytics" element={<AdminAnalytics />} />
-      <Route path="/admin/settings" element={<AdminSettings />} />
       
       {/* Fallback for unknown routes */}
       <Route path="*" element={<Navigate to="/" replace />} />

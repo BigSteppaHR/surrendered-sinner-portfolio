@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import { User, Lock, Bell, Shield, Loader2 } from "lucide-react";
 import DashboardNav from "@/components/dashboard/DashboardNav";
 
 const Settings = () => {
-  const { profile, updateProfile } = useAuth();
+  const { profile } = useAuth();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [email, setEmail] = useState(profile?.email || "");
@@ -40,7 +39,7 @@ const Settings = () => {
     } catch (error) {
       toast({
         title: "Error updating profile",
-        description: error.message || "Failed to update profile",
+        description: "Failed to update profile",
         variant: "destructive",
       });
     } finally {
