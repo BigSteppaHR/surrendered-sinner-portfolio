@@ -18,10 +18,7 @@ const DashboardLayout = () => {
   const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
   const location = useLocation();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const { toast } = useToast();
-  const initialLoadComplete = useRef(false);
-  const authCheckStarted = useRef(false);
   
   const isPublicPage = publicPages.includes(location.pathname);
   const isDebugMode = profile?.debug_mode || false;
@@ -41,42 +38,14 @@ const DashboardLayout = () => {
     }
   }, [isAuthenticated, isLoading, isInitialized, isAdmin, location.pathname, profile, isDebugMode]);
   
-  // Set a shorter timeout for auth check to prevent showing loader indefinitely
+  // Set page as loaded when auth is initialized
   useEffect(() => {
-    if (!authCheckStarted.current && !initialLoadComplete.current) {
-      authCheckStarted.current = true;
-      
-      logDebug("Auth state:", { 
-        isAuthenticated, 
-        isInitialized, 
-        isLoading,
-        hasProfile: !!profile
-      });
-      
-      // Only set page as loaded after auth is initialized
-      if (isInitialized) {
-        setIsPageLoaded(true);
-        initialLoadComplete.current = true;
-      }
-      
-      // Set a timeout to prevent infinite loading
-      const timer = setTimeout(() => {
-        setLoadingTimeout(true);
-        
-        if (!isAuthenticated && !isLoading) {
-          toast({
-            title: "Session expired",
-            description: "Your session has expired. Please log in again.",
-            variant: "destructive"
-          });
-        }
-      }, 3000); // Shorter 3 second timeout
-      
-      return () => clearTimeout(timer);
+    if (isInitialized) {
+      setIsPageLoaded(true);
     }
-  }, [isInitialized, isAuthenticated, profile, isLoading, toast, isDebugMode]);
+  }, [isInitialized]);
   
-  // Show loading state while checking auth, but with a timeout
+  // Show loading state while checking auth
   if (isLoading || !isInitialized || !isPageLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">

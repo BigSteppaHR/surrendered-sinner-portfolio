@@ -1,9 +1,8 @@
 
 import React, { ReactNode, createContext, useState, useEffect, useRef } from 'react';
-import { useAuthState } from '@/hooks/useAuthState';
-import { useAuthOperations } from '@/hooks/auth';
-import { AuthContextType } from '@/hooks/useAuth';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { Profile } from '@/hooks/useAuth';
 
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
@@ -11,197 +10,304 @@ const logDebug = (message: string, ...args: any[]) => {
   if (isDev) console.debug(`[AuthProvider] ${message}`, ...args);
 };
 
+export type AuthContextType = {
+  user: User | null;
+  profile: Profile | null;
+  session: Session | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isLoading: boolean;
+  isInitialized: boolean;
+  login: (email: string, password: string) => Promise<{ error: any | null; data: any | null }>;
+  signup: (email: string, password: string, fullName: string) => Promise<{ 
+    error: any | null, 
+    data: any | null 
+  }>;
+  logout: () => Promise<{ success: boolean; redirectTo?: string }>;
+  refreshProfile: () => Promise<Profile | null>;
+  resetPassword: (email: string) => Promise<{ error: any | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: any | null }>;
+};
+
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // Get auth state and operations from custom hooks
-  const authState = useAuthState();
-  const authOperations = useAuthOperations();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const initializeAttempted = useRef(false);
-  const sessionRefreshInterval = useRef<number | null>(null);
-  const authLoaded = useRef(false);
-  const isRefreshingProfile = useRef(false);
-  const pendingTimeouts = useRef<NodeJS.Timeout[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Track auth operations
+  const authSubscription = useRef<{ unsubscribe: () => void } | null>(null);
 
-  // Setup supabase client and initialize session
-  useEffect(() => {
-    // Initialize auth session only once
-    const initializeAuth = async () => {
-      if (initializeAttempted.current) return;
+  // This function will fetch the profile data when a user is authenticated
+  const fetchProfile = async (currentUser: User) => {
+    try {
+      logDebug('Fetching profile for user:', currentUser.id);
       
-      initializeAttempted.current = true;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+      
+      if (data) {
+        logDebug('Profile loaded:', data);
+        setIsAdmin(!!data.is_admin);
+        setProfile(data);
+        return data;
+      }
+      
+      // Create a basic profile if one doesn't exist
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: currentUser.id,
+          email: currentUser.email,
+          email_confirmed: !!currentUser.email_confirmed_at,
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        return null;
+      }
+      
+      logDebug('Created new profile:', newProfile);
+      setIsAdmin(!!newProfile.is_admin);
+      setProfile(newProfile);
+      return newProfile;
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      return null;
+    }
+  };
+
+  // Handle login
+  const login = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) return { error, data: null };
+      
+      if (data.user) {
+        const profileData = await fetchProfile(data.user);
+        return { error: null, data: { user: data.user, session: data.session, profile: profileData } };
+      }
+      
+      return { error: null, data };
+    } catch (error: any) {
+      return { error, data: null };
+    }
+  };
+
+  // Handle signup
+  const signup = async (email: string, password: string, fullName: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+      
+      if (error) return { error, data: null };
+      
+      return { error: null, data };
+    } catch (error: any) {
+      return { error, data: null };
+    }
+  };
+
+  // Handle logout
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      
+      if (error) throw error;
+      
+      // Clear state
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setIsAdmin(false);
+      
+      // Clear all auth-related data from localStorage
+      const keysToRemove: string[] = [];
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('supabase') || 
+          key === 'supabase_session' ||
+          key === 'minimal_session_data' ||
+          key.startsWith('sb-') || 
+          key.includes('auth')
+        )) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Clear auth-related cookies
+      document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.trim().split('=');
+        if (name && (
+          name.includes('auth') || 
+          name.includes('supabase') || 
+          name.startsWith('sb-')
+        )) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+      });
+      
+      return { success: true, redirectTo: '/login' };
+    } catch (error: any) {
+      console.error('Logout error:', error.message);
+      return { success: false };
+    }
+  };
+
+  // Reset password
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+      
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  // Update password
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  // Refresh profile
+  const refreshProfile = async (): Promise<Profile | null> => {
+    if (!user) return null;
+    
+    try {
+      const profileData = await fetchProfile(user);
+      return profileData;
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+      return null;
+    }
+  };
+
+  // Initialize auth on mount
+  useEffect(() => {
+    const initializeAuth = async () => {
       setIsLoading(true);
       
       try {
-        logDebug('Initializing auth provider...');
+        logDebug('Initializing auth');
         
-        // Set up the auth state listener first to catch any events during initialization
+        // First set up the auth state listener
+        if (authSubscription.current) {
+          authSubscription.current.unsubscribe();
+        }
+        
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            logDebug('Auth state changed:', event, session ? 'Session active' : 'No session');
+          async (event, currentSession) => {
+            logDebug('Auth state changed:', event);
             
-            // Minimize localStorage usage - only cache minimal session data
-            if (session) {
-              try {
-                // Only store essential session info
-                const minimalSession = {
-                  expires_at: session.expires_at,
-                  user_id: session.user.id
-                };
-                localStorage.setItem('minimal_session_data', JSON.stringify(minimalSession));
-                logDebug('Minimal session data saved on auth state change');
-              } catch (e) {
-                console.warn('Failed to save minimal session data:', e);
-              }
+            // Update session state
+            setSession(currentSession);
+            
+            // Update user state
+            const currentUser = currentSession?.user ?? null;
+            setUser(currentUser);
+            
+            // If we have a user, fetch their profile
+            if (currentUser) {
+              await fetchProfile(currentUser);
             } else {
-              // Remove session data if logged out
-              try {
-                localStorage.removeItem('minimal_session_data');
-                logDebug('Session data removed on logout');
-              } catch (e) {
-                console.warn('Failed to remove session data:', e);
-              }
-            }
-            
-            // Don't try to refresh profile during initialization to avoid loops
-            if (session?.user && authLoaded.current && !isRefreshingProfile.current) {
-              // Set a debounce to avoid rapid refresh calls
-              isRefreshingProfile.current = true;
-              
-              // Create a timeout but don't return it - instead store it for cleanup
-              const timeoutId = setTimeout(async () => {
-                try {
-                  await authState.refreshProfile();
-                } catch (error) {
-                  console.error("Error refreshing profile:", error);
-                } finally {
-                  isRefreshingProfile.current = false;
-                }
-              }, 300);
-              
-              // Store timeout for later cleanup
-              pendingTimeouts.current.push(timeoutId);
+              setProfile(null);
+              setIsAdmin(false);
             }
           }
         );
         
-        // Get session to ensure we have the most up-to-date state
-        const { data } = await supabase.auth.getSession();
-        logDebug('Current session:', data.session ? 'Active' : 'None');
+        authSubscription.current = subscription;
         
-        // If session exists, refresh profile data
-        if (data.session?.user) {
-          try {
-            isRefreshingProfile.current = true;
-            await authState.refreshProfile();
-            isRefreshingProfile.current = false;
-          } catch (error) {
-            console.error("Error refreshing initial profile:", error);
-            isRefreshingProfile.current = false;
-          }
+        // Then check if we have an existing session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        // Update session state
+        setSession(currentSession);
+        
+        // Update user state
+        const currentUser = currentSession?.user ?? null;
+        setUser(currentUser);
+        
+        // If we have a user, fetch their profile
+        if (currentUser) {
+          await fetchProfile(currentUser);
         }
         
-        // Always mark as initialized and loaded even if there's no session
         setIsInitialized(true);
-        authLoaded.current = true;
         setIsLoading(false);
         
-        // Set up automatic session refresh with a more conservative interval
-        if (sessionRefreshInterval.current) {
-          clearInterval(sessionRefreshInterval.current);
-          sessionRefreshInterval.current = null;
-        }
+        logDebug('Auth initialized', { user: !!currentUser, session: !!currentSession });
         
-        // Only set up refreshing if there's an active session
-        if (data.session) {
-          // Calculate refresh time - refresh when 80% of the session lifetime has passed
-          // Default Supabase JWT lifetime is 1 hour (3600 seconds)
-          const refreshInterval = Math.floor(3600 * 0.8) * 1000; // 80% of session lifetime in ms
-          
-          sessionRefreshInterval.current = window.setInterval(async () => {
-            if (!document.hidden) { // Only refresh when tab is visible
-              try {
-                // Check if we still have a session before attempting refresh
-                const { data: currentSession } = await supabase.auth.getSession();
-                if (currentSession.session) {
-                  logDebug("Refreshing session at", new Date().toISOString());
-                  const { data, error } = await supabase.auth.refreshSession();
-                  
-                  if (error) {
-                    console.error("Session refresh failed:", error);
-                  } else if (data.session) {
-                    logDebug("Session refreshed successfully at", new Date().toISOString());
-                    
-                    // Save minimal refreshed session data
-                    try {
-                      const minimalSession = {
-                        expires_at: data.session.expires_at,
-                        user_id: data.session.user.id
-                      };
-                      localStorage.setItem('minimal_session_data', JSON.stringify(minimalSession));
-                      logDebug('Minimal session data updated after refresh');
-                    } catch (e) {
-                      console.warn('Failed to save minimal session data:', e);
-                    }
-                  }
-                } else {
-                  logDebug("No active session to refresh");
-                  // Clear the interval if there's no session
-                  if (sessionRefreshInterval.current) {
-                    clearInterval(sessionRefreshInterval.current);
-                    sessionRefreshInterval.current = null;
-                  }
-                }
-              } catch (err) {
-                console.error("Error in refresh interval:", err);
+        // Set up session refresh
+        const refreshInterval = setInterval(async () => {
+          if (!document.hidden) { // Only refresh when tab is visible
+            try {
+              const { data } = await supabase.auth.getSession();
+              if (data.session) {
+                await supabase.auth.refreshSession();
               }
+            } catch (err) {
+              console.error("Error refreshing session:", err);
             }
-          }, refreshInterval || 4 * 60 * 1000); // Fallback to 4 minutes if calculation fails
-          
-          logDebug(`Session refresh interval set for ${refreshInterval / 1000} seconds`);
-        }
+          }
+        }, 4 * 60 * 1000); // Refresh every 4 minutes
         
-        return () => {
-          subscription.unsubscribe();
-        };
+        return () => clearInterval(refreshInterval);
       } catch (error) {
         console.error('Error initializing auth:', error);
-        setIsInitialized(true); // Still mark as initialized to not block the UI
-        authLoaded.current = true;
+        setIsInitialized(true);
         setIsLoading(false);
       }
     };
 
     initializeAuth();
-
-    // Clean up all pending timeouts and intervals when unmounting
+    
     return () => {
-      // Clear all pending timeouts
-      pendingTimeouts.current.forEach(timeoutId => {
-        clearTimeout(timeoutId);
-      });
-      pendingTimeouts.current = [];
-      
-      // Clear session refresh interval
-      if (sessionRefreshInterval.current) {
-        clearInterval(sessionRefreshInterval.current);
-        sessionRefreshInterval.current = null;
+      if (authSubscription.current) {
+        authSubscription.current.unsubscribe();
       }
     };
-  }, [authState]);
+  }, []);
 
-  // Combine state and operations
-  const value: AuthContextType = {
-    ...authState,
-    ...authOperations,
-    // Override with the refreshProfile from authState which has the correct signature
-    refreshProfile: authState.refreshProfile,
-    isInitialized,
-    isLoading, // Make sure isLoading is exposed in the context
-  };
-
+  // While loading, show a spinner
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
@@ -209,6 +315,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       </div>
     );
   }
+
+  // Provide auth context
+  const value: AuthContextType = {
+    user,
+    profile,
+    session,
+    isAuthenticated: !!user,
+    isAdmin,
+    isLoading,
+    isInitialized,
+    login,
+    signup,
+    logout,
+    refreshProfile,
+    resetPassword,
+    updatePassword,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

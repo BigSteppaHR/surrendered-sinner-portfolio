@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -17,7 +16,7 @@ const loginSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
-export default function Login() {
+const Login = () => {
   const { login, isAuthenticated, profile, isLoading, isInitialized } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -36,7 +35,6 @@ export default function Login() {
     };
   }, []);
 
-  // Handle authentication state changes and redirects
   useEffect(() => {
     console.log("Login page - Auth state:", { 
       isAuthenticated, 
@@ -46,11 +44,9 @@ export default function Login() {
       redirectAttempted: redirectAttemptedRef.current
     });
     
-    // Only proceed with redirects if auth is initialized and not loading
     if (isInitialized && !isLoading && isAuthenticated && profile) {
       console.log("Login: User authenticated, redirecting based on profile:", profile);
       
-      // If the user's email is confirmed, redirect them to the appropriate dashboard
       if (profile.email_confirmed) {
         console.log("User has confirmed email, redirecting to dashboard");
         if (profile.is_admin) {
@@ -59,7 +55,6 @@ export default function Login() {
           navigate("/dashboard", { replace: true });
         }
       } else if (!showEmailVerification) {
-        // If email not confirmed, show verification dialog
         setVerificationEmail(profile.email || "");
         setShowEmailVerification(true);
       }
@@ -116,7 +111,7 @@ export default function Login() {
     console.log("Login form submitted with:", values.email);
     setIsSubmitting(true);
     setLoginError(null);
-    redirectAttemptedRef.current = false; // Reset redirect flag to ensure we try again
+    redirectAttemptedRef.current = false;
     
     try {
       const result = await login(values.email, values.password);
@@ -160,7 +155,6 @@ export default function Login() {
           });
         }
       } else if (result.data?.user) {
-        // Reset redirect flag to allow proper redirection
         redirectAttemptedRef.current = false;
         
         toast({
@@ -168,7 +162,6 @@ export default function Login() {
           description: "Welcome back!",
         });
         
-        // Immediately redirect if we have profile info
         if (result.data.profile?.email_confirmed) {
           console.log("Redirecting immediately after successful login");
           if (result.data.profile?.is_admin) {
@@ -206,7 +199,6 @@ export default function Login() {
     navigate("/reset-password");
   };
 
-  // Show loading state while auth is initializing
   if (isLoading || !isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -245,4 +237,6 @@ export default function Login() {
       </div>
     </AnimatedBackground>
   );
-}
+};
+
+export default Login;

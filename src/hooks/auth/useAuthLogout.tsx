@@ -29,7 +29,6 @@ export const useAuthLogout = () => {
           key === 'supabase_session' ||
           key === 'minimal_session_data' ||
           key.startsWith('sb-') || 
-          key.startsWith('temp_creds_') ||
           key.includes('auth')
         )) {
           keysToRemove.push(key);
