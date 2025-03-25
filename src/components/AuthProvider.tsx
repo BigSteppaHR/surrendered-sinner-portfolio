@@ -3,7 +3,6 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/hooks/useAuth';
 
-// Helper for conditional logging
 const isDev = import.meta.env.DEV;
 const logDebug = (message: string, ...args: any[]) => {
   if (isDev) console.debug(`[AuthProvider] ${message}`, ...args);
@@ -17,6 +16,8 @@ export type AuthContextType = {
   isAdmin: boolean;
   isLoading: boolean;
   isInitialized: boolean;
+  loginCount: number;
+  lastActive: Date | null;
   login: (email: string, password: string) => Promise<{ error: any | null; data: any | null }>;
   signup: (email: string, password: string, fullName: string) => Promise<{ 
     error: any | null, 
@@ -38,10 +39,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Track auth operations
   const authSubscription = useRef<{ unsubscribe: () => void } | null>(null);
 
-  // This function will fetch the profile data when a user is authenticated
   const fetchProfile = async (currentUser: User) => {
     try {
       logDebug('Fetching profile for user:', currentUser.id);
@@ -61,17 +60,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logDebug('Profile loaded:', data);
         setIsAdmin(!!data.is_admin);
         setProfile(data);
+        
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              last_active_at: new Date().toISOString()
+            })
+            .eq('id', currentUser.id);
+            
+          logDebug('Updated last active time');
+        } catch (updateError) {
+          console.error('Error updating last active time:', updateError);
+        }
+        
         return data;
       }
       
-      // Create a basic profile if one doesn't exist
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
         .upsert({
           id: currentUser.id,
           email: currentUser.email,
           email_confirmed: !!currentUser.email_confirmed_at,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          login_count: 1,
+          last_active_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -91,7 +105,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Handle login
   const login = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -109,7 +122,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Handle signup
   const signup = async (email: string, password: string, fullName: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -130,20 +142,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Handle logout
   const logout = async () => {
     try {
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       
       if (error) throw error;
       
-      // Clear state
       setUser(null);
       setSession(null);
       setProfile(null);
       setIsAdmin(false);
       
-      // Clear all auth-related data from localStorage
       const keysToRemove: string[] = [];
       
       for (let i = 0; i < localStorage.length; i++) {
@@ -161,7 +170,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       keysToRemove.forEach(key => localStorage.removeItem(key));
       
-      // Clear auth-related cookies
       document.cookie.split(';').forEach(cookie => {
         const [name] = cookie.trim().split('=');
         if (name && (
@@ -180,7 +188,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Reset password
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -193,7 +200,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Update password
   const updatePassword = async (newPassword: string) => {
     try {
       const { error } = await supabase.auth.updateUser({
@@ -206,7 +212,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Refresh profile
   const refreshProfile = async (): Promise<Profile | null> => {
     if (!user) return null;
     
@@ -219,7 +224,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Initialize auth on mount with session fixing
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
@@ -227,9 +231,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         logDebug('Initializing auth');
         
-        // First attempt to fix any session issues by signing out and clearing storage
         try {
-          // Clear all auth-related data from localStorage
           const keysToRemove: string[] = [];
           
           for (let i = 0; i < localStorage.length; i++) {
@@ -248,14 +250,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           keysToRemove.forEach(key => localStorage.removeItem(key));
           console.log('Cleared auth-related localStorage items for fresh start');
           
-          // Force sign out to clear any server-side session too
           await supabase.auth.signOut({ scope: 'global' });
           console.log('Forced sign out to reset session state');
         } catch (clearError) {
           console.error('Error clearing old sessions:', clearError);
         }
         
-        // First set up the auth state listener
         if (authSubscription.current) {
           authSubscription.current.unsubscribe();
         }
@@ -263,16 +263,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, currentSession) => {
             logDebug('Auth state changed:', event);
-            console.log('Auth state changed:', event, currentSession); // Debugging line
+            console.log('Auth state changed:', event, currentSession);
             
-            // Update session state
             setSession(currentSession);
             
-            // Update user state
             const currentUser = currentSession?.user ?? null;
             setUser(currentUser);
             
-            // If we have a user, fetch their profile
             if (currentUser) {
               await fetchProfile(currentUser);
             } else {
@@ -284,20 +281,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         authSubscription.current = subscription;
         
-        // Then check if we have an existing session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        // Log session on mount for debugging
-        console.log('Session on mount:', currentSession); // Debugging line
+        console.log('Session on mount:', currentSession);
         
-        // Update session state
         setSession(currentSession);
         
-        // Update user state
         const currentUser = currentSession?.user ?? null;
         setUser(currentUser);
         
-        // If we have a user, fetch their profile
         if (currentUser) {
           await fetchProfile(currentUser);
         }
@@ -307,9 +299,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         logDebug('Auth initialized', { user: !!currentUser, session: !!currentSession });
         
-        // Set up session refresh
         const refreshInterval = setInterval(async () => {
-          if (!document.hidden) { // Only refresh when tab is visible
+          if (!document.hidden) {
             try {
               const { data } = await supabase.auth.getSession();
               if (data.session) {
@@ -319,7 +310,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               console.error("Error refreshing session:", err);
             }
           }
-        }, 4 * 60 * 1000); // Refresh every 4 minutes
+        }, 4 * 60 * 1000);
         
         return () => clearInterval(refreshInterval);
       } catch (error) {
@@ -338,7 +329,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // While loading, show a spinner
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
@@ -347,7 +337,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  // Provide auth context
   const value: AuthContextType = {
     user,
     profile,
@@ -356,6 +345,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAdmin,
     isLoading,
     isInitialized,
+    loginCount: profile?.login_count || 0,
+    lastActive: profile?.last_active_at ? new Date(profile?.last_active_at) : null,
     login,
     signup,
     logout,

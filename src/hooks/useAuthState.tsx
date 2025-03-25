@@ -36,6 +36,28 @@ export const useAuthState = () => {
       
       if (!error && data) {
         logDebug('Profile found:', data);
+        
+        // Update login count when profile is refreshed after successful login
+        if (session) {
+          try {
+            await supabase
+              .from('profiles')
+              .update({
+                login_count: (data.login_count || 0) + 1,
+                last_active_at: new Date().toISOString()
+              })
+              .eq('id', currentUser.id);
+            
+            // Update the local data with the new values
+            data.login_count = (data.login_count || 0) + 1;
+            data.last_active_at = new Date().toISOString();
+            
+            logDebug('Updated login count and activity time');
+          } catch (updateError) {
+            console.error('Error updating login metrics:', updateError);
+          }
+        }
+        
         return data;
       }
       
@@ -51,7 +73,9 @@ export const useAuthState = () => {
                 id: currentUser.id,
                 email: currentUser.email,
                 email_confirmed: !!currentUser.email_confirmed_at,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
+                login_count: 1,
+                last_active_at: new Date().toISOString()
               })
               .select()
               .single();
@@ -73,7 +97,9 @@ export const useAuthState = () => {
         id: currentUser.id,
         email: currentUser.email,
         email_confirmed: !!currentUser.email_confirmed_at,
-        is_admin: false
+        is_admin: false,
+        login_count: 1,
+        last_active_at: new Date().toISOString()
       };
     } catch (error: any) {
       console.error('Exception in refreshProfileData:', error.message);
@@ -82,7 +108,9 @@ export const useAuthState = () => {
         id: currentUser.id,
         email: currentUser.email,
         email_confirmed: !!currentUser.email_confirmed_at,
-        is_admin: false
+        is_admin: false,
+        login_count: 0,
+        last_active_at: new Date().toISOString()
       };
     }
   };
@@ -198,5 +226,7 @@ export const useAuthState = () => {
     isAuthenticated: !!user,
     isAdmin: !!profile?.is_admin,
     refreshProfile,
+    loginCount: profile?.login_count || 0,
+    lastActive: profile?.last_active_at ? new Date(profile.last_active_at) : null
   };
 };

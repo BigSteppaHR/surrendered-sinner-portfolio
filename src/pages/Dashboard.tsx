@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,7 +16,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
-  const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
+  const { isAuthenticated, isLoading, profile, isInitialized, isAdmin, loginCount, lastActive } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -27,53 +26,44 @@ const Dashboard = () => {
   const [subscriptionData, setSubscriptionData] = useState(null);
   
   useEffect(() => {
-    // Only set page as loaded after auth is initialized
     if (isInitialized) {
       setIsPageLoaded(true);
     }
   }, [isInitialized]);
   
   useEffect(() => {
-    // Only redirect once auth is initialized to prevent flashing
     if (!isInitialized) return;
     
-    // If authenticated admin, redirect to admin dashboard
     if (!isLoading && isAuthenticated && profile?.is_admin) {
       navigate("/admin", { replace: true });
       return;
     }
     
-    // If not authenticated, redirect to login
     if (!isLoading && !isAuthenticated) {
       navigate("/login", { replace: true });
       return;
     }
     
-    // If authenticated but email not confirmed, redirect to confirmation page
     if (!isLoading && isAuthenticated && profile && !profile.email_confirmed) {
       navigate("/confirm-email", { state: { email: profile.email }, replace: true });
       return;
     }
     
-    // If coming from verification page, show welcome toast
     if (location.state?.fromVerification) {
       toast({
         title: "Welcome to your dashboard!",
         description: "Your email has been verified and you're now logged in.",
       });
       
-      // Clear the state to prevent showing toast on refresh
       window.history.replaceState({}, document.title);
     }
   }, [isAuthenticated, isLoading, profile, navigate, isInitialized, location.state, toast, isAdmin]);
   
-  // Fetch user data when profile is available
   useEffect(() => {
     const fetchUserData = async () => {
       if (!isAuthenticated || !profile?.id) return;
       
       try {
-        // Fetch upcoming sessions
         const { data: sessionData, error: sessionError } = await supabase
           .from('user_sessions')
           .select('*')
@@ -84,7 +74,6 @@ const Dashboard = () => {
           
         if (sessionError) throw sessionError;
         
-        // Fetch user's workout plans
         const { data: planData, error: planError } = await supabase
           .from('workout_plans')
           .select('*')
@@ -94,7 +83,6 @@ const Dashboard = () => {
           
         if (planError) throw planError;
         
-        // Fetch subscription data
         const { data: subData, error: subError } = await supabase
           .from('subscriptions')
           .select('*')
@@ -104,7 +92,6 @@ const Dashboard = () => {
           .single();
           
         if (subError && subError.code !== 'PGRST116') {
-          // PGRST116 is "no rows returned" - we can ignore this
           throw subError;
         }
         
@@ -120,7 +107,26 @@ const Dashboard = () => {
     fetchUserData();
   }, [isAuthenticated, profile]);
   
-  // Show loading state while checking auth
+  const formatLastActive = () => {
+    if (!lastActive) return 'Never';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - lastActive.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    if (diffDays > 0) {
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    } else if (diffHours > 0) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else if (diffMinutes > 0) {
+      return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    } else {
+      return 'Just now';
+    }
+  };
+  
   if (isLoading || !isInitialized || !isPageLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -129,7 +135,6 @@ const Dashboard = () => {
     );
   }
   
-  // Don't render anything if not authenticated (will redirect)
   if (!isAuthenticated) {
     return null;
   }
@@ -140,7 +145,6 @@ const Dashboard = () => {
       
       <div className="flex-1 overflow-auto md:ml-64">
         <div className="p-6 max-w-7xl mx-auto">
-          {/* Welcome section with animated gradient border */}
           <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-[#ea384c] after:via-red-500 after:to-[#ea384c] after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-zinc-900 backdrop-blur-sm">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div>
@@ -148,6 +152,10 @@ const Dashboard = () => {
                   Welcome Back, {profile?.full_name || 'Athlete'}!
                 </h1>
                 <p className="text-gray-400 mt-1">Your training journey continues today</p>
+                <div className="mt-2 text-sm text-gray-500 flex flex-wrap gap-4">
+                  <span>Visits: {loginCount}</span>
+                  <span>Last activity: {formatLastActive()}</span>
+                </div>
               </div>
               <div className="mt-4 md:mt-0 w-full md:w-auto">
                 <DailyQuote />
@@ -155,7 +163,6 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Next session highlight card */}
           {upcomingSessions && upcomingSessions.length > 0 ? (
             <Card className="bg-zinc-900 border-zinc-800 mb-6 overflow-hidden relative">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#ea384c]/10 to-red-800/10 rounded-bl-full"></div>
@@ -222,7 +229,6 @@ const Dashboard = () => {
             <div className="lg:col-span-8 space-y-6">
               <UpcomingSessions />
               
-              {/* Featured training plan section */}
               {workoutPlans && workoutPlans.length > 0 ? (
                 <Card className="bg-zinc-900 border-zinc-800 overflow-hidden">
                   <CardHeader>
@@ -290,7 +296,6 @@ const Dashboard = () => {
             <div className="lg:col-span-4 space-y-6">
               <ScheduleSession />
 
-              {/* Membership card */}
               {subscriptionData ? (
                 <Card className="bg-zinc-900 border-zinc-800 overflow-hidden relative">
                   <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#ea384c]/20 to-red-600/20 rounded-bl-full"></div>
@@ -370,7 +375,6 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Quick action buttons */}
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
             <ActionButton 
               text="Schedule Session"
