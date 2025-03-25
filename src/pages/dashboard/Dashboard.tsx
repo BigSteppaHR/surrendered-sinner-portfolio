@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,14 +22,14 @@ const Dashboard = () => {
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [subscriptionData, setSubscriptionData] = useState(null);
-  
-  // Fetch user data when profile is available
+  const [loginCount, setLoginCount] = useState(0);
+  const [lastActive, setLastActive] = useState(null);
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (!profile?.id) return;
       
       try {
-        // Fetch upcoming sessions
         const { data: sessionData, error: sessionError } = await supabase
           .from('user_sessions')
           .select('*')
@@ -41,7 +40,6 @@ const Dashboard = () => {
           
         if (sessionError) throw sessionError;
         
-        // Fetch user's workout plans
         const { data: planData, error: planError } = await supabase
           .from('workout_plans')
           .select('*')
@@ -51,7 +49,6 @@ const Dashboard = () => {
           
         if (planError) throw planError;
         
-        // Fetch subscription data
         const { data: subData, error: subError } = await supabase
           .from('subscriptions')
           .select('*')
@@ -61,7 +58,6 @@ const Dashboard = () => {
           .single();
           
         if (subError && subError.code !== 'PGRST116') {
-          // PGRST116 is "no rows returned" - we can ignore this
           throw subError;
         }
         
@@ -77,7 +73,6 @@ const Dashboard = () => {
     fetchUserData();
   }, [profile]);
   
-  // If coming from verification page, show welcome toast
   useEffect(() => {
     if (location.state?.fromVerification) {
       toast({
@@ -85,21 +80,24 @@ const Dashboard = () => {
         description: "Your email has been verified and you're now logged in.",
       });
       
-      // Clear the state to prevent showing toast on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state, toast]);
   
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Welcome section with animated gradient border */}
-      <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-[#ea384c] after:via-red-500 after:to-[#ea384c] after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-[#111111] backdrop-blur-sm">
-        <div className="flex flex-col md:flex-row items-center justify-between">
+      <div className="mb-8 p-6 rounded-lg relative overflow-hidden border border-[#333333] bg-black shadow-md">
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-[#1a1a1a] to-black opacity-50"></div>
+        <div className="flex flex-col md:flex-row items-center justify-between relative z-10">
           <div>
-            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ea384c] to-red-400">
-              Welcome Back, {profile?.full_name || 'Athlete'}!
+            <h1 className="text-3xl font-bold text-white">
+              Welcome Back, <span className="text-[#ea384c]">{profile?.full_name || 'Athlete'}!</span>
             </h1>
-            <p className="text-gray-400 mt-1">Your training journey continues today</p>
+            <p className="text-white mt-1">Your training journey continues today</p>
+            <div className="mt-2 text-sm text-gray-300 flex flex-wrap gap-4">
+              <span>Visits: {loginCount}</span>
+              <span>Last activity: {formatLastActive()}</span>
+            </div>
           </div>
           <div className="mt-4 md:mt-0 w-full md:w-auto">
             <DailyQuote />
@@ -107,7 +105,6 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Next session highlight card */}
       {upcomingSessions && upcomingSessions.length > 0 ? (
         <Card className="bg-[#111111] border-[#333333] mb-6 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#ea384c]/10 to-red-800/10 rounded-bl-full"></div>
@@ -174,7 +171,6 @@ const Dashboard = () => {
         <div className="lg:col-span-8 space-y-6">
           <UpcomingSessions />
           
-          {/* Featured training plan section */}
           {workoutPlans && workoutPlans.length > 0 ? (
             <Card className="bg-[#111111] border-[#333333] overflow-hidden">
               <CardHeader>
@@ -242,7 +238,6 @@ const Dashboard = () => {
         <div className="lg:col-span-4 space-y-6">
           <ScheduleSession />
 
-          {/* Membership card */}
           {subscriptionData ? (
             <Card className="bg-[#111111] border-[#333333] overflow-hidden relative">
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#ea384c]/20 to-red-600/20 rounded-bl-full"></div>
@@ -322,7 +317,6 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Quick action buttons */}
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
         <ActionButton 
           text="Schedule Session"
