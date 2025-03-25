@@ -326,7 +326,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_admin: boolean | null
+          last_active_at: string | null
           last_login_at: string | null
+          login_count: number | null
           password_reset_sent_at: string | null
           password_reset_token: string | null
           profile_picture_url: string | null
@@ -343,7 +345,9 @@ export type Database = {
           id: string
           is_active?: boolean | null
           is_admin?: boolean | null
+          last_active_at?: string | null
           last_login_at?: string | null
+          login_count?: number | null
           password_reset_sent_at?: string | null
           password_reset_token?: string | null
           profile_picture_url?: string | null
@@ -360,7 +364,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_admin?: boolean | null
+          last_active_at?: string | null
           last_login_at?: string | null
+          login_count?: number | null
           password_reset_sent_at?: string | null
           password_reset_token?: string | null
           profile_picture_url?: string | null
@@ -988,7 +994,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_admin: boolean | null
+          last_active_at: string | null
           last_login_at: string | null
+          login_count: number | null
           password_reset_sent_at: string | null
           password_reset_token: string | null
           profile_picture_url: string | null
