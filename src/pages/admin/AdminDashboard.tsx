@@ -12,13 +12,25 @@ import AdminNotifications from "@/components/admin/AdminNotifications";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 const AdminDashboard = () => {
-  const { isAuthenticated, isAdmin, isLoading, profile } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading, profile, isInitialized } = useAuth();
   const location = useLocation();
   const isDebugMode = profile?.debug_mode || false;
 
-  if (isLoading) {
+  useEffect(() => {
+    console.log("AdminDashboard: Auth state", { 
+      isAuthenticated, 
+      isAdmin, 
+      isLoading, 
+      isInitialized,
+      profile: profile?.id ? `Exists (ID: ${profile.id})` : 'Not loaded',
+      location: location.pathname
+    });
+  }, [isAuthenticated, isAdmin, isLoading, isInitialized, profile, location]);
+
+  if (isLoading || !isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
         <div className="animate-spin h-8 w-8 border-4 border-sinner-red border-t-transparent rounded-full"></div>
@@ -28,14 +40,17 @@ const AdminDashboard = () => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    console.log("AdminDashboard: User not authenticated, redirecting to login");
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Redirect to dashboard if authenticated but not admin
   if (!isAdmin) {
+    console.log("AdminDashboard: User authenticated but not admin, redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 
+  console.log("AdminDashboard: Rendering admin dashboard for admin user");
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-[#000000] text-white">
