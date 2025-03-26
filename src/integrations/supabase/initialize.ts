@@ -8,6 +8,9 @@ import { supabase } from './client';
 export const initializeSupabaseAuth = () => {
   // Configure the Supabase client's auth behavior
   try {
+    // Log initialization steps to help with debugging
+    console.log('Initializing Supabase auth settings...');
+    
     // Make sure consistent storage is being used - forces localStorage only
     const authConfig = {
       autoRefreshToken: true,
@@ -32,16 +35,18 @@ export const initializeSupabaseAuth = () => {
  * Call this function at the app's entry point to ensure proper initialization
  */
 export const setupSupabase = () => {
-  initializeSupabaseAuth();
+  console.log('Setting up Supabase client...');
   
-  // Add additional initialization steps as needed
-  // Check for global Supabase initialization errors
+  // Check if the Supabase client is initialized properly
   if (!supabase) {
     console.error('Supabase client is not initialized properly');
     return false;
   }
   
-  console.log('Supabase setup completed');
+  initializeSupabaseAuth();
+  
+  // Add additional initialization steps as needed
+  console.log('Supabase setup completed successfully');
   return true;
 };
 
@@ -50,11 +55,13 @@ export const setupSupabase = () => {
  */
 export const verifySupabaseConnection = async () => {
   try {
+    console.log('Verifying Supabase connection...');
     const { error } = await supabase.from('profiles').select('id').limit(1);
     if (error) {
       console.error('Supabase connection verification failed:', error);
       return false;
     }
+    console.log('Supabase connection verified successfully');
     return true;
   } catch (err) {
     console.error('Error verifying Supabase connection:', err);
