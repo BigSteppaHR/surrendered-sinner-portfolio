@@ -69,10 +69,11 @@ const Dashboard = () => {
     );
   }
   
-  // If not authenticated, redirect to login
+  // If not authenticated, explicitly return a component instead of navigating directly
+  // This fixes the TypeScript error by ensuring we always return a React element
   if (!isAuthenticated) {
-    console.log("Dashboard: Not authenticated, redirecting to login");
-    return navigate("/login", { replace: true });
+    // Return null or a placeholder - the useEffect will handle the navigation
+    return null;
   }
   
   const handleRefreshQuote = () => {
