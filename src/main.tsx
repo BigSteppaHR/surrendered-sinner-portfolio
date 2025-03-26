@@ -1,15 +1,15 @@
 
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
-import './index.css';
-import { HelmetProvider } from 'react-helmet-async';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+import { setupSupabase } from './integrations/supabase/initialize.ts'
 
-// Initialize the application with strict mode for better development experience
-createRoot(document.getElementById("root")!).render(
+// Ensure Supabase is initialized before rendering the app
+setupSupabase();
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <HelmetProvider>
-      <App />
-    </HelmetProvider>
-  </React.StrictMode>
-);
+    <App />
+  </React.StrictMode>,
+)

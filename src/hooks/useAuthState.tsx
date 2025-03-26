@@ -130,7 +130,7 @@ export const useAuthState = () => {
           authSubscription.current.unsubscribe();
         }
         
-        // Set up the auth state listener first (IMPORTANT: must be before getSession)
+        // IMPORTANT: Set up the auth state listener FIRST
         const { data } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
           logDebug('Auth state changed:', event, currentSession?.user?.email);
           
@@ -158,7 +158,7 @@ export const useAuthState = () => {
         
         authSubscription.current = data.subscription;
 
-        // Then get the current session from Supabase (network request)
+        // THEN get the current session from Supabase
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         if (currentSession) {

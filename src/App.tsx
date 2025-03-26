@@ -18,6 +18,7 @@ import Settings from '@/pages/dashboard/Settings';
 import Payment from '@/pages/dashboard/Payment';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import VerifyEmail from '@/pages/VerifyEmail';
+import { startSessionHealthMonitoring } from '@/utils/sessionHealthCheck';
 
 // The App component structure is simplified to ensure proper context management
 const App: React.FC = () => {
@@ -81,6 +82,12 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => {
   const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
+  
+  // Start session health monitoring
+  useEffect(() => {
+    const cleanupMonitoring = startSessionHealthMonitoring();
+    return () => cleanupMonitoring();
+  }, []);
   
   useEffect(() => {
     if (isInitialized) {

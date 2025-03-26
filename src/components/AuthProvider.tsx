@@ -3,6 +3,7 @@ import React, { ReactNode, createContext, useState, useEffect, useRef } from 're
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const isDev = import.meta.env.DEV;
 const logDebug = (message: string, ...args: any[]) => {
@@ -39,6 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { toast } = useToast();
   
   const authSubscription = useRef<{ unsubscribe: () => void } | null>(null);
 
@@ -145,15 +147,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
+      logDebug('Attempting to log out user...');
+      
+      // Sign out from Supabase auth with global scope to clear all sessions
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Logout error from Supabase:', error);
+        throw error;
+      }
       
+      logDebug('Successfully logged out from Supabase');
+      
+      // Clear auth state
       setUser(null);
       setSession(null);
       setProfile(null);
       setIsAdmin(false);
       
+      // Clear all auth-related data from localStorage
       const keysToRemove: string[] = [];
       
       for (let i = 0; i < localStorage.length; i++) {
@@ -171,6 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       keysToRemove.forEach(key => localStorage.removeItem(key));
       
+      // Clear auth cookies
       document.cookie.split(';').forEach(cookie => {
         const [name] = cookie.trim().split('=');
         if (name && (
@@ -182,34 +195,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       });
       
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      
       return { success: true, redirectTo: '/login' };
     } catch (error: any) {
       console.error('Logout error:', error.message);
+      
+      toast({
+        title: "Logout failed",
+        description: error.message || "There was a problem logging out",
+        variant: "destructive",
+      });
+      
       return { success: false };
-    }
-  };
-
-  const resetPassword = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?reset=true`,
-      });
-      
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  };
-
-  const updatePassword = async (newPassword: string) => {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      
-      return { error };
-    } catch (error) {
-      return { error };
     }
   };
 
@@ -230,27 +231,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       
       try {
-        logDebug('Initializing auth');
-        
-        // REMOVED: The localStorage clearing code that was causing the auth issues
+        // Important: Set up auth listener BEFORE checking session
+        logDebug('Setting up auth state listener');
         
         if (authSubscription.current) {
           authSubscription.current.unsubscribe();
         }
         
+        // First: set up the auth state change listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, currentSession) => {
-            logDebug('Auth state changed:', event);
-            console.log('Auth state changed:', event, currentSession);
+            logDebug('Auth state changed:', event, currentSession?.user?.email);
             
-            setSession(currentSession);
-            
-            const currentUser = currentSession?.user ?? null;
-            setUser(currentUser);
-            
-            if (currentUser) {
-              await fetchProfile(currentUser);
+            if (currentSession) {
+              setSession(currentSession);
+              setUser(currentSession.user);
+              
+              if (currentSession.user) {
+                await fetchProfile(currentSession.user);
+              }
             } else {
+              setSession(null);
+              setUser(null);
               setProfile(null);
               setIsAdmin(false);
             }
@@ -259,36 +261,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         authSubscription.current = subscription;
         
+        // Then: check for an existing session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        console.log('Session on mount:', currentSession);
+        logDebug('Existing session check:', !!currentSession);
         
-        setSession(currentSession);
-        
-        const currentUser = currentSession?.user ?? null;
-        setUser(currentUser);
-        
-        if (currentUser) {
-          await fetchProfile(currentUser);
+        if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          
+          if (currentSession.user) {
+            await fetchProfile(currentSession.user);
+          }
+        } else {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setIsAdmin(false);
         }
         
         setIsInitialized(true);
         setIsLoading(false);
         
-        logDebug('Auth initialized', { user: !!currentUser, session: !!currentSession });
-        
+        // Set up a session refresh timer
         const refreshInterval = setInterval(async () => {
           if (!document.hidden) {
             try {
               const { data } = await supabase.auth.getSession();
               if (data.session) {
+                // Refresh the session if it exists
                 await supabase.auth.refreshSession();
+                logDebug('Session refreshed');
               }
             } catch (err) {
               console.error("Error refreshing session:", err);
             }
           }
-        }, 4 * 60 * 1000);
+        }, 4 * 60 * 1000); // Refresh every 4 minutes
         
         return () => clearInterval(refreshInterval);
       } catch (error) {
