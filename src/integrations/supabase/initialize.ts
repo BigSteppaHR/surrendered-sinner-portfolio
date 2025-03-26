@@ -35,4 +35,29 @@ export const setupSupabase = () => {
   initializeSupabaseAuth();
   
   // Add additional initialization steps as needed
+  // Check for global Supabase initialization errors
+  if (!supabase) {
+    console.error('Supabase client is not initialized properly');
+    return false;
+  }
+  
+  console.log('Supabase setup completed');
+  return true;
+};
+
+/**
+ * Verify the Supabase connection is active and working
+ */
+export const verifySupabaseConnection = async () => {
+  try {
+    const { error } = await supabase.from('profiles').select('id').limit(1);
+    if (error) {
+      console.error('Supabase connection verification failed:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error verifying Supabase connection:', err);
+    return false;
+  }
 };

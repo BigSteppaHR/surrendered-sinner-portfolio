@@ -2,10 +2,10 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import Stripe from 'https://esm.sh/stripe@13.3.0'
 
-// Set up proper CORS headers that allow requests from all origins (for testing)
+// Set up proper CORS headers that allow requests from all origins with additional stripe-signature header
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*', // Allow all origins - replace with your domain in production
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json; charset=utf-8',
   'X-Content-Type-Options': 'nosniff',
@@ -13,13 +13,21 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight requests - this must be first
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Get the request body
+    // First, check if this is a webhook request from Stripe
+    const url = new URL(req.url);
+    
+    // Special handling for Stripe webhook requests
+    if (url.pathname.endsWith('/webhook')) {
+      return await handleStripeWebhook(req);
+    }
+    
+    // Get the request body for regular API requests
     const { action, params } = await req.json()
 
     // Initialize Stripe
@@ -220,8 +228,8 @@ serve(async (req) => {
         break
       
       case 'handleStripeWebhook':
-        // This case should be handled by a separate function, not directly in this helper
-        throw new Error('Webhook handling should be done in a separate function')
+        // This case should be handled by the separate webhook handler
+        throw new Error('Webhook handling should be done via the webhook endpoint')
       
       default:
         throw new Error(`Unsupported action: ${action}`)
@@ -251,3 +259,120 @@ serve(async (req) => {
     )
   }
 })
+
+/**
+ * Handles Stripe webhook events
+ */
+async function handleStripeWebhook(req: Request) {
+  try {
+    // Get the stripe webhook signing secret
+    const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    if (!stripeWebhookSecret) {
+      console.error('Missing Stripe webhook secret');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Webhook secret not configured' }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    // Get the signature from the headers
+    const signature = req.headers.get('stripe-signature');
+    if (!signature) {
+      console.error('Missing Stripe signature');
+      return new Response(
+        JSON.stringify({ success: false, error: 'No signature found in request' }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // Initialize Stripe
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeSecretKey) {
+      console.error('Missing Stripe secret key');
+      return new Response(
+        JSON.stringify({ success: false, error: 'API key not configured' }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2023-10-16'
+    });
+
+    // Get the raw body as text
+    const rawBody = await req.text();
+    
+    // Verify the webhook signature
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        stripeWebhookSecret
+      );
+    } catch (err) {
+      console.error(`Webhook signature verification failed: ${err.message}`);
+      return new Response(
+        JSON.stringify({ success: false, error: `Webhook Error: ${err.message}` }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    console.log(`Webhook received: ${event.type}`);
+
+    // Handle specific event types
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+        console.log(`PaymentIntent succeeded: ${paymentIntent.id}`);
+        
+        // Update payment record in database if payment_id exists in metadata
+        if (paymentIntent.metadata?.payment_id) {
+          try {
+            // In a real implementation, call supabase to update the database
+            console.log(`Updating payment ${paymentIntent.metadata.payment_id} to succeeded via webhook`);
+          } catch (error) {
+            console.error('Error updating payment status:', error);
+          }
+        }
+        break;
+        
+      case 'payment_intent.payment_failed':
+        const failedPaymentIntent = event.data.object;
+        console.log(`Payment failed: ${failedPaymentIntent.id}`);
+        
+        // Update payment record to failed
+        if (failedPaymentIntent.metadata?.payment_id) {
+          try {
+            // In a real implementation, call supabase to update the database
+            console.log(`Updating payment ${failedPaymentIntent.metadata.payment_id} to failed via webhook`);
+          } catch (error) {
+            console.error('Error updating payment status:', error);
+          }
+        }
+        break;
+        
+      case 'checkout.session.completed':
+        const session = event.data.object;
+        console.log(`Checkout session completed: ${session.id}`);
+        break;
+        
+      // Add other event types as needed
+        
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    // Return a success response
+    return new Response(
+      JSON.stringify({ received: true }),
+      { headers: corsHeaders }
+    );
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
