@@ -37,6 +37,8 @@ const AdminDashboard = () => {
         description: "You don't have permission to access the admin dashboard.",
         variant: "destructive"
       });
+      
+      // Navigation will be handled by the redirect below, not here
     }
   }, [isAuthenticated, isAdmin, isLoading, toast]);
 
@@ -49,13 +51,13 @@ const AdminDashboard = () => {
     );
   }
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated - use component instead of hook call
   if (!isAuthenticated) {
     console.log("AdminDashboard: Not authenticated, redirecting to login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Redirect to dashboard if authenticated but not admin
+  // Redirect to dashboard if authenticated but not admin - use component instead of hook call
   if (!isAdmin) {
     console.log("AdminDashboard: Not admin, redirecting to dashboard", { 
       profile, 

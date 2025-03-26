@@ -54,19 +54,19 @@ const DashboardLayout = () => {
     );
   }
   
-  // If user is not authenticated, redirect to login
+  // If user is not authenticated, redirect to login using Navigate component
   if (!isAuthenticated) {
     logDebug("User not authenticated, redirecting to login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
-  // If authenticated admin, redirect to admin dashboard
+  // If authenticated admin, redirect to admin dashboard using Navigate component
   if (isAuthenticated && profile?.is_admin) {
     logDebug("User is admin, redirecting to admin dashboard");
     return <Navigate to="/admin" replace />;
   }
   
-  // If authenticated but email not confirmed, redirect to confirmation page
+  // If authenticated but email not confirmed, redirect to confirmation page using Navigate component
   if (isAuthenticated && profile && !profile.email_confirmed) {
     logDebug("Email not confirmed, redirecting to confirm page");
     return <Navigate to="/confirm-email" state={{ email: profile.email }} replace />;

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +58,13 @@ const Dashboard = () => {
       navigate("/admin", { replace: true });
     }
   }, [isAuthenticated, isAdmin, navigate, isLoading, isPageLoading, toast]);
+  
+  useEffect(() => {
+    if (!isLoading && !isPageLoading && !isAuthenticated) {
+      console.log("Dashboard: Not authenticated, redirecting to login");
+      navigate("/login", { replace: true });
+    }
+  }, [isAuthenticated, isLoading, isPageLoading, navigate]);
   
   // If still loading, show a loading spinner
   if (isLoading || isPageLoading) {
