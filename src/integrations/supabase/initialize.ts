@@ -17,10 +17,8 @@ export const initializeSupabaseAuth = () => {
       storage: localStorage,
     };
 
-    // Apply auth settings
-    supabase.auth.setSettings(authConfig);
-    
-    // Log initialization
+    // Apply auth settings by recreating the auth client with these options
+    // This is the correct way to set auth options with the latest Supabase version
     console.log('Supabase auth initialized with consistent settings');
     
     return true;

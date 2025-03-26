@@ -1,4 +1,3 @@
-
 import React, { ReactNode, createContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -223,6 +222,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Error refreshing profile:', error);
       return null;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        console.error('Reset password error:', error);
+        toast({
+          title: "Failed to send reset email",
+          description: error.message || "There was a problem sending the reset email",
+          variant: "destructive",
+        });
+        return { error };
+      }
+      
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for password reset instructions",
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      console.error('Reset password error:', error.message);
+      toast({
+        title: "Failed to send reset email",
+        description: error.message || "There was a problem sending the reset email",
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (error) {
+        console.error('Update password error:', error);
+        toast({
+          title: "Failed to update password",
+          description: error.message || "There was a problem updating your password",
+          variant: "destructive",
+        });
+        return { error };
+      }
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been updated successfully",
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      console.error('Update password error:', error.message);
+      toast({
+        title: "Failed to update password",
+        description: error.message || "There was a problem updating your password",
+        variant: "destructive",
+      });
+      return { error };
     }
   };
 
