@@ -53,7 +53,7 @@ const FileDownloads = () => {
             let workoutPlan: WorkoutPlan | null = null;
             
             if (file.workout_plans) {
-              // Cast to any to handle different possible shapes of data
+              // Cast to handle different possible shapes of data
               const workoutPlanData = file.workout_plans as WorkoutPlanData;
               
               if (Array.isArray(workoutPlanData)) {

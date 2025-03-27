@@ -127,13 +127,6 @@ const AdminFilesManagement = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      // Log download activity (optional)
-      // await supabase.from('file_download_logs').insert({
-      //   user_id: user?.id,
-      //   file_id: file.id,
-      //   download_time: new Date().toISOString()
-      // });
-      
     } catch (error) {
       console.error('Download error:', error);
       toast({
