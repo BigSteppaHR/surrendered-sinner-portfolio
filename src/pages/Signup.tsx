@@ -11,6 +11,7 @@ import { Eye, EyeOff, User, Mail, Key, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import AnimatedBackground from '@/components/auth/AnimatedBackground';
 
 const Signup = () => {
   const [fullName, setFullName] = useState('');
@@ -132,146 +133,148 @@ const Signup = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-[#111] text-white">
-      <div className="w-full max-w-md">
-        <Card className="border-gray-800 bg-gray-900">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl flex items-center justify-center gap-2">
-              <User className="h-6 w-6 text-sinner-red" />
-              <span>Create an Account</span>
-            </CardTitle>
-            <CardDescription className="text-center text-gray-400">
-              Enter your information to create an account
-              {quizResultId && (
-                <p className="mt-1 text-sm text-sinner-red">Your custom training plan will be saved to your account</p>
+    <AnimatedBackground>
+      <div className="flex min-h-screen items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          <Card className="border-gray-800 bg-gray-900">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl flex items-center justify-center gap-2">
+                <User className="h-6 w-6 text-sinner-red" />
+                <span>Create an Account</span>
+              </CardTitle>
+              <CardDescription className="text-center text-gray-400">
+                Enter your information to create an account
+                {quizResultId && (
+                  <p className="mt-1 text-sm text-sinner-red">Your custom training plan will be saved to your account</p>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {errorMessage && (
+                <Alert variant="destructive" className="mb-4 bg-red-900/20 border-red-800 text-white">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>
+                    {errorMessage}
+                  </AlertDescription>
+                </Alert>
               )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {errorMessage && (
-              <Alert variant="destructive" className="mb-4 bg-red-900/20 border-red-800 text-white">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  {errorMessage}
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            <form onSubmit={handleSignup}>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name" className="text-gray-300">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="name"
-                      className="pl-10 bg-gray-800 border-gray-700 text-white"
-                      placeholder="John Doe"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
+              
+              <form onSubmit={handleSignup}>
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name" className="text-gray-300">Full Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="name"
+                        className="pl-10 bg-gray-800 border-gray-700 text-white"
+                        placeholder="John Doe"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-gray-300">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      className="pl-10 bg-gray-800 border-gray-700 text-white"
-                      placeholder="m@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="email" className="text-gray-300">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="email"
+                        type="email"
+                        className="pl-10 bg-gray-800 border-gray-700 text-white"
+                        placeholder="m@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="password" className="text-gray-300">Password</Label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      className="pl-10 pr-10 bg-gray-800 border-gray-700 text-white"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-3 text-gray-400 hover:text-white"
-                      onClick={toggleShowPassword}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="password" className="text-gray-300">Password</Label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        className="pl-10 pr-10 bg-gray-800 border-gray-700 text-white"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                        onClick={toggleShowPassword}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="confirm-password" className="text-gray-300">Confirm Password</Label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="confirm-password"
-                      type={showPassword ? "text" : "password"}
-                      className="pl-10 bg-gray-800 border-gray-700 text-white"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="confirm-password" className="text-gray-300">Confirm Password</Label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="confirm-password"
+                        type={showPassword ? "text" : "password"}
+                        className="pl-10 bg-gray-800 border-gray-700 text-white"
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-sinner-red hover:bg-red-700" 
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? "Creating Account..." : "Create Account"}
+                  </Button>
                 </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full bg-sinner-red hover:bg-red-700" 
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? "Creating Account..." : "Create Account"}
-                </Button>
+              </form>
+              
+              <div className="mt-4 text-center text-sm">
+                <p className="text-gray-400">
+                  By signing up, you agree to our{" "}
+                  <a href="/terms" className="underline text-primary hover:text-primary/90">
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a href="/privacy" className="underline text-primary hover:text-primary/90">
+                    Privacy Policy
+                  </a>
+                </p>
               </div>
-            </form>
-            
-            <div className="mt-4 text-center text-sm">
-              <p className="text-gray-400">
-                By signing up, you agree to our{" "}
-                <a href="/terms" className="underline text-primary hover:text-primary/90">
-                  Terms of Service
-                </a>{" "}
-                and{" "}
-                <a href="/privacy" className="underline text-primary hover:text-primary/90">
-                  Privacy Policy
-                </a>
-              </p>
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Separator className="bg-gray-800" />
-            <div className="text-center w-full">
-              <span className="text-gray-400">Already have an account?</span>{" "}
-              <button 
-                onClick={navigateToLogin}
-                className="text-primary hover:underline"
-              >
-                Sign in
-              </button>
-            </div>
-          </CardFooter>
-        </Card>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <Separator className="bg-gray-800" />
+              <div className="text-center w-full">
+                <span className="text-gray-400">Already have an account?</span>{" "}
+                <button 
+                  onClick={navigateToLogin}
+                  className="text-primary hover:underline"
+                >
+                  Sign in
+                </button>
+              </div>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
-    </div>
+    </AnimatedBackground>
   );
 };
 

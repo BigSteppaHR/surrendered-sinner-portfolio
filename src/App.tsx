@@ -25,6 +25,7 @@ import Payment from '@/pages/Payment';
 import PaymentPortal from '@/pages/PaymentPortal';
 import { AuthProvider } from '@/components/AuthProvider';
 import StripeProvider from '@/components/StripeProvider';
+import Auth from '@/pages/Auth';
 
 function App() {
   return (

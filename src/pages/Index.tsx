@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import About from '@/components/About';
@@ -15,9 +15,13 @@ import FeaturedProducts from '@/components/FeaturedProducts';
 import { Button } from '@/components/ui/button';
 import { Dumbbell, Target, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ConfirmationDialog from '@/components/ui/confirmation-dialog';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
   
   // Determine if we're on codecove.dev
   const isCodecove = typeof window !== 'undefined' && 
@@ -32,7 +36,16 @@ const Index = () => {
     : 'https://surrenderedsinnerfitness.com';
     
   const handleStartPlanQuiz = () => {
-    navigate('/dashboard/plans?showQuiz=true');
+    if (isAuthenticated) {
+      navigate('/dashboard/plans?showQuiz=true');
+    } else {
+      setQuizDialogOpen(true);
+    }
+  };
+
+  const handleQuizConfirm = () => {
+    setQuizDialogOpen(false);
+    navigate('/signup', { state: { redirectAfterLogin: '/dashboard/plans?showQuiz=true' } });
   };
 
   return (
@@ -110,15 +123,6 @@ const Index = () => {
         <Separator className="bg-sinner-red/20 h-0.5" />
       </div>
       
-      {/* Add Featured Products section */}
-      <FeaturedProducts />
-      
-      <div className="section-divider">
-        <Separator className="bg-sinner-red/20 h-0.5" />
-      </div>
-      
-      <Contact />
-      
       {/* Bottom Quiz CTA */}
       <div className="w-full bg-black py-8 px-4">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
@@ -135,10 +139,23 @@ const Index = () => {
         </div>
       </div>
       
+      <Contact />
+      
       <Footer />
       
       {/* Floating CTA */}
       <FloatingCTA />
+
+      {/* Quiz confirmation dialog */}
+      <ConfirmationDialog
+        isOpen={quizDialogOpen}
+        onClose={() => setQuizDialogOpen(false)}
+        onConfirm={handleQuizConfirm}
+        title="Sign Up to Take the Quiz"
+        description="Create an account to take our fitness assessment quiz and get your personalized training plan. It only takes a minute!"
+        confirmText="Sign Up"
+        cancelText="Maybe Later"
+      />
     </div>
   );
 };

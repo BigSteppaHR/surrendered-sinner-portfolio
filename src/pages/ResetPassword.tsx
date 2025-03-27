@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { z } from "zod";
@@ -51,13 +50,11 @@ const ResetPassword = () => {
   });
 
   useEffect(() => {
-    // Set default email from profile if authenticated
     if (isAuthenticated && profile?.email) {
       emailForm.setValue("email", profile.email);
       setDefaultEmail(profile.email);
     }
 
-    // Check for reset token in URL
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
     
