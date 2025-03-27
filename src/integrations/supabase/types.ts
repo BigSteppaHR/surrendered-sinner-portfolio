@@ -102,6 +102,75 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          priority: string
+          reference_id: string | null
+          status: string
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description: string
+          due_date?: string | null
+          id?: string
+          priority?: string
+          reference_id?: string | null
+          status?: string
+          task_type: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          priority?: string
+          reference_id?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      analytics_dashboards: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       custom_plan_results: {
         Row: {
           created_at: string

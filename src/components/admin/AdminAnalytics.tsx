@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area } from 'recharts';
@@ -119,7 +118,7 @@ const AdminAnalytics = () => {
           planCounts[planName] = (planCounts[planName] || 0) + 1;
         });
         
-        const planColors = {
+        const planColors: {[key: string]: string} = {
           'Basic Plan': '#ea384c',
           'Pro Plan': '#8884d8',
           'Elite Plan': '#82ca9d',
@@ -127,7 +126,7 @@ const AdminAnalytics = () => {
           'Unknown Plan': '#d0d0d0'
         };
         
-        const planDistributionData = Object.entries(planCounts).map(([name, value], index) => ({
+        const planDistributionData = Object.entries(planCounts).map(([name, value]) => ({
           name,
           value,
           color: planColors[name as keyof typeof planColors] || `#${Math.floor(Math.random()*16777215).toString(16)}`
@@ -216,6 +215,14 @@ const AdminAnalytics = () => {
       )
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'support_tickets' }, 
+        () => fetchData()
+      )
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'analytics_dashboards' }, 
+        () => fetchData()
+      )
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'admin_tasks' }, 
         () => fetchData()
       )
       .subscribe();
