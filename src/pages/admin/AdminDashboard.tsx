@@ -80,7 +80,7 @@ const AdminDashboard = () => {
         <AdminSidebar />
         <div className="flex-1 p-6 overflow-auto">
           <Routes>
-            <Route path="/" element={<Navigate to="/admin/overview" replace />} />
+            <Route path="/" element={<AdminOverview />} />
             <Route path="/overview" element={<AdminOverview />} />
             <Route path="/sessions" element={<AdminSessions />} />
             <Route path="/payments" element={<AdminPayments />} />
