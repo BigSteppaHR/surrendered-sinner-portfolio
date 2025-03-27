@@ -6,7 +6,7 @@ import Signup from '@/pages/Signup';
 import ResetPassword from '@/pages/ResetPassword';
 import ConfirmEmail from '@/pages/ConfirmEmail';
 import VerifyEmail from '@/pages/VerifyEmail';
-import Dashboard from '@/pages/dashboard/Dashboard';
+import Dashboard from '@/pages/Dashboard';
 import DashboardAccount from '@/pages/dashboard/Account';
 import DashboardTrainingPlans from '@/pages/dashboard/TrainingPlans';
 import DashboardSchedule from '@/pages/dashboard/Schedule';
@@ -25,7 +25,6 @@ import Payment from '@/pages/Payment';
 import PaymentPortal from '@/pages/PaymentPortal';
 import { AuthProvider } from '@/components/AuthProvider';
 import StripeProvider from '@/components/StripeProvider';
-import Auth from '@/pages/Auth';
 
 function App() {
   return (
