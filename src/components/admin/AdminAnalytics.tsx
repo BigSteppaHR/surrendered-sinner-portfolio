@@ -105,11 +105,13 @@ const AdminAnalytics = () => {
           let planName = 'Unknown Plan';
           
           if (subscription.subscription_packages) {
-            if (Array.isArray(subscription.subscription_packages) && subscription.subscription_packages.length > 0) {
-              planName = subscription.subscription_packages[0].name || 'Unknown Plan';
+            const packageData = subscription.subscription_packages;
+            
+            if (Array.isArray(packageData) && packageData.length > 0) {
+              planName = String(packageData[0].name || 'Unknown Plan');
             } 
-            else if (typeof subscription.subscription_packages === 'object' && 'name' in subscription.subscription_packages) {
-              planName = subscription.subscription_packages.name || 'Unknown Plan';
+            else if (typeof packageData === 'object' && packageData !== null && 'name' in packageData) {
+              planName = String(packageData.name || 'Unknown Plan');
             }
           }
           
