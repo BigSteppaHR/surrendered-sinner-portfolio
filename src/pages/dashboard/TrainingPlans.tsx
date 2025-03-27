@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Download, Activity, ClipboardList, DollarSign } from "lucide-react";
+import { Loader2, FileText, Download, Activity, ClipboardList, DollarSign, Check } from "lucide-react";
 import TrainingPlanQuiz from "@/components/plans/TrainingPlanQuiz";
 
 interface WorkoutPlan {
