@@ -5,11 +5,15 @@ import App from './App.tsx'
 import './index.css'
 import { setupSupabase } from './integrations/supabase/initialize.ts'
 import { HelmetProvider } from 'react-helmet-async'
+import { initializeAssetProtection } from './utils/assetLoadingHandler.ts'
 
 // Global error handler for uncaught exceptions
 window.addEventListener('error', (event) => {
   console.error('Uncaught error:', event.error);
 });
+
+// Initialize asset protection early
+initializeAssetProtection();
 
 // Add logging to help with debugging
 console.log('Initializing application...');

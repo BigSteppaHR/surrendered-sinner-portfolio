@@ -46,10 +46,13 @@ export const setupSupabase = () => {
     
     initializeSupabaseAuth();
     
-    // Test connection and log results but don't block initialization
-    testSupabaseConnection().catch(err => {
-      console.error('Error testing Supabase connection:', err);
-    });
+    // Test connection but ensure we don't block application startup
+    // This prevents any connection issues from breaking the entire app
+    setTimeout(() => {
+      testSupabaseConnection().catch(err => {
+        console.error('Error testing Supabase connection:', err);
+      });
+    }, 100);
     
     // Add additional initialization steps as needed
     console.log('Supabase setup completed successfully');
@@ -68,18 +71,35 @@ export const testSupabaseConnection = async () => {
     console.log('Testing Supabase connection...');
     
     // Use a simple anonymous query that doesn't require authentication
-    const { data, error } = await supabase
-      .from('daily_quotes')
-      .select('id')
-      .limit(1);
-    
-    if (error) {
-      console.warn('Supabase connection test failed:', error.message);
-      return false;
+    // Try daily_quotes first, then fall back to profiles if needed
+    try {
+      const { data, error } = await supabase
+        .from('daily_quotes')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        console.warn('First connection test failed, trying backup:', error.message);
+        throw error; // Forward to the fallback
+      }
+      
+      console.log('Supabase connection test successful!');
+      return true;
+    } catch (innerErr) {
+      // Fallback to another table if the first one fails
+      const { error: backupError } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1);
+        
+      if (backupError) {
+        console.warn('Backup connection test also failed:', backupError.message);
+        return false;
+      }
+      
+      console.log('Supabase connection test successful via backup route!');
+      return true;
     }
-    
-    console.log('Supabase connection test successful!');
-    return true;
   } catch (err) {
     console.error('Error testing Supabase connection:', err);
     return false;
