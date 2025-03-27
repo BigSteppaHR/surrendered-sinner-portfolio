@@ -1,7 +1,11 @@
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 import DashboardLayout from './DashboardLayout';
 import Account from './Account';
+
+interface DashboardLayoutProps {
+  children: ReactNode;
+}
 
 const AccountPage = () => {
   return (

@@ -26,12 +26,14 @@ const DashboardNav = () => {
   const [balance, setBalance] = useState<UserBalance | null>(null);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [dailyQuote, setDailyQuote] = useState<{quote: string, author: string} | null>(null);
   const location = useLocation();
   const { logout, profile, user } = useAuth();
 
   useEffect(() => {
     if (user) {
       fetchUserData();
+      fetchDailyQuote();
       
       // Set up realtime subscription for payment balance updates
       const balanceChannel = supabase
@@ -102,6 +104,21 @@ const DashboardNav = () => {
     }
   };
 
+  const fetchDailyQuote = async () => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_quote_of_the_day');
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setDailyQuote(data[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching daily quote:', error);
+    }
+  };
+
   const isActive = (path: string) => {
     return location.pathname === path;
   };
@@ -116,6 +133,16 @@ const DashboardNav = () => {
       currency: currency,
       minimumFractionDigits: 2,
     }).format(amount);
+  };
+
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return 'N/A';
+    
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const NavItem = ({ path, icon, label }: { path: string; icon: React.ReactNode; label: string }) => (
@@ -168,6 +195,14 @@ const DashboardNav = () => {
           />
           <h2 className="text-xl font-bold text-white">Dashboard</h2>
         </div>
+
+        {/* Daily Quote Section */}
+        {dailyQuote && (
+          <div className="p-4 border-b border-[#222] bg-[#111]">
+            <p className="text-sm italic text-gray-300">"{dailyQuote.quote}"</p>
+            <p className="text-xs text-right text-gray-400 mt-1">— {dailyQuote.author || 'Unknown'}</p>
+          </div>
+        )}
 
         <div className="p-4">
           <div className="mb-6">
@@ -236,7 +271,7 @@ const DashboardNav = () => {
                 <div className="p-4 bg-[#111] rounded-md mb-4 text-sm">
                   {/* Balance Section */}
                   <div className="flex items-center mb-1">
-                    <CreditCard className="h-3.5 w-3.5 text-sinner-red mr-1.5" />
+                    <CreditCard className="h-3.5 w-3.5 text-[#ea384c] mr-1.5" />
                     <span className="font-medium text-sm">Account Balance</span>
                   </div>
                   <div className="ml-5 text-xs text-gray-400 mb-2">
@@ -247,7 +282,7 @@ const DashboardNav = () => {
                   
                   {/* Subscription Section */}
                   <div className="flex items-center mb-1">
-                    <Calendar className="h-3.5 w-3.5 text-sinner-red mr-1.5" />
+                    <Calendar className="h-3.5 w-3.5 text-[#ea384c] mr-1.5" />
                     <span className="font-medium text-sm">Subscription</span>
                   </div>
                   <div className="ml-5 text-xs">
@@ -257,14 +292,14 @@ const DashboardNav = () => {
                           <span className="text-white">
                             {subscription.plan_id.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}
                           </span>
-                          <span className="ml-1.5 px-1 py-0.5 text-[10px] bg-sinner-red text-white rounded-full">
+                          <span className="ml-1.5 px-1 py-0.5 text-[10px] bg-[#ea384c] text-white rounded-full">
                             {subscription.status}
                           </span>
                         </div>
                         {subscription.current_period_end && (
                           <div className="text-[10px] text-gray-400 flex items-center mt-0.5">
                             <Calendar className="h-2.5 w-2.5 mr-1" />
-                            Renews: {new Date(subscription.current_period_end).toLocaleDateString()}
+                            Renews: {formatDate(subscription.current_period_end)}
                           </div>
                         )}
                       </>

@@ -1,65 +1,62 @@
 
-import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, ArrowRight } from 'lucide-react';
 import Logo from '@/components/Logo';
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
-  
+
   useEffect(() => {
-    // Redirect to payment portal after 5 seconds
-    const timer = setTimeout(() => {
-      navigate('/payment-portal');
-    }, 5000);
-    
-    return () => clearTimeout(timer);
-  }, [navigate]);
-  
+    // Could fetch updated user data here if needed
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <Logo size="medium" />
+    <div className="min-h-screen flex flex-col bg-black text-white">
+      <header className="border-b border-[#333] py-4">
+        <div className="container mx-auto px-4 flex items-center">
+          <Logo size="small" />
+          <span className="ml-4 text-xl font-semibold">Payment Successful</span>
         </div>
-        
-        <Card className="bg-zinc-900 border-[#333]">
-          <CardHeader className="pb-4">
-            <div className="w-16 h-16 mx-auto bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-8 w-8 text-green-500" />
+      </header>
+      
+      <main className="flex-1 container mx-auto px-4 py-12 max-w-xl">
+        <div className="bg-zinc-900 border border-[#333] rounded-lg p-8 text-center">
+          <div className="flex justify-center mb-6">
+            <div className="h-20 w-20 bg-green-900/30 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-12 w-12 text-green-500" />
             </div>
-            <CardTitle className="text-2xl text-center">Payment Successful</CardTitle>
-            <CardDescription className="text-center">
-              Your payment has been processed successfully
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <p>
-              Thank you for your payment. Your account has been updated with the funds.
-            </p>
-            <p className="text-sm text-gray-400">
-              You will be redirected to the payment portal automatically in a few seconds.
-            </p>
-          </CardContent>
-          <CardFooter className="flex justify-center pb-6">
+          </div>
+          
+          <h1 className="text-2xl font-bold mb-4">Payment Successful!</h1>
+          <p className="text-gray-400 mb-6">
+            Your payment has been processed successfully. Your account has been updated with the new funds.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               className="bg-[#ea384c] hover:bg-red-700"
               onClick={() => navigate('/dashboard')}
             >
-              Go to Dashboard
-              <ArrowRight className="ml-2 h-4 w-4" />
+              Return to Dashboard
             </Button>
-          </CardFooter>
-        </Card>
-        
-        <div className="mt-4 text-center">
-          <Link to="/payment-portal" className="text-sm text-gray-400 hover:text-white">
-            Return to payment portal
-          </Link>
+            <Button 
+              variant="outline" 
+              className="border-[#333]"
+              onClick={() => navigate('/payment-portal')}
+            >
+              View Payment History
+            </Button>
+          </div>
         </div>
-      </div>
+      </main>
+      
+      <footer className="border-t border-[#333] py-4 text-center text-gray-500 text-sm">
+        <div className="container mx-auto px-4">
+          <p>© {new Date().getFullYear()} Surrendered Sinner Fitness. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 };
