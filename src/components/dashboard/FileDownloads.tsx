@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,40 +42,19 @@ const FileDownloads = () => {
         
         if (data) {
           const formattedFiles: UserFile[] = data.map(file => {
-            // Handle workout_plans correctly - it might be null or an object
             let planName = 'General';
             let workoutPlan: WorkoutPlan | null = null;
             
             if (file.workout_plans) {
-              // Check if workout_plans is an array
-              if (Array.isArray(file.workout_plans)) {
-                if (file.workout_plans.length > 0) {
-                  // Access the first item's title property
-                  const firstPlan = file.workout_plans[0];
-                  if (firstPlan && typeof firstPlan === 'object' && 'title' in firstPlan) {
-                    planName = firstPlan.title || 'General';
-                    workoutPlan = { 
-                      id: '',
-                      user_id: '',
-                      title: firstPlan.title as string, 
-                      description: null,
-                      pdf_url: null,
-                      plan_type: '',
-                      created_at: '',
-                      updated_at: ''
-                    };
-                  }
-                }
-              } 
-              // If workout_plans is a single object
-              else if (typeof file.workout_plans === 'object' && file.workout_plans !== null) {
-                // Check if the title property exists on the object
-                if ('title' in file.workout_plans) {
-                  planName = file.workout_plans.title as string || 'General';
-                  workoutPlan = { 
+              const workoutPlanData = file.workout_plans as any;
+              
+              if (Array.isArray(workoutPlanData)) {
+                if (workoutPlanData.length > 0 && workoutPlanData[0]?.title) {
+                  planName = workoutPlanData[0].title;
+                  workoutPlan = {
                     id: '',
                     user_id: '',
-                    title: file.workout_plans.title as string, 
+                    title: workoutPlanData[0].title,
                     description: null,
                     pdf_url: null,
                     plan_type: '',
@@ -84,6 +62,18 @@ const FileDownloads = () => {
                     updated_at: ''
                   };
                 }
+              } else if (typeof workoutPlanData === 'object' && workoutPlanData !== null && 'title' in workoutPlanData) {
+                planName = workoutPlanData.title || 'General';
+                workoutPlan = {
+                  id: '',
+                  user_id: '',
+                  title: workoutPlanData.title,
+                  description: null,
+                  pdf_url: null,
+                  plan_type: '',
+                  created_at: '',
+                  updated_at: ''
+                };
               }
             }
             
@@ -118,7 +108,6 @@ const FileDownloads = () => {
     
     fetchUserFiles();
     
-    // Set up realtime subscription
     const channel = supabase
       .channel('user-files-changes')
       .on('postgres_changes', 
@@ -156,7 +145,6 @@ const FileDownloads = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      // Log download activity
       await supabase.from('file_download_logs').insert({
         user_id: user?.id,
         file_id: file.id,
