@@ -14,6 +14,38 @@ window.addEventListener('error', (event) => {
 // Add logging to help with debugging
 console.log('Initializing application...');
 
+// Basic Error Boundary Component
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('Error caught by ErrorBoundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000000', color: '#ffffff', padding: '20px', textAlign: 'center'}}>
+          <h1 style={{color: '#ea384c', marginBottom: '20px'}}>Something went wrong</h1>
+          <p>We encountered an error while rendering the application. Please try refreshing the page.</p>
+          <button onClick={() => window.location.reload()} style={{marginTop: '20px', backgroundColor: '#ea384c', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer'}}>
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 try {
   // Ensure Supabase is initialized before rendering the app
   const supabaseInitialized = setupSupabase();
@@ -53,37 +85,5 @@ try {
         </button>
       </div>
     `;
-  }
-}
-
-// Basic Error Boundary Component
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
-  constructor(props: {children: React.ReactNode}) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error('Error caught by ErrorBoundary:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000000', color: '#ffffff', padding: '20px', textAlign: 'center'}}>
-          <h1 style={{color: '#ea384c', marginBottom: '20px'}}>Something went wrong</h1>
-          <p>We encountered an error while rendering the application. Please try refreshing the page.</p>
-          <button onClick={() => window.location.reload()} style={{marginTop: '20px', backgroundColor: '#ea384c', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer'}}>
-            Refresh Page
-          </button>
-        </div>
-      );
-    }
-
-    return this.props.children;
   }
 }
