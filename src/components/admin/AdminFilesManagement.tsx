@@ -26,7 +26,7 @@ interface FileRecord {
   profiles?: { 
     full_name: string | null; 
     email: string | null;
-  };
+  } | null;
 }
 
 const AdminFilesManagement = () => {
@@ -57,22 +57,24 @@ const AdminFilesManagement = () => {
         
       if (error) throw error;
       
-      const formattedFiles = data.map(file => ({
-        id: file.id,
-        file_name: file.file_name,
-        file_type: file.file_type,
-        file_size: file.file_size,
-        description: file.description || '',
-        download_url: file.download_url,
-        uploaded_at: new Date(file.uploaded_at).toLocaleString(),
-        uploaded_by: file.uploaded_by,
-        user_id: file.user_id,
-        user_name: file.profiles?.full_name || 'Unknown',
-        user_email: file.profiles?.email || 'Unknown',
-        profiles: file.profiles
-      }));
-      
-      setFiles(formattedFiles);
+      if (data) {
+        const formattedFiles: FileRecord[] = data.map(file => ({
+          id: file.id,
+          file_name: file.file_name,
+          file_type: file.file_type,
+          file_size: file.file_size,
+          description: file.description || '',
+          download_url: file.download_url,
+          uploaded_at: new Date(file.uploaded_at).toLocaleString(),
+          uploaded_by: file.uploaded_by,
+          user_id: file.user_id,
+          user_name: file.profiles?.full_name || 'Unknown',
+          user_email: file.profiles?.email || 'Unknown',
+          profiles: file.profiles
+        }));
+        
+        setFiles(formattedFiles);
+      }
     } catch (error) {
       console.error('Error fetching files:', error);
       toast({

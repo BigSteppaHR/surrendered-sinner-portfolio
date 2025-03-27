@@ -54,20 +54,22 @@ const FileDownloads = () => {
           
         if (error) throw error;
         
-        const formattedFiles = data.map(file => ({
-          id: file.id,
-          file_name: file.file_name,
-          file_type: file.file_type,
-          file_size: file.file_size,
-          description: file.description || '',
-          download_url: file.download_url,
-          uploaded_at: new Date(file.uploaded_at).toLocaleDateString(),
-          plan_id: file.plan_id,
-          plan_name: file.workout_plans?.title || 'General',
-          workout_plans: file.workout_plans
-        }));
-        
-        setFiles(formattedFiles);
+        if (data) {
+          const formattedFiles: UserFile[] = data.map(file => ({
+            id: file.id,
+            file_name: file.file_name,
+            file_type: file.file_type,
+            file_size: file.file_size,
+            description: file.description || '',
+            download_url: file.download_url,
+            uploaded_at: new Date(file.uploaded_at).toLocaleDateString(),
+            plan_id: file.plan_id,
+            plan_name: file.workout_plans?.title || 'General',
+            workout_plans: file.workout_plans
+          }));
+          
+          setFiles(formattedFiles);
+        }
       } catch (error) {
         console.error('Error fetching user files:', error);
         toast({
