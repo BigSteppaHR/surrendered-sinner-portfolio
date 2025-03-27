@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dumbbell, Target, Award, HeartPulse } from 'lucide-react';
 import GlassCard from './GlassCard';
@@ -29,9 +28,9 @@ const About: React.FC = () => {
   ];
 
   const certifications = [
-    { name: "NASM Certified Personal Trainer", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
+    { name: "ISSA Certified Personal Trainer", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
     { name: "ISSA Nutritionist", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
-    { name: "CrossFit Level 2 Trainer", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" }
+    { name: "ISSA Strength & Conditioning Coach", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" }
   ];
 
   return (
@@ -97,7 +96,6 @@ const About: React.FC = () => {
               </div>
             </div>
             
-            {/* Added CTA button */}
             <div className="mt-6">
               <a href="#contact" className="btn-primary pulse-glow inline-flex">
                 Book Free Consultation
@@ -106,7 +104,6 @@ const About: React.FC = () => {
           </div>
         </div>
 
-        {/* New Certifications Section */}
         <div className="mt-16 mb-16">
           <h3 className="text-2xl font-bold mb-6 text-center">Our <span className="text-sinner-red">Certifications</span></h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
