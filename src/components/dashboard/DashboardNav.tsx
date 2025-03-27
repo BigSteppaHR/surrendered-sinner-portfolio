@@ -1,33 +1,99 @@
 
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
-  Home,
-  Calendar,
-  FileText,
+  LayoutDashboard,
   User,
+  Dumbbell,
+  Calendar,
+  Wallet,
+  BarChart3,
+  MessageCircle,
   Settings,
   LogOut,
   Menu,
   X,
-  BarChart2,
-  HelpCircle,
-  Bell,
-  MessageSquare
+  ChevronRight,
+  CreditCard,
+  Package
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import Logo from '@/components/Logo';
+import { cn } from '@/lib/utils';
+
+const sidebarLinks = [
+  {
+    path: '/dashboard',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    label: 'Dashboard',
+    exact: true,
+  },
+  {
+    path: '/dashboard/account',
+    icon: <User className="h-5 w-5" />,
+    label: 'Account',
+  },
+  {
+    path: '/dashboard/plans',
+    icon: <Dumbbell className="h-5 w-5" />,
+    label: 'Training Plans',
+  },
+  {
+    path: '/dashboard/schedule',
+    icon: <Calendar className="h-5 w-5" />,
+    label: 'Schedule',
+  },
+  {
+    path: '/dashboard/progress',
+    icon: <BarChart3 className="h-5 w-5" />,
+    label: 'Progress',
+  },
+  {
+    path: '/dashboard/payment',
+    icon: <Wallet className="h-5 w-5" />,
+    label: 'Payment',
+  },
+  {
+    path: '/dashboard/support',
+    icon: <MessageCircle className="h-5 w-5" />,
+    label: 'Support',
+  },
+  {
+    path: '/dashboard/settings',
+    icon: <Settings className="h-5 w-5" />,
+    label: 'Settings',
+  },
+];
+
+const utilityLinks = [
+  {
+    path: '/plans-catalog',
+    icon: <Package className="h-5 w-5" />,
+    label: 'Plan Catalog',
+  },
+  {
+    path: '/payment',
+    icon: <CreditCard className="h-5 w-5" />,
+    label: 'Payment Portal',
+  },
+];
 
 const DashboardNav = () => {
-  const { logout, profile } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Close the mobile menu when the route changes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
-    const result = await logout();
-    if (result.success && result.redirectTo) {
-      navigate(result.redirectTo);
+    const { success, redirectTo } = await logout();
+    if (success && redirectTo) {
+      navigate(redirectTo);
     }
   };
 
@@ -35,144 +101,121 @@ const DashboardNav = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  const navigateTo = (path: string) => {
-    navigate(path);
-    setIsMenuOpen(false);
-  };
-
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: <Home size={20} /> },
-    { name: 'Schedule', path: '/schedule', icon: <Calendar size={20} /> },
-    { name: 'Training Plans', path: '/plans', icon: <FileText size={20} /> },
-    { name: 'Progress', path: '/progress', icon: <BarChart2 size={20} /> },
-    { name: 'Support', path: '/support', icon: <MessageSquare size={20} /> },
-    { name: 'Account', path: '/account', icon: <User size={20} /> },
-    { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
-  ];
-
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
-
   return (
     <>
-      {/* Mobile Nav */}
-      <div className="flex md:hidden justify-between items-center p-4 bg-black text-white border-b border-[#ea384c]/20">
-        <div className="flex items-center">
-          <h2 className="text-xl font-bold text-white">
-            SURRENDERED<span className="text-[#ea384c]">SINNER</span>
-          </h2>
+      {/* Mobile Navigation Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-zinc-900 border-b border-zinc-800">
+        <div className="flex justify-between items-center h-16 px-4">
+          <Link to="/dashboard" className="flex items-center">
+            <Logo size="small" />
+          </Link>
+          <button
+            onClick={toggleMenu}
+            className="text-white p-2"
+            aria-label="Toggle navigation menu"
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleMenu}
-          className="text-white hover:bg-[#ea384c]/10"
-        >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </Button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Navigation Overlay */}
       {isMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black pt-16">
-          <div className="flex flex-col p-4 space-y-2 overflow-y-auto max-h-screen">
-            {profile && (
-              <div className="flex items-center p-4 border-b border-[#ea384c]/20 mb-4">
-                <div className="w-10 h-10 rounded-full bg-[#ea384c]/20 flex items-center justify-center text-[#ea384c] font-bold mr-3">
-                  {profile.full_name ? profile.full_name.charAt(0) : '?'}
-                </div>
-                <div>
-                  <p className="font-medium text-white">{profile.full_name || 'Athlete'}</p>
-                  <p className="text-sm text-gray-400">{profile.email}</p>
-                </div>
-              </div>
-            )}
-
-            {navItems.map((item) => (
-              <Button
-                key={item.path}
-                variant="ghost"
-                className={`w-full justify-start pl-4 ${
-                  isActive(item.path)
-                    ? 'bg-[#ea384c]/10 text-[#ea384c] font-medium'
-                    : 'text-white hover:bg-[#ea384c]/5 hover:text-[#ea384c]'
-                }`}
-                onClick={() => navigateTo(item.path)}
-              >
-                <span className="mr-2">{item.icon}</span>
-                {item.name}
-              </Button>
-            ))}
-
-            <div className="border-t border-[#ea384c]/20 mt-4 pt-4">
-              <Button
-                variant="ghost"
-                className="w-full justify-start pl-4 text-white hover:bg-[#ea384c]/5 hover:text-[#ea384c]"
-                onClick={handleLogout}
-              >
-                <span className="mr-2">
-                  <LogOut size={20} />
-                </span>
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
+        <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={toggleMenu}></div>
       )}
 
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex h-screen w-64 flex-col bg-black border-r border-[#ea384c]/20 fixed">
-        <div className="p-4 border-b border-[#ea384c]/20">
-          <h2 className="text-xl font-bold text-white text-center">
-            SURRENDERED<span className="text-[#ea384c]">SINNER</span>
-          </h2>
-        </div>
-
-        {profile && (
-          <div className="flex items-center p-4 border-b border-[#ea384c]/20">
-            <div className="w-10 h-10 rounded-full bg-[#ea384c]/20 flex items-center justify-center text-[#ea384c] font-bold mr-3">
-              {profile.full_name ? profile.full_name.charAt(0) : '?'}
-            </div>
-            <div>
-              <p className="font-medium text-white">{profile.full_name || 'Athlete'}</p>
-              <p className="text-sm text-gray-400 truncate max-w-[140px]">{profile.email}</p>
-            </div>
-          </div>
+      {/* Sidebar for both Mobile and Desktop */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 bg-zinc-900 border-r border-zinc-800 transition-transform transform-gpu",
+          isMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
+      >
+        <div className="flex flex-col h-full">
+          {/* Sidebar Header */}
+          <div className="h-16 flex items-center px-6 border-b border-zinc-800 hidden md:flex">
+            <Link to="/dashboard" className="flex items-center">
+              <Logo size="small" />
+            </Link>
+          </div>
 
-        <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-          {navItems.map((item) => (
+          {/* Sidebar Content */}
+          <div className="flex-1 overflow-y-auto py-6 px-4">
+            <nav className="space-y-6">
+              <div className="space-y-1">
+                {sidebarLinks.map((link) => (
+                  <NavLink
+                    key={link.path}
+                    to={link.path}
+                    icon={link.icon}
+                    label={link.label}
+                    exact={link.exact}
+                  />
+                ))}
+              </div>
+
+              <div className="pt-6 border-t border-zinc-800">
+                <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Utilities
+                </p>
+                <div className="space-y-1">
+                  {utilityLinks.map((link) => (
+                    <NavLink
+                      key={link.path}
+                      to={link.path}
+                      icon={link.icon}
+                      label={link.label}
+                    />
+                  ))}
+                </div>
+              </div>
+            </nav>
+          </div>
+
+          {/* Sidebar Footer */}
+          <div className="p-4 border-t border-zinc-800">
             <Button
-              key={item.path}
               variant="ghost"
-              className={`w-full justify-start ${
-                isActive(item.path)
-                  ? 'bg-[#ea384c]/10 text-[#ea384c] font-medium'
-                  : 'text-white hover:bg-[#ea384c]/5 hover:text-[#ea384c]'
-              }`}
-              onClick={() => navigateTo(item.path)}
+              className="w-full justify-start text-red-400 hover:text-white hover:bg-red-900/20"
+              onClick={handleLogout}
             >
-              <span className="mr-2">{item.icon}</span>
-              {item.name}
+              <LogOut className="h-5 w-5 mr-2" />
+              Log Out
             </Button>
-          ))}
-        </nav>
-
-        <div className="p-4 border-t border-[#ea384c]/20">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-white hover:bg-[#ea384c]/5 hover:text-[#ea384c]"
-            onClick={handleLogout}
-          >
-            <span className="mr-2">
-              <LogOut size={20} />
-            </span>
-            Logout
-          </Button>
+          </div>
         </div>
       </aside>
     </>
+  );
+};
+
+interface NavLinkProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  exact?: boolean;
+}
+
+const NavLink = ({ to, icon, label, exact }: NavLinkProps) => {
+  const location = useLocation();
+  const isActive = exact
+    ? location.pathname === to
+    : location.pathname.startsWith(to);
+
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+        isActive
+          ? "bg-sinner-red text-white"
+          : "text-gray-300 hover:text-white hover:bg-zinc-800"
+      )}
+    >
+      <span className="mr-3">{icon}</span>
+      <span className="flex-1">{label}</span>
+      {isActive && <ChevronRight className="h-4 w-4" />}
+    </Link>
   );
 };
 

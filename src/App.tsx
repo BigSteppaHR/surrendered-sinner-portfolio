@@ -25,6 +25,9 @@ import Payment from '@/pages/Payment';
 import PaymentPortal from '@/pages/PaymentPortal';
 import { AuthProvider } from '@/components/AuthProvider';
 import StripeProvider from '@/components/StripeProvider';
+import PlansCatalog from '@/pages/PlansCatalog';
+import PaymentSuccess from '@/pages/PaymentSuccess';
+import PaymentCancelled from '@/pages/PaymentCancelled';
 
 function App() {
   return (
@@ -44,6 +47,9 @@ function App() {
               <Route path="/confirm-email" element={<ConfirmEmail />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/plans-catalog" element={<PlansCatalog />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-cancelled" element={<PaymentCancelled />} />
 
               {/* Dashboard Routes */}
               <Route path="/dashboard/account" element={<DashboardAccount />} />

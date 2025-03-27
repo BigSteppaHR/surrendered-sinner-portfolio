@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.4.0?target=deno";
 
@@ -154,6 +155,58 @@ async function handler(req: Request): Promise<Response> {
           success: true,
           payment_id: params.payment_id,
           status: params.status
+        };
+        break;
+        
+      case 'create-checkout-session':
+        console.log("Creating Stripe checkout session...");
+        
+        if (!params.priceId) {
+          throw new Error("Price ID is required for creating a checkout session");
+        }
+        
+        let checkoutOptions: any = {
+          line_items: [
+            {
+              price: params.priceId,
+              quantity: 1,
+            },
+          ],
+          mode: params.mode || 'subscription', // subscription or payment
+          success_url: params.successUrl || `${req.headers.get('origin')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: params.cancelUrl || `${req.headers.get('origin')}/payment-cancelled`,
+        };
+        
+        // If user_id is provided, save it in the metadata
+        if (params.userId) {
+          checkoutOptions.metadata = {
+            user_id: params.userId
+          };
+          
+          // Check if user already has a Stripe customer ID
+          const { data: existingCustomer } = await supabase
+            .from('stripe_customers')
+            .select('stripe_customer_id')
+            .eq('user_id', params.userId)
+            .maybeSingle();
+            
+          if (existingCustomer?.stripe_customer_id) {
+            checkoutOptions.customer = existingCustomer.stripe_customer_id;
+          } else if (params.userEmail) {
+            // If no customer ID but email is provided, add email to create a new customer
+            checkoutOptions.customer_email = params.userEmail;
+          }
+        } else if (params.userEmail) {
+          checkoutOptions.customer_email = params.userEmail;
+        }
+        
+        const session = await stripe.checkout.sessions.create(checkoutOptions);
+        
+        console.log(`Checkout session created with id: ${session.id}`);
+        
+        result = {
+          sessionId: session.id,
+          url: session.url
         };
         break;
       
