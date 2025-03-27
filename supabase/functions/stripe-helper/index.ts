@@ -22,6 +22,13 @@ serve(async (req) => {
     // Get the Stripe secret key from environment variables
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     
+    // Enhanced debug logging for Stripe key detection
+    console.log("Stripe key availability check:", {
+      keyExists: !!stripeSecretKey,
+      keyLength: stripeSecretKey ? stripeSecretKey.length : 0,
+      keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 5) + '...' : 'none'
+    });
+    
     if (!stripeSecretKey) {
       console.error("Missing Stripe secret key in environment variables");
       throw new Error("Missing Stripe secret key");
