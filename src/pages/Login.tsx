@@ -1,241 +1,216 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, useLocation } from "react-router-dom";
-import * as z from "zod";
-import LoginHeader from "@/components/auth/LoginHeader";
-import LoginForm from "@/components/auth/LoginForm";
-import LoginFooter from "@/components/auth/LoginFooter";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import AnimatedBackground from "@/components/auth/AnimatedBackground";
 
-const EmailVerificationDialogLazy = lazy(() => import("@/components/email/EmailVerificationDialog"));
-
-const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-});
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { useAuthLogin } from '@/hooks/auth/useAuthLogin';
+import { Eye, EyeOff, Mail, Key, Lock, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Login = () => {
-  const { login, isAuthenticated, profile, isLoading, isInitialized } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState("");
-  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [quizResultId, setQuizResultId] = useState<string | null>(null);
+  
+  const { login } = useAuthLogin();
   const location = useLocation();
-  const mountedRef = useRef(true);
-  const redirectAttemptedRef = useRef(false);
-  const { toast } = useToast();
-
+  const navigate = useNavigate();
+  
+  // Parse URL params to get quiz result ID
   useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    console.log("Login page - Auth state:", { 
-      isAuthenticated, 
-      profile, 
-      isInitialized, 
-      isLoading,
-      redirectAttempted: redirectAttemptedRef.current
-    });
+    const params = new URLSearchParams(location.search);
+    const resultId = params.get('quizResultId');
+    if (resultId) {
+      setQuizResultId(resultId);
+    }
     
-    if (isInitialized && !isLoading && isAuthenticated && profile) {
-      console.log("Login: User authenticated, redirecting based on profile:", profile);
-      
-      if (profile.email_confirmed) {
-        console.log("User has confirmed email, redirecting to dashboard");
-        if (profile.is_admin) {
-          navigate("/admin", { replace: true });
-        } else {
-          navigate("/dashboard", { replace: true });
+    // Check for pending quiz data
+    const storedQuizData = sessionStorage.getItem('pendingQuizData');
+    if (storedQuizData && !resultId) {
+      try {
+        const { resultId: storedResultId } = JSON.parse(storedQuizData);
+        if (storedResultId) {
+          setQuizResultId(storedResultId);
         }
-      } else if (!showEmailVerification) {
-        setVerificationEmail(profile.email || "");
-        setShowEmailVerification(true);
+      } catch (error) {
+        console.error("Error parsing stored quiz data:", error);
       }
     }
-  }, [isAuthenticated, profile, navigate, isInitialized, isLoading, showEmailVerification]);
-
-  const checkEmailVerification = async (email: string): Promise<boolean> => {
-    if (!email) return false;
     
-    setIsCheckingVerification(true);
+    // Extract redirect info from the location state
+    const state = location.state as { redirectAfterLogin?: string } | undefined;
+    if (state?.redirectAfterLogin) {
+      console.log("Will redirect to:", state.redirectAfterLogin);
+    }
+  }, [location]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      setErrorMessage('Please provide both email and password');
+      return;
+    }
+    
+    setIsProcessing(true);
+    setErrorMessage('');
     
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('email_confirmed')
-        .eq('email', email)
-        .maybeSingle();
+      const { error, data } = await login(email, password);
       
-      if (mountedRef.current) {
-        setIsCheckingVerification(false);
+      if (error) {
+        console.error("Login error:", error);
+        setErrorMessage(error.message || 'Invalid login credentials');
+        setIsProcessing(false);
+        return;
       }
       
-      console.log("Profile verification check result:", { data, error });
-      
-      if (!error && data && data.email_confirmed) {
-        console.log("Email already verified according to database check:", data);
-        return true;
+      // If we have a quiz result ID, store it to be handled after login
+      if (quizResultId) {
+        const quizData = {
+          resultId: quizResultId
+        };
+        sessionStorage.setItem('pendingQuizConnection', JSON.stringify(quizData));
       }
       
-      return false;
-    } catch (err) {
-      console.error("Error checking email verification:", err);
-      if (mountedRef.current) {
-        setIsCheckingVerification(false);
-      }
-      return false;
-    }
-  };
-
-  useEffect(() => {
-    if (location.state?.message) {
-      toast({
-        title: "Success",
-        description: location.state.message,
-      });
-      
-      navigate(location.pathname, { replace: true });
-    }
-  }, [location.state, navigate, toast]);
-
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
-    if (!mountedRef.current) return;
-    
-    console.log("Login form submitted with:", values.email);
-    setIsSubmitting(true);
-    setLoginError(null);
-    redirectAttemptedRef.current = false;
-    
-    try {
-      const result = await login(values.email, values.password);
-      
-      if (!mountedRef.current) return;
-      
-      console.log("Login result:", result);
-      
-      if (result.error) {
-        if (result.error.code === "email_not_confirmed" && result.data?.showVerification) {
-          const isVerified = await checkEmailVerification(values.email);
-          
-          if (isVerified) {
-            toast({
-              title: "Email already verified",
-              description: "Your email is already verified. Attempting to sign you in...",
-            });
-            
-            const retryResult = await login(values.email, values.password);
-            
-            if (retryResult.error) {
-              setLoginError(retryResult.error.message || "Login failed. Please try again.");
-              toast({
-                title: "Login failed",
-                description: retryResult.error.message || "Login failed. Please try again.",
-                variant: "destructive",
-              });
-            }
-          } else {
-            console.log("Email not confirmed, showing verification dialog for:", values.email);
-            setVerificationEmail(values.email);
-            setShowEmailVerification(true);
-          }
-        } else {
-          const errorMessage = result.error.message || "Login failed. Please try again.";
-          setLoginError(errorMessage);
-          toast({
-            title: "Login failed",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        }
-      } else if (result.data?.user) {
-        redirectAttemptedRef.current = false;
-        
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
-        
-        if (result.data.profile?.email_confirmed) {
-          console.log("Redirecting immediately after successful login");
-          if (result.data.profile?.is_admin) {
-            navigate("/admin", { replace: true });
-          } else {
-            navigate("/dashboard", { replace: true });
-          }
-        }
-      }
-    } catch (error: any) {
-      if (!mountedRef.current) return;
-      
-      console.error("Login error:", error);
-      const errorMessage = "An unexpected error occurred. Please try again.";
-      setLoginError(errorMessage);
-      toast({
-        title: "Login failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Redirect based on location state or default to dashboard
+      const state = location.state as { redirectAfterLogin?: string } | undefined;
+      const redirectPath = state?.redirectAfterLogin || data?.redirectTo || '/dashboard';
+      navigate(redirectPath);
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setErrorMessage(err.message || 'An error occurred during login');
     } finally {
-      if (mountedRef.current) {
-        setIsSubmitting(false);
-      }
+      setIsProcessing(false);
     }
   };
 
-  const handleCloseVerification = () => {
-    if (mountedRef.current) {
-      setShowEmailVerification(false);
-    }
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
   };
   
-  const handleForgotPassword = () => {
-    navigate("/reset-password");
+  const navigateToSignup = () => {
+    const queryParams = quizResultId ? `?quizResultId=${quizResultId}` : '';
+    navigate(`/signup${queryParams}`);
   };
 
-  if (isLoading || !isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
+  const navigateToResetPassword = () => {
+    navigate('/reset-password');
+  };
 
   return (
-    <AnimatedBackground>
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <LoginHeader />
-          
-          <LoginForm 
-            onSubmit={onSubmit}
-            isSubmitting={isSubmitting || isCheckingVerification}
-            isLoading={isLoading}
-            loginError={loginError}
-            onForgotPassword={handleForgotPassword}
-          />
-          
-          <LoginFooter />
-        </div>
-
-        {showEmailVerification && (
-          <Suspense fallback={<div className="animate-pulse">Loading verification...</div>}>
-            <EmailVerificationDialogLazy 
-              isOpen={showEmailVerification}
-              onClose={handleCloseVerification}
-              initialEmail={verificationEmail}
-              redirectToLogin={false}
-            />
-          </Suspense>
-        )}
+    <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-[#111] text-white">
+      <div className="w-full max-w-md">
+        <Card className="border-gray-800 bg-gray-900">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl flex items-center justify-center gap-2">
+              <Lock className="h-6 w-6 text-sinner-red" />
+              <span>Welcome Back</span>
+            </CardTitle>
+            <CardDescription className="text-center text-gray-400">
+              Enter your credentials to access your account
+              {quizResultId && (
+                <p className="mt-1 text-sm text-sinner-red">Your custom training plan will be connected to your account</p>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {errorMessage && (
+              <Alert variant="destructive" className="mb-4 bg-red-900/20 border-red-800 text-white">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                  {errorMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <form onSubmit={handleLogin}>
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email" className="text-gray-300">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      className="pl-10 bg-gray-800 border-gray-700 text-white"
+                      placeholder="m@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-gray-300">Password</Label>
+                    <button
+                      type="button"
+                      onClick={navigateToResetPassword}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Forgot?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      className="pl-10 pr-10 bg-gray-800 border-gray-700 text-white"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                      onClick={toggleShowPassword}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-sinner-red hover:bg-red-700"
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Signing In..." : "Sign In"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Separator className="bg-gray-800" />
+            <div className="text-center w-full">
+              <span className="text-gray-400">Don't have an account?</span>{" "}
+              <button 
+                onClick={navigateToSignup}
+                className="text-primary hover:underline"
+                type="button"
+              >
+                Sign up
+              </button>
+            </div>
+          </CardFooter>
+        </Card>
       </div>
-    </AnimatedBackground>
+    </div>
   );
 };
 

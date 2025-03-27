@@ -1,361 +1,278 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, Link } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { EyeIcon, EyeOffIcon, AlertCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
-import AnimatedBackground from "@/components/auth/AnimatedBackground";
 
-const EmailVerificationDialog = lazy(() => import("@/components/email/EmailVerificationDialog"));
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { useAuthSignup } from '@/hooks/auth/useAuthSignup';
+import { Separator } from '@/components/ui/separator';
+import { Eye, EyeOff, User, Mail, Key, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
-const signupSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters" })
-    .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
-    .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
-    .regex(/[0-9]/, { message: "Password must contain at least one number" }),
-  fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-export default function Signup() {
-  const { signup, isAuthenticated, profile, isInitialized } = useAuth();
+const Signup = () => {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [signupError, setSignupError] = useState<string | null>(null);
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
-  const [signupEmail, setSignupEmail] = useState("");
-  const [passwordStrength, setPasswordStrength] = useState(0);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isInitialized && isAuthenticated && profile?.email_confirmed) {
-      navigate("/dashboard");
-    }
-  }, [isAuthenticated, profile, navigate, isInitialized]);
-
-  const form = useForm<z.infer<typeof signupSchema>>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-      fullName: "",
-    },
-  });
-
-  const calculatePasswordStrength = (password: string): number => {
-    if (!password) return 0;
-    
-    let strength = 0;
-    
-    if (password.length >= 8) strength += 25;
-    
-    if (/[A-Z]/.test(password)) strength += 25;
-    
-    if (/[a-z]/.test(password)) strength += 25;
-    
-    if (/[0-9]/.test(password)) strength += 25;
-    
-    return strength;
-  };
-
-  const watchPassword = form.watch("password");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [quizResultId, setQuizResultId] = useState<string | null>(null);
   
-  useEffect(() => {
-    setPasswordStrength(calculatePasswordStrength(watchPassword));
-  }, [watchPassword]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { signup } = useAuthSignup();
+  const { toast } = useToast();
 
-  const getStrengthColor = (strength: number) => {
-    if (strength <= 25) return "bg-red-500";
-    if (strength <= 50) return "bg-orange-500";
-    if (strength <= 75) return "bg-yellow-500";
-    return "bg-green-500";
+  // Parse URL params to get quiz result ID
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const resultId = params.get('quizResultId');
+    if (resultId) {
+      setQuizResultId(resultId);
+      // Could pre-fill email if we had it
+    }
+    
+    // Check for pending quiz data
+    const storedQuizData = sessionStorage.getItem('pendingQuizData');
+    if (storedQuizData && !resultId) {
+      try {
+        const { resultId: storedResultId } = JSON.parse(storedQuizData);
+        if (storedResultId) {
+          setQuizResultId(storedResultId);
+        }
+      } catch (error) {
+        console.error("Error parsing stored quiz data:", error);
+      }
+    }
+  }, [location]);
+
+  const validateForm = () => {
+    if (!fullName || !email || !password || !confirmPassword) {
+      setErrorMessage('Please fill in all fields');
+      return false;
+    }
+    
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match');
+      return false;
+    }
+    
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters');
+      return false;
+    }
+    
+    // Basic email validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      setErrorMessage('Please enter a valid email address');
+      return false;
+    }
+    
+    setErrorMessage('');
+    return true;
   };
 
-  const onSubmit = async (values: z.infer<typeof signupSchema>) => {
-    if (!mountedRef.current) return;
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    setIsSubmitting(true);
-    setSignupError(null);
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsProcessing(true);
+    setErrorMessage('');
     
     try {
-      console.log("Submitting signup form for:", values.email);
-      const result = await signup(values.email, values.password, values.fullName);
+      const { error, data } = await signup(email, password, fullName);
       
-      if (!mountedRef.current) return;
+      if (error) {
+        setErrorMessage(error.message || 'An error occurred during signup');
+        setIsProcessing(false);
+        return;
+      }
       
-      if (result.error) {
-        console.log("Signup error:", result.error);
-        setSignupError(result.error.message || "There was a problem creating your account");
-      } else {
-        if (result.data?.showVerification) {
-          console.log("Showing verification dialog for:", values.email);
-          setSignupEmail(values.email);
-          setShowEmailVerification(true);
-          form.reset();
-        }
+      // If we have a quiz result ID, associate it with the user
+      if (quizResultId) {
+        // Store in session storage to be handled after email verification
+        const quizData = {
+          resultId: quizResultId
+        };
+        sessionStorage.setItem('pendingQuizConnection', JSON.stringify(quizData));
         
-        if (result.data?.redirectTo) {
-          setTimeout(() => {
-            if (mountedRef.current) {
-              console.log("Redirecting to:", result.data?.redirectTo);
-              navigate(result.data?.redirectTo as string);
-            }
-          }, 3000);
-        }
+        toast({
+          title: "Account created!",
+          description: "Please verify your email. Your quiz results will be connected to your account when you log in.",
+        });
       }
-    } catch (error) {
-      if (!mountedRef.current) return;
       
-      console.error("Unexpected signup error:", error);
-      setSignupError("An unexpected error occurred. Please try again.");
-    } finally {
-      if (mountedRef.current) {
-        setIsSubmitting(false);
+      if (data?.redirectTo) {
+        navigate(data.redirectTo, { state: data.redirectState || {} });
       }
+      
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      setErrorMessage(err.message || 'An error occurred during signup');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleCloseVerification = () => {
-    if (mountedRef.current) {
-      setShowEmailVerification(false);
-      navigate("/login");
-    }
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
   };
 
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
-
-  if (isAuthenticated && profile?.email_confirmed) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
+  const navigateToLogin = () => {
+    const queryParams = quizResultId ? `?quizResultId=${quizResultId}` : '';
+    navigate(`/login${queryParams}`);
+  };
 
   return (
-    <AnimatedBackground>
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white">
-              SURRENDERED<span className="text-red-600">SINNER</span>
-            </h1>
-            <p className="text-gray-400 mt-2">Elite fitness coaching</p>
-          </div>
-
-          <Card className="bg-gray-900 text-white border-gray-800">
-            
-            <CardHeader className="pb-4">
-              <CardTitle className="text-2xl">Create Account</CardTitle>
-              <CardDescription className="text-gray-400">
-                Enter your details to create an account
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent>
-              {signupError && (
-                <div className="bg-red-900/30 border border-red-800 text-white p-3 rounded-md mb-4 flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm">{signupError}</p>
-                </div>
+    <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-[#111] text-white">
+      <div className="w-full max-w-md">
+        <Card className="border-gray-800 bg-gray-900">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl flex items-center justify-center gap-2">
+              <User className="h-6 w-6 text-sinner-red" />
+              <span>Create an Account</span>
+            </CardTitle>
+            <CardDescription className="text-center text-gray-400">
+              Enter your information to create an account
+              {quizResultId && (
+                <p className="mt-1 text-sm text-sinner-red">Your custom training plan will be saved to your account</p>
               )}
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="text" 
-                            placeholder="Enter your full name" 
-                            {...field}
-                            disabled={isSubmitting} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="email" 
-                            placeholder="Enter your email" 
-                            {...field}
-                            disabled={isSubmitting} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showPassword ? "text" : "password"}
-                              placeholder="Enter your password"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                            <span
-                              className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                              onClick={() => setShowPassword(!showPassword)}
-                            >
-                              {showPassword ? (
-                                <EyeOffIcon className="h-4 w-4 text-gray-500" />
-                              ) : (
-                                <EyeIcon className="h-4 w-4 text-gray-500" />
-                              )}
-                            </span>
-                          </div>
-                        </FormControl>
-                        {field.value && (
-                          <div className="mt-2">
-                            <div className="flex justify-between text-xs mb-1">
-                              <span>Password strength</span>
-                              <span>{passwordStrength <= 25 ? "Weak" : passwordStrength <= 50 ? "Fair" : passwordStrength <= 75 ? "Good" : "Strong"}</span>
-                            </div>
-                            <Progress 
-                              value={passwordStrength} 
-                              className="h-1" 
-                              indicatorClassName={getStrengthColor(passwordStrength)} 
-                            />
-                          </div>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showConfirmPassword ? "text" : "password"}
-                              placeholder="Confirm your password"
-                              {...field}
-                              disabled={isSubmitting}
-                            />
-                            <span
-                              className="absolute inset-y-0 right-2 flex items-center cursor-pointer"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            >
-                              {showConfirmPassword ? (
-                                <EyeOffIcon className="h-4 w-4 text-gray-500" />
-                              ) : (
-                                <EyeIcon className="h-4 w-4 text-gray-500" />
-                              )}
-                            </span>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        Creating Account...
-                      </span>
-                    ) : (
-                      "Create Account"
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-
-            <CardFooter>
-              <p className="text-sm text-gray-400 w-full text-center">
-                Already have an account?{" "}
-                <Link to="/login" className="text-sinner-red hover:underline font-semibold">
-                  Login
-                </Link>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {errorMessage && (
+              <Alert variant="destructive" className="mb-4 bg-red-900/20 border-red-800 text-white">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                  {errorMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <form onSubmit={handleSignup}>
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name" className="text-gray-300">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="name"
+                      className="pl-10 bg-gray-800 border-gray-700 text-white"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="email" className="text-gray-300">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      className="pl-10 bg-gray-800 border-gray-700 text-white"
+                      placeholder="m@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="password" className="text-gray-300">Password</Label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      className="pl-10 pr-10 bg-gray-800 border-gray-700 text-white"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                      onClick={toggleShowPassword}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="confirm-password" className="text-gray-300">Confirm Password</Label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="confirm-password"
+                      type={showPassword ? "text" : "password"}
+                      className="pl-10 bg-gray-800 border-gray-700 text-white"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-sinner-red hover:bg-red-700" 
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Creating Account..." : "Create Account"}
+                </Button>
+              </div>
+            </form>
+            
+            <div className="mt-4 text-center text-sm">
+              <p className="text-gray-400">
+                By signing up, you agree to our{" "}
+                <a href="/terms" className="underline text-primary hover:text-primary/90">
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" className="underline text-primary hover:text-primary/90">
+                  Privacy Policy
+                </a>
               </p>
-            </CardFooter>
-          
-          </Card>
-
-          <div className="mt-6 text-center text-gray-500">
-            <p className="text-xs">
-              <AlertCircle className="inline-block h-4 w-4 mr-1 align-middle" />
-              By signing up, you agree to our{" "}
-              <a href="#" className="text-sinner-red hover:underline">
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a href="#" className="text-sinner-red hover:underline">
-                Privacy Policy
-              </a>
-              .
-            </p>
-          </div>
-        </div>
-
-        {mountedRef.current && (
-          <Suspense fallback={<div className="animate-pulse">Loading verification...</div>}>
-            <EmailVerificationDialog 
-              isOpen={showEmailVerification}
-              onClose={handleCloseVerification}
-              initialEmail={signupEmail}
-              redirectToLogin={true}
-            />
-          </Suspense>
-        )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Separator className="bg-gray-800" />
+            <div className="text-center w-full">
+              <span className="text-gray-400">Already have an account?</span>{" "}
+              <button 
+                onClick={navigateToLogin}
+                className="text-primary hover:underline"
+              >
+                Sign in
+              </button>
+            </div>
+          </CardFooter>
+        </Card>
       </div>
-    </AnimatedBackground>
+    </div>
   );
-}
+};
+
+export default Signup;

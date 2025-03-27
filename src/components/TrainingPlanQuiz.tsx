@@ -1,6 +1,7 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Check, X } from "lucide-react";
+import { ChevronRight, Check, X, LogIn } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +54,29 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requiresAuth, setRequiresAuth] = useState(false);
+  const [quizResultId, setQuizResultId] = useState<string | null>(null);
+  
+  // Check for stored quiz data on mount
+  useEffect(() => {
+    const storedQuizData = sessionStorage.getItem('pendingQuizData');
+    if (storedQuizData) {
+      try {
+        const { answers: storedAnswers, resultId } = JSON.parse(storedQuizData);
+        if (storedAnswers) {
+          setAnswers(storedAnswers);
+        }
+        if (resultId) {
+          setQuizResultId(resultId);
+          // If user is already authenticated and has quiz data, we can complete the quiz
+          if (isAuthenticated && profile?.id) {
+            connectQuizResultToUser(resultId);
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing stored quiz data:", error);
+      }
+    }
+  }, [isAuthenticated, profile]);
   
   const handleSelect = (option: string) => {
     if (currentStep >= quizSteps.length) return;
@@ -64,10 +88,128 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
       setCurrentStep(currentStep + 1);
     } else {
       if (!isAuthenticated) {
-        setRequiresAuth(true);
-        return;
+        // For unauthenticated users, save quiz results anonymously
+        saveAnonymousQuizResults(newAnswers);
+      } else {
+        submitQuizResults(newAnswers);
       }
-      submitQuizResults(newAnswers);
+    }
+  };
+  
+  // Save quiz results anonymously and redirect to signup
+  const saveAnonymousQuizResults = async (results: Record<string, string>) => {
+    setIsSubmitting(true);
+    
+    try {
+      // Create a description based on the quiz results
+      const description = `
+        Goal: ${results.goal}
+        Training frequency: ${results.frequency}
+        Fitness level: ${results.level}
+        Focus area: ${results.focus}
+        Training type: ${results.type}
+      `;
+      
+      // Determine the plan type and price based on quiz answers
+      let planType = "custom";
+      let planPrice = 149.99; // Default price
+      
+      if (results.goal === "Competition Prep") {
+        planType = "competition";
+        planPrice = 299.99;
+      } else if (results.goal === "Weight Loss") {
+        planType = "weight_loss";
+        planPrice = 179.99;
+      } else if (results.goal === "Muscle Building") {
+        planType = "muscle_building";
+        planPrice = 199.99;
+      }
+      
+      if (results.level === "Advanced" || results.level === "Elite") {
+        planPrice += 50; // Higher price for advanced/elite level
+      }
+      
+      // Apply a small discount (5%) for taking the quiz
+      const discountedPrice = Number((planPrice * 0.95).toFixed(2));
+      
+      // Create a temporary quiz result
+      const { data: customPlanResult, error: customPlanError } = await supabase
+        .from('custom_plan_results')
+        .insert({
+          user_id: null, // Will be updated when user signs up
+          quiz_answers: results,
+          selected_plan_name: `Custom ${results.goal} Plan`,
+          selected_plan_price: discountedPrice,
+          plan_features: [
+            `Personalized ${results.goal} program`,
+            `Designed for ${results.level} fitness level`,
+            `Optimized for ${results.frequency} training frequency`,
+            `Focus on ${results.focus} development`,
+            `${results.type} training methodology`,
+            `5% quiz completion discount applied`
+          ]
+        })
+        .select()
+        .single();
+      
+      if (customPlanError) throw customPlanError;
+      
+      // Store the quiz data in session storage for later retrieval
+      sessionStorage.setItem('pendingQuizData', JSON.stringify({
+        answers: results,
+        resultId: customPlanResult.id
+      }));
+      
+      setQuizResultId(customPlanResult.id);
+      
+      // Show auth modal
+      setRequiresAuth(true);
+      setIsSubmitting(false);
+      
+    } catch (error: any) {
+      console.error("Error saving anonymous quiz:", error);
+      toast({
+        title: "Submission failed",
+        description: error.message || "Failed to save quiz results",
+        variant: "destructive"
+      });
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Connect existing quiz result to user after signup/login
+  const connectQuizResultToUser = async (resultId: string) => {
+    if (!profile?.id) return;
+    
+    try {
+      // Update the quiz result with the user ID
+      const { error: updateError } = await supabase
+        .from('custom_plan_results')
+        .update({ user_id: profile.id })
+        .eq('id', resultId);
+      
+      if (updateError) throw updateError;
+      
+      // Create workout plan from the quiz result
+      const { data: workoutPlan, error: workoutError } = await supabase
+        .rpc('add_custom_plan_to_workout_plans', {
+          p_user_id: profile.id,
+          p_custom_plan_result_id: resultId
+        });
+      
+      if (workoutError) throw workoutError;
+      
+      // Clear stored quiz data
+      sessionStorage.removeItem('pendingQuizData');
+      
+      toast({
+        title: "Quiz result connected",
+        description: "Your custom plan has been added to your dashboard."
+      });
+      
+      onComplete();
+    } catch (error: any) {
+      console.error("Error connecting quiz to user:", error);
     }
   };
   
@@ -112,6 +254,9 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
         planPrice += 50; // Higher price for advanced/elite level
       }
       
+      // Apply a small discount (5%) for taking the quiz
+      const discountedPrice = Number((planPrice * 0.95).toFixed(2));
+      
       // First, store the quiz results
       const { data: customPlanResult, error: customPlanError } = await supabase
         .from('custom_plan_results')
@@ -119,13 +264,14 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
           user_id: profile.id,
           quiz_answers: results,
           selected_plan_name: `Custom ${results.goal} Plan`,
-          selected_plan_price: planPrice,
+          selected_plan_price: discountedPrice,
           plan_features: [
             `Personalized ${results.goal} program`,
             `Designed for ${results.level} fitness level`,
             `Optimized for ${results.frequency} training frequency`,
             `Focus on ${results.focus} development`,
-            `${results.type} training methodology`
+            `${results.type} training methodology`,
+            `5% quiz completion discount applied`
           ]
         })
         .select()
@@ -167,13 +313,16 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
   };
 
   const redirectToLogin = () => {
-    // Store quiz state in sessionStorage
-    sessionStorage.setItem('dashboardPendingQuizAnswers', JSON.stringify(answers));
-    sessionStorage.setItem('dashboardPendingQuizStep', currentStep.toString());
-    navigate('/login', { state: { redirectAfterLogin: '/dashboard/plans' } });
+    // Create a custom signup URL with the quiz result ID
+    navigate(`/signup?quizResultId=${quizResultId}`);
   };
 
-  // Skip to end if we're in submission state
+  const redirectToDashboard = () => {
+    // Navigate to dashboard to see the plan
+    navigate('/dashboard/plans');
+  };
+
+  // Loading state for submissions
   if (isSubmitting) {
     return (
       <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
@@ -193,26 +342,28 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
     );
   }
 
-  // Show login screen if auth is required
+  // Show login/signup prompt if auth is required
   if (requiresAuth) {
     return (
       <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
         <CardHeader>
-          <CardTitle className="text-center">Login Required</CardTitle>
+          <CardTitle className="text-center">Your Custom Plan is Ready!</CardTitle>
           <CardDescription className="text-center text-gray-400">
-            You need to login or create an account to save your custom plan
+            Create an account to save your custom plan or view it now
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 flex flex-col items-center justify-center min-h-[300px]">
           <p className="text-center text-gray-300 mb-6">
-            Your quiz answers will be preserved after you login
+            We've created a personalized training plan based on your quiz answers. 
+            Would you like to save it to your account?
           </p>
-          <div className="flex space-x-4">
+          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
             <Button 
               onClick={redirectToLogin}
               className="bg-sinner-red hover:bg-red-700"
             >
-              Login or Sign Up
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign Up & Save Plan
             </Button>
             <Button 
               variant="outline" 

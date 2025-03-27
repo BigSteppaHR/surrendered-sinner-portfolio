@@ -6,7 +6,7 @@ export const subscriptionPlans = [
   {
     id: "monthly",
     name: "Monthly Coaching",
-    price: "$349/month",
+    price: "$549/month",
     description: "Elite fitness coaching subscription with monthly check-ins",
     features: [
       "Personalized workout plans",
@@ -19,7 +19,7 @@ export const subscriptionPlans = [
   {
     id: "quarterly",
     name: "Quarterly Package",
-    price: "$899/quarter",
+    price: "$1399/quarter",
     description: "Save 15% with our quarterly coaching package",
     features: [
       "Everything in Monthly plan",
@@ -32,7 +32,7 @@ export const subscriptionPlans = [
   {
     id: "competition",
     name: "Competition Prep",
-    price: "$499/month",
+    price: "$899/month",
     description: "Specialized coaching for bodybuilding competitions",
     features: [
       "Contest peak week planning",

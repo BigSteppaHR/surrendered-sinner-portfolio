@@ -21,6 +21,7 @@ import AdminPayments from '@/pages/admin/AdminPayments';
 import NotFound from '@/pages/NotFound';
 import Schedule from '@/pages/Schedule';
 import Plans from '@/pages/Plans';
+import Payment from '@/pages/Payment';
 import PaymentPortal from '@/pages/PaymentPortal';
 import { AuthProvider } from '@/components/AuthProvider';
 import StripeProvider from '@/components/StripeProvider';
@@ -38,6 +39,7 @@ function App() {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/plans" element={<Plans />} />
               <Route path="/schedule" element={<Schedule />} />
+              <Route path="/payment" element={<Payment />} />
               <Route path="/payment-portal" element={<PaymentPortal />} />
               <Route path="/confirm-email" element={<ConfirmEmail />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
