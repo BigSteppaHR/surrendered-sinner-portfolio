@@ -1,137 +1,82 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.29.0'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Define CORS headers - allow any origin or use environment variable if set
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Allow all origins including codecove.dev
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOW_ORIGIN') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json; charset=utf-8', // Add UTF-8 charset
-  'X-Content-Type-Options': 'nosniff', // Prevent MIME-sniffing
-  'Content-Security-Policy': "frame-ancestors 'none'", // Modern alternative to X-Frame-Options
-  'Cache-Control': 'no-store, max-age=0' // Prevent caching of sensitive data
-}
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, {
+      headers: corsHeaders,
+      status: 204,
+    });
   }
 
   try {
-    // Get the Supabase client with admin privileges
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-
-    // Make sure we have the required env variables
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase URL or service role key')
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Get the request body
-    const { email, userId } = await req.json()
-
-    if (!email && !userId) {
-      throw new Error('Email or userId is required')
-    }
-
-    let user
+    // Get the email from the request
+    const { email } = await req.json();
     
-    // Find the user by ID or email
-    if (userId) {
-      console.log(`Looking up user by ID: ${userId}`)
-      const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId)
-      
-      if (error) {
-        throw error
-      }
-      
-      user = data.user
-    } else {
-      console.log(`Looking up user by email: ${email}`)
-      // Find the user by email
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers()
-      
-      if (error) {
-        throw error
-      }
-      
-      user = data.users.find(u => u.email === email)
+    if (!email) {
+      throw new Error("Email is required");
     }
-
-    if (!user) {
-      throw new Error('User not found')
-    }
-
-    console.log(`Found user: ${user.id} (${user.email})`)
-
-    // Check if email is already confirmed
-    if (user.email_confirmed_at) {
-      console.log('Email already confirmed at:', user.email_confirmed_at)
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Email already confirmed',
-          userId: user.id,
-          email: user.email,
-          confirmedAt: user.email_confirmed_at
-        }),
-        { headers: corsHeaders }
-      )
-    }
-
-    // Set email_confirmed_at to now
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
-      user.id,
-      { email_confirmed_at: new Date().toISOString() }
-    )
-
+    
+    console.log("Verifying email for:", email);
+    
+    // Create a Supabase client with the Admin key
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    // Update the profile to mark email as confirmed
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .update({ email_confirmed: true })
+      .eq('email', email);
+      
     if (error) {
-      throw error
+      console.error("Error updating profile:", error);
+      throw error;
     }
-
-    console.log('Successfully confirmed email for user:', user.id)
-
-    // Also update the profile
-    try {
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .update({ 
-          email_confirmed: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
-
-      if (profileError) {
-        console.error('Error updating profile:', profileError)
-      }
-    } catch (profileErr) {
-      console.error('Exception updating profile:', profileErr)
-    }
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Email confirmed successfully',
-        userId: user.id,
-        email: user.email
-      }),
-      { headers: corsHeaders }
-    )
-  } catch (error) {
-    console.error('Error:', error.message)
     
+    console.log("Email verified successfully for:", email);
+    
+    // Return success response with CORS headers
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
+      JSON.stringify({
+        success: true,
+        message: "Email verified successfully",
       }),
-      { 
-        status: 500,
-        headers: corsHeaders
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+        status: 200,
       }
-    )
+    );
+  } catch (error) {
+    console.error("Error in set-email-verified function:", error);
+    
+    // Return error response with CORS headers
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message || "Failed to verify email",
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+        status: 500,
+      }
+    );
   }
-})
+});

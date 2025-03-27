@@ -25,6 +25,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     storageKey: 'supabase_auth_token',
     storage: localStorage,
+  },
+  global: {
+    // Always include the apikey in requests, important for CORS
+    headers: {
+      apikey: supabaseAnonKey
+    }
   }
 });
 
@@ -44,8 +50,11 @@ supabase.auth.onAuthStateChange((event, session) => {
 // Add a method to check connection health
 export const checkSupabaseConnection = async () => {
   try {
+    console.log('Checking Supabase connection...');
     const { error } = await supabase.from('profiles').select('count', { count: 'exact' }).limit(1);
-    return !error;
+    const connected = !error;
+    console.log('Supabase connection check result:', connected);
+    return connected;
   } catch (err) {
     console.error('Error checking Supabase connection:', err);
     return false;

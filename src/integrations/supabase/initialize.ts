@@ -46,11 +46,49 @@ export const setupSupabase = () => {
     
     initializeSupabaseAuth();
     
+    // Test connection and log results
+    testSupabaseConnection().then(isConnected => {
+      console.log('Supabase connection test result:', isConnected ? 'Success' : 'Failed');
+    }).catch(err => {
+      console.error('Error testing Supabase connection:', err);
+    });
+    
     // Add additional initialization steps as needed
     console.log('Supabase setup completed successfully');
     return true;
   } catch (error) {
     console.error('Error during Supabase setup:', error);
+    return false;
+  }
+};
+
+/**
+ * Test the Supabase connection by making a simple request
+ */
+export const testSupabaseConnection = async () => {
+  try {
+    console.log('Testing Supabase connection...');
+    
+    // First test - check if we can call a simple function
+    const { data: healthData, error: healthError } = await supabase.rpc('get_quote_of_the_day');
+    
+    if (healthError) {
+      console.warn('DB function test failed:', healthError);
+      
+      // Second test - try a simple table query if function fails
+      const { error: queryError } = await supabase.from('profiles').select('id').limit(1);
+      
+      if (queryError) {
+        console.warn('Table query test failed:', queryError);
+        return false;
+      }
+      
+      return true;
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('Error testing Supabase connection:', err);
     return false;
   }
 };

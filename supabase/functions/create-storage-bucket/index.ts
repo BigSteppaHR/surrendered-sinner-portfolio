@@ -1,122 +1,110 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Define CORS headers - allow any origin or use environment variable if set
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOW_ORIGIN') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: corsHeaders,
-    })
+      status: 204,
+    });
   }
-  
+
   try {
-    // Get the authorization header from the request
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Missing Authorization header')
+    // Get the bucket name from the request
+    const { bucketName, isPublic } = await req.json();
+    
+    if (!bucketName) {
+      throw new Error("Bucket name is required");
     }
+    
+    console.log(`Creating storage bucket: ${bucketName}, public: ${isPublic}`);
     
     // Create a Supabase client with the service role key
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
     
-    // Create buckets if they don't exist
-    const buckets = [
-      {
-        id: 'profile-pictures',
-        name: 'Profile Pictures',
-        public: true,
-        fileSizeLimit: 5 * 1024 * 1024, // 5MB limit
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-      },
-      {
-        id: 'weight-images',
-        name: 'Weight Images',
-        public: true,
-        fileSizeLimit: 10 * 1024 * 1024, // 10MB limit
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-      }
-    ]
+    // Check if bucket already exists
+    const { data: existingBuckets, error: getBucketsError } = await supabaseAdmin.storage.listBuckets();
     
-    const results = []
-    
-    for (const bucket of buckets) {
-      try {
-        // Check if bucket exists
-        const { data: existingBucket, error: checkError } = await supabase
-          .storage
-          .getBucket(bucket.id)
-        
-        if (checkError && !existingBucket) {
-          // Create bucket if it doesn't exist
-          const { data, error } = await supabase
-            .storage
-            .createBucket(bucket.id, {
-              public: bucket.public,
-              fileSizeLimit: bucket.fileSizeLimit,
-              allowedMimeTypes: bucket.allowedMimeTypes
-            })
-          
-          if (error) {
-            results.push({ bucket: bucket.id, status: 'error', message: error.message })
-          } else {
-            results.push({ bucket: bucket.id, status: 'created', data })
-            
-            // Create RLS policies for the bucket
-            await supabase.rpc('create_storage_policies', {
-              bucket_name: bucket.id,
-              is_public: bucket.public
-            }).catch(e => {
-              console.error(`Error creating policies for ${bucket.id}:`, e)
-            })
-          }
-        } else {
-          // Update existing bucket
-          const { data, error } = await supabase
-            .storage
-            .updateBucket(bucket.id, {
-              public: bucket.public,
-              fileSizeLimit: bucket.fileSizeLimit,
-              allowedMimeTypes: bucket.allowedMimeTypes
-            })
-          
-          if (error) {
-            results.push({ bucket: bucket.id, status: 'error_update', message: error.message })
-          } else {
-            results.push({ bucket: bucket.id, status: 'updated', data })
-          }
-        }
-      } catch (bucketError) {
-        results.push({ bucket: bucket.id, status: 'exception', message: bucketError.message })
-      }
+    if (getBucketsError) {
+      console.error("Error checking existing buckets:", getBucketsError);
+      throw getBucketsError;
     }
     
+    const bucketExists = existingBuckets.some(bucket => bucket.name === bucketName);
+    
+    if (bucketExists) {
+      console.log(`Bucket ${bucketName} already exists`);
+      
+      // Update bucket if needed
+      if (isPublic !== undefined) {
+        const { error: updateError } = await supabaseAdmin.storage.updateBucket(bucketName, {
+          public: isPublic
+        });
+        
+        if (updateError) {
+          console.error(`Error updating bucket ${bucketName}:`, updateError);
+          throw updateError;
+        }
+        
+        console.log(`Bucket ${bucketName} updated successfully`);
+      }
+    } else {
+      // Create the bucket
+      const { error: createError } = await supabaseAdmin.storage.createBucket(bucketName, {
+        public: isPublic ?? false
+      });
+      
+      if (createError) {
+        console.error(`Error creating bucket ${bucketName}:`, createError);
+        throw createError;
+      }
+      
+      console.log(`Bucket ${bucketName} created successfully`);
+    }
+    
+    // Return success response with CORS headers
     return new Response(
-      JSON.stringify({ success: true, results }),
+      JSON.stringify({
+        success: true,
+        message: bucketExists ? "Bucket already exists" : "Bucket created successfully",
+        bucketName
+      }),
       {
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         status: 200,
-      },
-    )
+      }
+    );
   } catch (error) {
+    console.error("Error in create-storage-bucket function:", error);
+    
+    // Return error response with CORS headers
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({
+        success: false,
+        error: error.message || "Failed to create storage bucket",
+      }),
       {
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        status: 400,
-      },
-    )
+        status: 500,
+      }
+    );
   }
-})
+});
