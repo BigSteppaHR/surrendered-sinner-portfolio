@@ -234,6 +234,35 @@ export type Database = {
         }
         Relationships: []
       }
+      file_download_logs: {
+        Row: {
+          download_time: string
+          file_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          download_time?: string
+          file_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          download_time?: string
+          file_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_download_logs_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "user_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
@@ -789,6 +818,56 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_files: {
+        Row: {
+          description: string | null
+          download_url: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          plan_id: string | null
+          uploaded_at: string
+          uploaded_by: string | null
+          user_id: string
+        }
+        Insert: {
+          description?: string | null
+          download_url: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          plan_id?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+          user_id: string
+        }
+        Update: {
+          description?: string | null
+          download_url?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          plan_id?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_files_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
             referencedColumns: ["id"]
           },
         ]

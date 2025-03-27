@@ -47,7 +47,7 @@ const AdminFilesManagement = () => {
           uploaded_at,
           uploaded_by,
           user_id,
-          profiles (full_name, email)
+          profiles:user_id(full_name, email)
         `)
         .order('uploaded_at', { ascending: false });
         
@@ -58,7 +58,7 @@ const AdminFilesManagement = () => {
         file_name: file.file_name,
         file_type: file.file_type,
         file_size: file.file_size,
-        description: file.description,
+        description: file.description || '',
         download_url: file.download_url,
         uploaded_at: new Date(file.uploaded_at).toLocaleString(),
         uploaded_by: file.uploaded_by,
@@ -136,8 +136,8 @@ const AdminFilesManagement = () => {
   const filteredFiles = files.filter(file => 
     file.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     file.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    file.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    file.user_email?.toLowerCase().includes(searchQuery.toLowerCase())
+    (file.user_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (file.user_email?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
   
   return (

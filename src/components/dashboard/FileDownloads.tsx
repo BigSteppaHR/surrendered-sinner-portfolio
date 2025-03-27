@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FilePdf, FileText, AlertCircle } from "lucide-react";
+import { Download, FileText, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,7 +44,7 @@ const FileDownloads = () => {
             download_url, 
             uploaded_at,
             plan_id,
-            workout_plans (title)
+            workout_plans:plan_id (title)
           `)
           .eq('user_id', user.id)
           .order('uploaded_at', { ascending: false });
@@ -56,7 +56,7 @@ const FileDownloads = () => {
           file_name: file.file_name,
           file_type: file.file_type,
           file_size: file.file_size,
-          description: file.description,
+          description: file.description || '',
           download_url: file.download_url,
           uploaded_at: new Date(file.uploaded_at).toLocaleDateString(),
           plan_id: file.plan_id,
@@ -135,7 +135,7 @@ const FileDownloads = () => {
   
   const getFileIcon = (fileType: string) => {
     if (fileType.includes('pdf')) {
-      return <FilePdf className="h-10 w-10 text-sinner-red" />;
+      return <FileText className="h-10 w-10 text-sinner-red" />;
     } 
     return <FileText className="h-10 w-10 text-sinner-red" />;
   };
