@@ -1,5 +1,5 @@
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import AdminSidebar from './AdminSidebar';
 
 interface AdminLayoutProps {
@@ -7,10 +7,16 @@ interface AdminLayoutProps {
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   return (
     <div className="min-h-screen bg-black text-white flex">
-      <AdminSidebar />
-      <main className="flex-1 overflow-auto">
+      <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+      <main className={`flex-1 overflow-auto transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
         {children}
       </main>
     </div>
