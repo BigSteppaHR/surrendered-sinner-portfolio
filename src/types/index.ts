@@ -1,3 +1,4 @@
+
 // User session type
 export interface UserSession {
   id: string;
@@ -32,6 +33,9 @@ export interface WorkoutPlan {
   description: string | null;
   pdf_url: string | null;
   plan_type: string;
+  custom_plan_result_id?: string | null;
+  payment_id?: string | null;
+  is_purchased?: boolean;
   created_at?: string;
   updated_at?: string;
 }

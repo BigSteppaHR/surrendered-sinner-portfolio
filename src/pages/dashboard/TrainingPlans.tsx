@@ -10,18 +10,7 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { withErrorHandling } from '@/utils/databaseErrorHandler';
 import TrainingPlanQuiz from '@/components/plans/TrainingPlanQuiz';
-
-interface WorkoutPlan {
-  id: string;
-  title: string;
-  description: string | null;
-  plan_type: string;
-  pdf_url: string | null;
-  created_at: string;
-  updated_at: string;
-  payment_id?: string | null;
-  is_purchased?: boolean;
-}
+import { WorkoutPlan } from '@/types';
 
 interface CustomPlanResult {
   id: string;
@@ -55,21 +44,24 @@ const TrainingPlans = () => {
       setIsLoadingPlans(true);
       
       const { data, error } = await withErrorHandling(
-        () => supabase
-          .from('workout_plans')
-          .select('*')
-          .eq('user_id', profile.id)
-          .order('created_at', { ascending: false }),
+        async () => {
+          // Add await here to properly handle the Promise
+          return await supabase
+            .from('workout_plans')
+            .select('*')
+            .eq('user_id', profile.id)
+            .order('created_at', { ascending: false });
+        },
         'Failed to load workout plans'
       );
         
       if (error) throw error;
       
-      // Mark purchased plans
-      const purchasedPlans = data?.map(plan => ({
+      // Make sure data is typed correctly and handle null case
+      const purchasedPlans = data ? data.map(plan => ({
         ...plan,
         is_purchased: true
-      })) || [];
+      })) : [];
       
       setPlans(purchasedPlans);
     } catch (error: any) {
@@ -89,21 +81,25 @@ const TrainingPlans = () => {
     
     try {
       const { data, error } = await withErrorHandling(
-        () => supabase
-          .from('custom_plan_results')
-          .select('*')
-          .eq('user_id', profile.id)
-          .order('created_at', { ascending: false }),
+        async () => {
+          // Add await here to properly handle the Promise
+          return await supabase
+            .from('custom_plan_results')
+            .select('*')
+            .eq('user_id', profile.id)
+            .order('created_at', { ascending: false });
+        },
         'Failed to load custom plan results'
       );
         
       if (error) throw error;
       
       // Filter out plans that are already purchased
-      const existingPlanIds = plans.map(p => p.custom_plan_result_id);
-      const filteredPlans = (data || []).filter(
+      // Add proper type check and null handling
+      const existingPlanIds = plans.map(p => p.custom_plan_result_id || '');
+      const filteredPlans = data ? data.filter(
         plan => !existingPlanIds.includes(plan.id)
-      );
+      ) : [];
       
       setCustomPlans(filteredPlans);
     } catch (error: any) {
@@ -132,17 +128,20 @@ const TrainingPlans = () => {
     try {
       // Add the payment record first
       const { data: paymentData, error: paymentError } = await withErrorHandling(
-        () => supabase
-          .from('payments')
-          .insert([{
-            user_id: profile.id,
-            amount: planPrice * 100, // Store in cents
-            status: 'completed',
-            payment_method: 'credit_card',
-            metadata: { plan_id: planId, plan_name: planName }
-          }])
-          .select('id')
-          .single(),
+        async () => {
+          // Add await here to properly handle the Promise
+          return await supabase
+            .from('payments')
+            .insert([{
+              user_id: profile.id,
+              amount: planPrice * 100, // Store in cents
+              status: 'completed',
+              payment_method: 'credit_card',
+              metadata: { plan_id: planId, plan_name: planName }
+            }])
+            .select('id')
+            .single();
+        },
         'Failed to record payment'
       );
       
@@ -154,11 +153,14 @@ const TrainingPlans = () => {
       
       // Now add plan to workout_plans with the payment_id
       const { error: workoutError } = await withErrorHandling(
-        () => supabase
-          .rpc('add_custom_plan_to_workout_plans', {
-            p_user_id: profile.id,
-            p_custom_plan_result_id: planId
-          }),
+        async () => {
+          // Add await here to properly handle the Promise
+          return await supabase
+            .rpc('add_custom_plan_to_workout_plans', {
+              p_user_id: profile.id,
+              p_custom_plan_result_id: planId
+            });
+        },
         'Failed to add plan to your account'
       );
       
@@ -166,11 +168,14 @@ const TrainingPlans = () => {
       
       // Update the newly created workout plan with payment_id
       const { error: updateError } = await withErrorHandling(
-        () => supabase
-          .from('workout_plans')
-          .update({ payment_id: paymentData.id })
-          .eq('custom_plan_result_id', planId)
-          .eq('user_id', profile.id),
+        async () => {
+          // Add await here to properly handle the Promise
+          return await supabase
+            .from('workout_plans')
+            .update({ payment_id: paymentData.id })
+            .eq('custom_plan_result_id', planId)
+            .eq('user_id', profile.id);
+        },
         'Failed to update payment information'
       );
       

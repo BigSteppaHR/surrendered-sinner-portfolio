@@ -1,3 +1,4 @@
+
 import { PostgrestError } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
 
@@ -70,6 +71,7 @@ export const withErrorHandling = async <T>(
     attemptsRemaining--;
     
     try {
+      // Ensure queryFn returns a Promise
       const result = await queryFn();
       
       // If connection error and we have attempts remaining, try again
