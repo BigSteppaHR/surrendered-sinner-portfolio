@@ -1,220 +1,188 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, LogIn, User, LogOut, ShoppingBag } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { 
+  Menu, 
+  X, 
+  User, 
+  LogOut, 
+  ChevronDown,
+  ShoppingBag,
+  Dumbbell,
+  Calendar
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const Navbar: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const { isAuthenticated, logout, profile, isAdmin } = useAuth();
-  const navigate = useNavigate();
+const Navbar = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+  const { user, profile, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 50);
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
-  const navLinks = [
-    { name: 'Home', href: '#home' },
-    { name: 'About', href: '#about' },
-    { name: 'Services', href: '#services' },
-    { name: 'Testimonials', href: '#testimonials' },
-    { name: 'Shop', href: '#shop' },
-    { name: 'Contact', href: '#contact' },
+  useEffect(() => {
+    setIsMenuOpen(false); // Close the mobile menu on route change
+  }, [location]);
+
+  const navigationItems = [
+    { name: 'Home', path: '/' },
+    { name: 'Services', path: '/#services' },
+    { name: 'About', path: '/#about' },
+    { name: 'Plans', path: '/plans' },
+    { name: 'Shop', path: '/#shop' },
+    { name: 'Schedule', path: '/schedule' },
+    { name: 'Contact', path: '/#contact' },
   ];
 
   const handleLogout = async () => {
-    try {
-      console.log("Logout initiated from Navbar");
-      const result = await logout();
-      console.log("Logout result:", result);
-    } catch (error) {
-      console.error("Error during logout:", error);
+    const { success, redirectTo } = await logout();
+    if (success && redirectTo) {
+      window.location.href = redirectTo;
+    } else {
+      // Handle logout failure (optional)
+      console.error('Logout failed');
     }
   };
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-black/80 backdrop-blur-md py-2' : 'bg-transparent py-4'
+    <header
+      className={`fixed w-full z-50 transition-all duration-300 ${
+        isScrolled ? 'bg-black/95 shadow-lg py-2' : 'bg-transparent py-4'
       }`}
     >
       <div className="container-custom flex items-center justify-between">
-        <a href="#home" className="flex items-center">
-          <span className="text-xl font-extrabold tracking-tight text-[#ea384c]">
-            SURRENDERED<span className="text-white ml-2">SINNER</span>
-          </span>
-        </a>
+        <Link to="/" className="flex items-center font-bold text-xl">
+          <img
+            src="/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png"
+            alt="Surrendered Sinner Fitness Logo"
+            className="h-10 w-auto mr-2"
+          />
+          <span className="text-sinner-red">Surrendered</span>Sinner
+        </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex md:items-center">
-          <ul className="flex space-x-8 mr-4">
-            {navLinks.map((link) => (
-              <li key={link.name}>
-                <a
-                  href={link.href}
-                  className="text-white hover:text-[#ea384c] transition-colors relative after:absolute after:w-full after:scale-x-0 after:h-0.5 after:-bottom-1 after:left-0 after:bg-[#ea384c] after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
-                >
-                  {link.name}
-                </a>
-              </li>
-            ))}
-          </ul>
+        <nav className="hidden lg:flex items-center space-x-6">
+          {navigationItems.map((item) => (
+            <Link
+              key={item.name}
+              to={item.path}
+              className="text-white hover:text-sinner-red transition-colors duration-200"
+            >
+              {item.name}
+            </Link>
+          ))}
+        </nav>
 
-          {/* Shop Button for desktop */}
-          <a
-            href="https://shop.surrenderedsinnerfitness.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:text-[#ea384c] mr-4 hidden md:flex items-center"
-          >
-            <ShoppingBag className="h-5 w-5 mr-1" />
-          </a>
-
-          {isAuthenticated ? (
+        {/* Auth Buttons / Dropdown */}
+        <div className="hidden lg:flex items-center space-x-4">
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white hover:text-[#ea384c]">
-                  <User className="h-5 w-5 mr-1" />
-                  {profile?.full_name || 'Account'}
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <User className="h-4 w-4" />
+                  <ChevronDown className="h-4 w-4 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-white">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-zinc-800" />
-                <DropdownMenuItem 
-                  onClick={() => navigate('/dashboard')}
-                  className="hover:bg-zinc-800 cursor-pointer"
-                >
-                  Dashboard
+              <DropdownMenuContent className="absolute right-0 mt-2 w-48 bg-black border border-zinc-800 rounded-md shadow-lg z-50">
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="flex items-center space-x-2">
+                    <Dumbbell className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </Link>
                 </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem 
-                    onClick={() => navigate('/admin')}
-                    className="hover:bg-zinc-800 cursor-pointer"
-                  >
-                    Admin Panel
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard/schedule" className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Schedule</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-zinc-800" />
-                <DropdownMenuItem 
-                  onClick={handleLogout}
-                  className="hover:bg-zinc-800 text-[#ea384c] cursor-pointer"
-                >
+                <DropdownMenuItem className="cursor-pointer" onSelect={handleLogout}>
                   <LogOut className="h-4 w-4 mr-2" />
-                  Logout
+                  <span>Log Out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="text-white hover:text-[#ea384c]">
-                <LogIn className="h-5 w-5 mr-1" />
-                Login
-              </Button>
-            </Link>
+            <>
+              <Link to="/login">
+                <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800">
+                  Log In
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button>Sign Up</Button>
+              </Link>
+            </>
           )}
         </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden focus:outline-none"
-          aria-label="Toggle menu"
-        >
-          {isOpen ? (
-            <X className="h-6 w-6 text-white" />
-          ) : (
-            <Menu className="h-6 w-6 text-white" />
-          )}
-        </button>
-      </div>
+        {/* Mobile Menu */}
+        <div className="lg:hidden">
+          <Button variant="ghost" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+        </div>
 
-      {/* Mobile Menu */}
-      <div
-        className={`${
-          isOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
-        } md:hidden fixed inset-0 top-[56px] bg-black/95 transition-all duration-300 ease-in-out backdrop-blur-lg z-40`}
-      >
-        <div className="flex flex-col items-center justify-center h-full">
-          <ul className="flex flex-col items-center space-y-8">
-            {navLinks.map((link) => (
-              <li key={link.name}>
-                <a
-                  href={link.href}
-                  className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
-                  onClick={() => setIsOpen(false)}
+        {/* Mobile Menu Content */}
+        {isMenuOpen && (
+          <div className="fixed top-0 left-0 w-full h-screen bg-black/95 z-40 flex flex-col items-center justify-center">
+            <nav className="flex flex-col items-center space-y-4">
+              {navigationItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className="text-white text-lg hover:text-sinner-red transition-colors duration-200"
+                  onClick={() => setIsMenuOpen(false)} // Close menu on item click
                 >
-                  {link.name}
-                </a>
-              </li>
-            ))}
-            {isAuthenticated ? (
-              <>
-                <li>
-                  <Link
-                    to="/dashboard"
-                    className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
-                    onClick={() => setIsOpen(false)}
-                  >
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+            <div className="mt-8 flex flex-col items-center space-y-4">
+              {user ? (
+                <>
+                  <Link to="/dashboard" className="text-white hover:text-sinner-red transition-colors duration-200">
                     Dashboard
                   </Link>
-                </li>
-                {isAdmin && (
-                  <li>
-                    <Link
-                      to="/admin"
-                      className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Admin Panel
-                    </Link>
-                  </li>
-                )}
-                <li>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsOpen(false);
-                    }}
-                    className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
-                  >
-                    Logout
-                  </button>
-                </li>
-              </>
-            ) : (
-              <li>
-                <Link
-                  to="/login"
-                  className="text-2xl font-bold text-white hover:text-[#ea384c] transition-colors"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Login
-                </Link>
-              </li>
-            )}
-          </ul>
-        </div>
+                  <Button variant="outline" onClick={handleLogout} className="border-zinc-700 hover:bg-zinc-800">
+                    Log Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login">
+                    <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800">
+                      Log In
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button>Sign Up</Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </nav>
+    </header>
   );
 };
 
