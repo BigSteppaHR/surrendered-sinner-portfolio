@@ -34,7 +34,7 @@ export const initializeSupabaseAuth = () => {
 /**
  * Call this function at the app's entry point to ensure proper initialization
  */
-export const setupSupabase = () => {
+export const setupSupabase = async () => {
   console.log('Setting up Supabase client...');
   
   try {
@@ -44,15 +44,22 @@ export const setupSupabase = () => {
       return false;
     }
     
-    initializeSupabaseAuth();
+    // Initialize auth settings
+    const authInitialized = initializeSupabaseAuth();
+    if (!authInitialized) {
+      console.warn('Supabase auth initialization failed, but continuing...');
+    }
     
     // Test connection but ensure we don't block application startup
     // This prevents any connection issues from breaking the entire app
-    setTimeout(() => {
-      testSupabaseConnection().catch(err => {
-        console.error('Error testing Supabase connection:', err);
-      });
-    }, 100);
+    try {
+      const connectionValid = await testSupabaseConnection();
+      if (!connectionValid) {
+        console.warn('Supabase connection test failed, but continuing...');
+      }
+    } catch (err) {
+      console.error('Error testing Supabase connection:', err);
+    }
     
     // Add additional initialization steps as needed
     console.log('Supabase setup completed successfully');

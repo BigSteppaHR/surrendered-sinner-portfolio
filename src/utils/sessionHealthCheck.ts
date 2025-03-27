@@ -1,131 +1,59 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 
 /**
- * Monitors session health and attempts to refresh the session if issues are detected
- * @returns A cleanup function to stop monitoring
+ * Monitors the health of the user's session and attempts to refresh it
+ * when necessary to prevent auth state loss during app usage
  */
-export const startSessionHealthMonitoring = (): () => void => {
-  let isRefreshing = false;
-  const checkInterval = 30000; // Check every 30 seconds
+export const startSessionHealthMonitoring = () => {
+  console.log('Starting session health monitoring');
   
-  const timer = setInterval(async () => {
-    if (isRefreshing || document.hidden) return;
+  // Setup interval to periodically check session status
+  const checkInterval = setInterval(async () => {
+    // Skip checks when page is not visible to save resources
+    if (document.visibilityState === 'hidden') return;
     
     try {
-      isRefreshing = true;
+      // Check if we have a current session
+      const { data } = await supabase.auth.getSession();
+      const hasActiveSession = !!data.session;
       
-      // Check if we have a session
-      const { data, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Session health check error:', error);
-        await attemptSessionRefresh();
-      } else if (!data.session) {
-        console.log('No active session found during health check');
+      if (hasActiveSession) {
+        // Session exists, but refresh it to ensure it stays valid
+        await supabase.auth.refreshSession();
+        console.debug('Session refreshed successfully');
+      } else {
+        console.info('No active session found during health check');
       }
-      
-      isRefreshing = false;
-    } catch (err) {
-      console.error('Session health check exception:', err);
-      isRefreshing = false;
+    } catch (error) {
+      console.error('Error during session health check:', error);
     }
-  }, checkInterval);
+  }, 4 * 60 * 1000); // Check every 4 minutes
   
-  return () => clearInterval(timer);
+  // Return cleanup function
+  return () => {
+    clearInterval(checkInterval);
+    console.log('Session health monitoring stopped');
+  };
 };
 
 /**
- * Attempts to refresh the session
+ * Verifies that the current auth state is valid by checking with Supabase
+ * Can be used during critical operations to ensure auth is still valid
  */
-const attemptSessionRefresh = async (): Promise<boolean> => {
+export const verifyCurrentSession = async (): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.auth.refreshSession();
+    const { data, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('Session refresh error:', error);
+      console.error('Error verifying session:', error);
       return false;
     }
     
-    if (data.session) {
-      console.log('Session successfully refreshed');
-      return true;
-    }
-    
-    return false;
+    return !!data.session;
   } catch (err) {
-    console.error('Session refresh exception:', err);
+    console.error('Exception verifying session:', err);
     return false;
   }
 };
 
-/**
- * Checks that the current auth session is valid and refreshes if needed
- * @returns True if session is valid
- */
-export const validateSession = async (): Promise<boolean> => {
-  try {
-    // First try to get the current session
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error('Error validating session:', error);
-      return false;
-    }
-    
-    if (!session) {
-      console.log('No active session found');
-      return false;
-    }
-    
-    // Check if the token is about to expire (within 5 minutes)
-    const expiresAt = session?.expires_at;
-    if (expiresAt) {
-      const expiryTime = expiresAt * 1000; // Convert to milliseconds
-      const currentTime = Date.now();
-      const timeUntilExpiry = expiryTime - currentTime;
-      
-      // If token expires within 5 minutes, refresh it
-      if (timeUntilExpiry < 5 * 60 * 1000) {
-        console.log('Token expires soon, refreshing...');
-        return await attemptSessionRefresh();
-      }
-    }
-    
-    return true;
-  } catch (err) {
-    console.error('Session validation exception:', err);
-    return false;
-  }
-};
-
-/**
- * Call this when a server request fails with a 401 error
- * to attempt to recover the session
- */
-export const handleAuthError = async (): Promise<boolean> => {
-  toast({
-    title: "Session expired",
-    description: "Attempting to restore your session...",
-    variant: "default"
-  });
-  
-  const refreshed = await attemptSessionRefresh();
-  
-  if (refreshed) {
-    toast({
-      title: "Session restored",
-      description: "Your session has been successfully restored",
-      variant: "default"
-    });
-    return true;
-  } else {
-    toast({
-      title: "Authentication required",
-      description: "Please log in again to continue",
-      variant: "destructive"
-    });
-    return false;
-  }
-};

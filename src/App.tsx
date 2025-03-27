@@ -31,53 +31,6 @@ const App: React.FC = () => {
   );
 };
 
-// Protected route components for user and admin routes
-const UserRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (isAdmin) {
-    console.log("User trying to access user-only route, redirecting to admin dashboard");
-    return <Navigate to="/admin" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (!isAdmin) {
-    console.log("Non-admin trying to access admin-only route, redirecting to user dashboard");
-    return <Navigate to="/dashboard" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
 // AppRoutes component, within the AuthProvider context
 const AppRoutes = () => {
   const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
@@ -152,6 +105,7 @@ const AppRoutes = () => {
     );
   }
   
+  // Routes protected by auth status checks
   return (
     <Routes>
       {/* Public routes */}
@@ -162,19 +116,82 @@ const AppRoutes = () => {
       <Route path="/confirm-email" element={<ConfirmEmail />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       
-      {/* User dashboard routes - protected with UserRoute */}
-      <Route path="/dashboard" element={<UserRoute><Dashboard /></UserRoute>} />
-      <Route path="/schedule" element={<UserRoute><Schedule /></UserRoute>} />
-      <Route path="/plans" element={<UserRoute><TrainingPlans /></UserRoute>} />
-      <Route path="/progress" element={<UserRoute><Progress /></UserRoute>} />
-      <Route path="/support" element={<UserRoute><Support /></UserRoute>} />
-      <Route path="/account" element={<UserRoute><Account /></UserRoute>} />
-      <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
-      <Route path="/payment" element={<UserRoute><Payment /></UserRoute>} />
+      {/* User dashboard routes */}
+      <Route 
+        path="/dashboard" 
+        element={
+          isAuthenticated ? 
+            <Dashboard /> : 
+            <Navigate to="/login" state={{ from: '/dashboard' }} replace />
+        } 
+      />
+      <Route 
+        path="/schedule" 
+        element={
+          isAuthenticated ? 
+            <Schedule /> : 
+            <Navigate to="/login" state={{ from: '/schedule' }} replace />
+        } 
+      />
+      <Route 
+        path="/plans" 
+        element={
+          isAuthenticated ? 
+            <TrainingPlans /> : 
+            <Navigate to="/login" state={{ from: '/plans' }} replace />
+        } 
+      />
+      <Route 
+        path="/progress" 
+        element={
+          isAuthenticated ? 
+            <Progress /> : 
+            <Navigate to="/login" state={{ from: '/progress' }} replace />
+        } 
+      />
+      <Route 
+        path="/support" 
+        element={
+          isAuthenticated ? 
+            <Support /> : 
+            <Navigate to="/login" state={{ from: '/support' }} replace />
+        } 
+      />
+      <Route 
+        path="/account" 
+        element={
+          isAuthenticated ? 
+            <Account /> : 
+            <Navigate to="/login" state={{ from: '/account' }} replace />
+        } 
+      />
+      <Route 
+        path="/settings" 
+        element={
+          isAuthenticated ? 
+            <Settings /> : 
+            <Navigate to="/login" state={{ from: '/settings' }} replace />
+        } 
+      />
+      <Route 
+        path="/payment" 
+        element={
+          isAuthenticated ? 
+            <Payment /> : 
+            <Navigate to="/login" state={{ from: '/payment' }} replace />
+        } 
+      />
       
       {/* Admin routes */}
       <Route path="/admin" element={<AdminRedirect />} />
-      <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route 
+        path="/admin/*" 
+        element={
+          isAuthenticated && isAdmin ? 
+            <AdminDashboard /> : 
+            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+        } 
+      />
       
       {/* Fallback for unknown routes */}
       <Route path="*" element={<Navigate to="/" replace />} />

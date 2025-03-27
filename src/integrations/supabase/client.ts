@@ -32,6 +32,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       apikey: supabaseAnonKey
     }
   },
+  // Improved retry and timeout settings
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
 });
 
 // Add global error handler for common Supabase errors
