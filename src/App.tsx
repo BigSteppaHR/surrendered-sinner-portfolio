@@ -1,75 +1,87 @@
 
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import Index from '@/pages/Index';
-import Login from '@/pages/Login';
-import Signup from '@/pages/Signup';
-import ResetPassword from '@/pages/ResetPassword';
-import ConfirmEmail from '@/pages/ConfirmEmail';
-import VerifyEmail from '@/pages/VerifyEmail';
-import Dashboard from '@/pages/Dashboard';
-import DashboardAccount from '@/pages/dashboard/Account';
-import DashboardTrainingPlans from '@/pages/dashboard/TrainingPlans';
-import DashboardSchedule from '@/pages/dashboard/Schedule';
-import DashboardProgress from '@/pages/dashboard/Progress';
-import DashboardPayment from '@/pages/dashboard/Payment';
-import DashboardSupport from '@/pages/dashboard/Support';
-import DashboardSettings from '@/pages/dashboard/Settings';
-import DashboardDownloads from '@/pages/dashboard/Downloads';
-import AdminDashboard from '@/pages/admin/AdminDashboard';
-import NotFound from '@/pages/NotFound';
-import Schedule from '@/pages/Schedule';
-import Plans from '@/pages/Plans';
-import Payment from '@/pages/Payment';
-import PaymentPortal from '@/pages/PaymentPortal';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/components/AuthProvider';
-import StripeProvider from '@/components/StripeProvider';
-import PlansCatalog from '@/pages/PlansCatalog';
-import PaymentSuccess from '@/pages/PaymentSuccess';
-import PaymentCancelled from '@/pages/PaymentCancelled';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Pages
+import LandingPage from "@/pages/LandingPage";
+import AuthPage from '@/pages/AuthPage';
+import Dashboard from "@/pages/dashboard/Dashboard";
+import AccountPage from "@/pages/dashboard/AccountPage";
+import PlanPage from "@/pages/dashboard/PlanPage";
+import SchedulePage from "@/pages/dashboard/SchedulePage";
+import ProgressPage from "@/pages/dashboard/ProgressPage";
+import Downloads from "@/pages/dashboard/Downloads";
+import PaymentPage from "@/pages/dashboard/PaymentPage";
+import SupportPage from "@/pages/dashboard/SupportPage";
+import SettingsPage from "@/pages/dashboard/SettingsPage";
+import PaymentPortal from "@/pages/PaymentPortal";
+import PaymentSuccess from "@/pages/PaymentSuccess";
+import PaymentError from "@/pages/PaymentError";
+import PaymentProcess from "@/pages/PaymentProcess";
+
+// Admin Pages
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminInvoices from "@/pages/admin/AdminInvoices";
+import AdminSettings from "@/pages/admin/AdminSettings";
+import CreateInvoice from "@/pages/admin/CreateInvoice";
+
+// Protected route wrapper
+import ProtectedRoute from '@/components/ProtectedRoute';
+import AdminRoute from '@/components/AdminRoute';
+
+// Create QueryClient
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <StripeProvider>
-          <div className="app-container">
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
+        <AuthProvider>
+          <BrowserRouter>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/plans" element={<Plans />} />
-              <Route path="/schedule" element={<Schedule />} />
-              <Route path="/payment" element={<Payment />} />
-              <Route path="/payment-portal" element={<PaymentPortal />} />
-              <Route path="/confirm-email" element={<ConfirmEmail />} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
-              <Route path="/plans-catalog" element={<PlansCatalog />} />
-              <Route path="/payment-success" element={<PaymentSuccess />} />
-              <Route path="/payment-cancelled" element={<PaymentCancelled />} />
-
-              {/* Dashboard Routes */}
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/account" element={<DashboardAccount />} />
-              <Route path="/dashboard/plans" element={<DashboardTrainingPlans />} />
-              <Route path="/dashboard/schedule" element={<DashboardSchedule />} />
-              <Route path="/dashboard/progress" element={<DashboardProgress />} />
-              <Route path="/dashboard/payment" element={<DashboardPayment />} />
-              <Route path="/dashboard/support" element={<DashboardSupport />} />
-              <Route path="/dashboard/settings" element={<DashboardSettings />} />
-              <Route path="/dashboard/downloads" element={<DashboardDownloads />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<AuthPage mode="login" />} />
+              <Route path="/signup" element={<AuthPage mode="signup" />} />
+              <Route path="/forgot-password" element={<AuthPage mode="forgot-password" />} />
+              <Route path="/reset-password" element={<AuthPage mode="reset-password" />} />
+              
+              {/* Payment Routes */}
+              <Route path="/payment-portal" element={<ProtectedRoute><PaymentPortal /></ProtectedRoute>} />
+              <Route path="/payment-process" element={<ProtectedRoute><PaymentProcess /></ProtectedRoute>} />
+              <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+              <Route path="/payment-error" element={<ProtectedRoute><PaymentError /></ProtectedRoute>} />
+              
+              {/* User Dashboard Routes */}
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+              <Route path="/dashboard/plans" element={<ProtectedRoute><PlanPage /></ProtectedRoute>} />
+              <Route path="/dashboard/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
+              <Route path="/dashboard/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
+              <Route path="/dashboard/downloads" element={<ProtectedRoute><Downloads /></ProtectedRoute>} />
+              <Route path="/dashboard/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
+              <Route path="/dashboard/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
+              <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
               
               {/* Admin Routes */}
-              <Route path="/admin/*" element={<AdminDashboard />} />
+              <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+              <Route path="/admin/invoices" element={<AdminRoute><AdminInvoices /></AdminRoute>} />
+              <Route path="/admin/create-invoice" element={<AdminRoute><CreateInvoice /></AdminRoute>} />
+              <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
               
-              {/* 404 Route */}
-              <Route path="*" element={<NotFound />} />
+              {/* Catch-all redirect */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-          </div>
-        </StripeProvider>
-      </AuthProvider>
-    </BrowserRouter>
+          </BrowserRouter>
+          <Toaster />
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

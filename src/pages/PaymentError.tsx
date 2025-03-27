@@ -3,20 +3,11 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, ArrowRight } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import Logo from '@/components/Logo';
 
-const PaymentSuccess = () => {
+const PaymentError = () => {
   const navigate = useNavigate();
-  
-  useEffect(() => {
-    // Redirect to payment portal after 5 seconds
-    const timer = setTimeout(() => {
-      navigate('/payment-portal');
-    }, 5000);
-    
-    return () => clearTimeout(timer);
-  }, [navigate]);
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4">
@@ -27,36 +18,36 @@ const PaymentSuccess = () => {
         
         <Card className="bg-zinc-900 border-[#333]">
           <CardHeader className="pb-4">
-            <div className="w-16 h-16 mx-auto bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-8 w-8 text-green-500" />
+            <div className="w-16 h-16 mx-auto bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
-            <CardTitle className="text-2xl text-center">Payment Successful</CardTitle>
+            <CardTitle className="text-2xl text-center">Payment Failed</CardTitle>
             <CardDescription className="text-center">
-              Your payment has been processed successfully
+              We encountered a problem processing your payment
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-center">
             <p>
-              Thank you for your payment. Your account has been updated with the funds.
+              Your payment could not be processed. This could be due to insufficient funds, incorrect payment details, or a temporary issue with the payment provider.
             </p>
             <p className="text-sm text-gray-400">
-              You will be redirected to the payment portal automatically in a few seconds.
+              No charges have been made to your account. Please try again or use a different payment method.
             </p>
           </CardContent>
           <CardFooter className="flex justify-center pb-6">
             <Button 
               className="bg-[#ea384c] hover:bg-red-700"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/payment-portal')}
             >
-              Go to Dashboard
-              <ArrowRight className="ml-2 h-4 w-4" />
+              Try Again
+              <RefreshCw className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
         </Card>
         
         <div className="mt-4 text-center">
-          <Link to="/payment-portal" className="text-sm text-gray-400 hover:text-white">
-            Return to payment portal
+          <Link to="/dashboard" className="text-sm text-gray-400 hover:text-white">
+            Return to dashboard
           </Link>
         </div>
       </div>
@@ -64,4 +55,4 @@ const PaymentSuccess = () => {
   );
 };
 
-export default PaymentSuccess;
+export default PaymentError;

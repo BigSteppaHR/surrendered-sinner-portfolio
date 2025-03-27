@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.4.0?target=deno";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOW_ORIGIN') || '*',
@@ -19,6 +20,11 @@ async function handler(req: Request): Promise<Response> {
 
   try {
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
     console.log("Stripe key availability check:", {
       keyExists: !!stripeSecretKey,
@@ -138,13 +144,16 @@ async function handler(req: Request): Promise<Response> {
         
         console.log(`Updating payment status for payment_id: ${params.payment_id}, status: ${params.status}`);
         
-        const { data: updatedPayment, error: updateError } = await supabase
-          .rpc('update_payment_status', {
-            payment_id: params.payment_id,
-            new_status: params.status,
+        // Update payment status in the database
+        const { error: updateError } = await supabase
+          .from('payments')
+          .update({ 
+            status: params.status,
             payment_intent_id: params.payment_intent_id,
-            payment_method: params.payment_method
-          });
+            payment_method: params.payment_method,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', params.payment_id);
           
         if (updateError) {
           console.error("Error updating payment status:", updateError);
@@ -207,6 +216,95 @@ async function handler(req: Request): Promise<Response> {
         result = {
           sessionId: session.id,
           url: session.url
+        };
+        break;
+      
+      case 'create-invoice':
+        if (!params.customer || !params.amount) {
+          throw new Error("Customer and amount are required for creating an invoice");
+        }
+        
+        console.log(`Creating invoice for customer: ${params.customer}, amount: ${params.amount}`);
+        
+        // First, ensure we have a customer in Stripe
+        let customerId;
+        
+        if (params.customerEmail) {
+          // Look up if customer exists
+          const customers = await stripe.customers.list({
+            email: params.customerEmail,
+            limit: 1
+          });
+          
+          if (customers.data.length > 0) {
+            customerId = customers.data[0].id;
+          } else {
+            // Create a new customer
+            const newCustomer = await stripe.customers.create({
+              email: params.customerEmail,
+              name: params.customerName,
+              metadata: {
+                user_id: params.userId
+              }
+            });
+            
+            customerId = newCustomer.id;
+            
+            // Save customer ID to database if we have a user ID
+            if (params.userId) {
+              await supabase.from('stripe_customers').insert({
+                user_id: params.userId,
+                stripe_customer_id: customerId
+              });
+            }
+          }
+        } else {
+          throw new Error("Customer email is required for creating an invoice");
+        }
+        
+        // Create an invoice
+        const invoice = await stripe.invoices.create({
+          customer: customerId,
+          auto_advance: true, // automatically finalize this draft
+          collection_method: 'send_invoice',
+          days_until_due: params.daysUntilDue || 30,
+          description: params.description || 'Training services',
+          metadata: {
+            invoice_id: params.invoiceId,
+            user_id: params.userId
+          }
+        });
+        
+        // Add a line item
+        await stripe.invoiceItems.create({
+          invoice: invoice.id,
+          customer: customerId,
+          amount: params.amount,
+          currency: params.currency || 'usd',
+          description: params.description || 'Training services',
+        });
+        
+        // Finalize the invoice
+        const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+        
+        // Send the invoice
+        const sentInvoice = await stripe.invoices.sendInvoice(invoice.id);
+        
+        // Update the invoice in our database
+        if (params.invoiceId) {
+          await supabase.from('invoices').update({
+            stripe_invoice_id: sentInvoice.id,
+            payment_link: sentInvoice.hosted_invoice_url,
+            status: 'pending',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', params.invoiceId);
+        }
+        
+        result = {
+          invoice_id: sentInvoice.id,
+          invoice_url: sentInvoice.hosted_invoice_url,
+          status: sentInvoice.status
         };
         break;
       
