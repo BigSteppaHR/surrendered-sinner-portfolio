@@ -1,20 +1,21 @@
-import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { FileUp, Users, Calendar, FilePlus } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, FileUp, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { Progress } from "@/components/ui/progress";
 
-interface User {
-  id: string;
-  full_name: string;
-  email: string;
+interface AdminFileUploadProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
 interface WorkoutPlan {
@@ -23,303 +24,313 @@ interface WorkoutPlan {
   user_id: string;
 }
 
-const AdminFileUpload = () => {
+const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSuccess }) => {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('');
   const [description, setDescription] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState('');
+  const [plans, setPlans] = useState<WorkoutPlan[]>([]);
+  const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
   const { toast } = useToast();
-  const { user } = useAuth();
-  
+
   useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('workout_plans')
+          .select('id, title, user_id');
+          
+        if (error) throw error;
+        
+        if (data) {
+          setPlans(data as WorkoutPlan[]);
+        }
+      } catch (error) {
+        console.error('Error fetching plans:', error);
+      }
+    };
+    
     const fetchUsers = async () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name, email')
-          .order('full_name', { ascending: true });
+          .select('id, full_name')
+          .eq('is_active', true);
           
         if (error) throw error;
-        if (data) setUsers(data);
+        
+        if (data) {
+          setUsers(data as { id: string; full_name: string }[]);
+        }
       } catch (error) {
         console.error('Error fetching users:', error);
-        toast({
-          title: "Failed to load users",
-          description: "There was an error loading the user list.",
-          variant: "destructive"
-        });
       }
     };
     
-    fetchUsers();
-  }, [toast]);
-  
-  useEffect(() => {
-    const fetchWorkoutPlans = async () => {
-      if (!selectedUser) {
-        setWorkoutPlans([]);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('workout_plans')
-          .select('id, title, user_id')
-          .eq('user_id', selectedUser);
-          
-        if (error) throw error;
-        if (data) setWorkoutPlans(data);
-      } catch (error) {
-        console.error('Error fetching workout plans:', error);
-      }
-    };
-    
-    fetchWorkoutPlans();
-  }, [selectedUser]);
-  
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (isOpen) {
+      fetchPlans();
+      fetchUsers();
+    }
+  }, [isOpen]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       
-      // Set default file name from uploaded file
+      // Set default file name from the file itself
       if (!fileName) {
         setFileName(selectedFile.name);
       }
     }
   };
-  
-  const simulateProgress = () => {
+
+  const handleUpload = async () => {
+    if (!file || !selectedUser) {
+      toast({
+        title: "Missing information",
+        description: "Please select a file and a user to upload for.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsUploading(true);
     setUploadProgress(0);
-    const timer = setInterval(() => {
-      setUploadProgress((prevProgress) => {
-        const newProgress = prevProgress + 5;
-        if (newProgress >= 100) {
-          clearInterval(timer);
-          return 100;
-        }
-        return newProgress;
-      });
-    }, 100);
-    
-    return () => clearInterval(timer);
-  };
-  
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    
-    if (!file) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file to upload.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!selectedUser) {
-      toast({
-        title: "No user selected",
-        description: "Please select a user for this file.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!fileName.trim()) {
-      toast({
-        title: "File name required",
-        description: "Please provide a name for the file.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    const progressCleanup = simulateProgress();
     
     try {
-      // Create a unique file path
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${selectedUser}/${Date.now()}-${file.name}`;
-      
-      // Upload the file to storage
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('user_files')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(progressInterval);
+            return 95;
+          }
+          return prev + 5;
         });
+      }, 100);
+    
+      // Upload file to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${selectedUser}/${Date.now()}-${fileName.replace(/\s+/g, '-')}.${fileExt}`;
       
-      if (storageError) throw storageError;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('training_materials')
+        .upload(filePath, file);
       
-      // Get the public URL for the file
-      const { data: urlData } = supabase.storage
-        .from('user_files')
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: urlData } = await supabase.storage
+        .from('training_materials')
         .getPublicUrl(filePath);
+        
+      if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
       
-      // Save file metadata to the database
+      // Record file in database
       const { error: dbError } = await supabase
         .from('user_files')
         .insert({
           user_id: selectedUser,
-          file_name: fileName,
+          plan_id: selectedPlan || null,
+          file_name: fileName || file.name,
           file_type: file.type,
           file_size: file.size,
           description: description,
+          file_path: filePath,
           download_url: urlData.publicUrl,
-          uploaded_by: user?.id,
-          plan_id: selectedPlan || null
+          uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
-      
+        
       if (dbError) throw dbError;
       
-      // Clear form after successful upload
-      setFile(null);
-      setFileName('');
-      setDescription('');
-      setSelectedPlan('');
-      
-      // Ensure upload progress is 100% at the end
+      // Complete the progress
+      clearInterval(progressInterval);
       setUploadProgress(100);
       
       toast({
-        title: "File uploaded successfully",
+        title: "Upload successful",
         description: "The file has been uploaded and is now available to the user.",
+        variant: "default"
       });
       
-      // Reset the file input
-      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = '';
-      }
-      
-    } catch (error: any) {
-      console.error('Upload error:', error);
+      onSuccess();
+      resetForm();
+    } catch (error) {
+      console.error('Error uploading file:', error);
       toast({
         title: "Upload failed",
-        description: error.message || "There was an error uploading the file",
-        variant: "destructive",
+        description: "There was an error uploading the file. Please try again.",
+        variant: "destructive"
       });
     } finally {
-      progressCleanup();
-      setTimeout(() => {
-        setIsLoading(false);
-        setUploadProgress(0);
-      }, 500);
+      setIsUploading(false);
     }
   };
   
+  const resetForm = () => {
+    setFile(null);
+    setFileName('');
+    setDescription('');
+    setSelectedPlan(null);
+    setSelectedUser(null);
+    setUploadProgress(0);
+  };
+
   return (
-    <Card className="bg-[#0f0f0f] border-[#333] w-full">
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2">
-          <FileUp className="h-5 w-5 text-[#ea384c]" />
-          Upload Training Material
-        </CardTitle>
-        <CardDescription>
-          Upload files to make them available for users
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="bg-[#0f0f0f] border-[#333] text-white sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <Upload className="h-5 w-5 text-sinner-red mr-2" />
+            Upload Training File
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
           <div>
-            <Label htmlFor="user">Select User</Label>
-            <Select onValueChange={(value) => setSelectedUser(value)}>
-              <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white focus:ring-[#ea384c]">
-                <SelectValue placeholder="Select a user" />
+            <Label htmlFor="user">User</Label>
+            <Select
+              value={selectedUser || ''}
+              onValueChange={setSelectedUser}
+              disabled={isUploading}
+            >
+              <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white">
+                <SelectValue placeholder="Select user" />
               </SelectTrigger>
               <SelectContent className="bg-[#1a1a1a] border-[#333] text-white">
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.full_name} ({user.email})
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Users</SelectLabel>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.full_name || 'Unnamed User'}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
           
           <div>
-            <Label htmlFor="plan">Select Workout Plan (Optional)</Label>
-            <Select onValueChange={(value) => setSelectedPlan(value)}>
-              <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white focus:ring-[#ea384c]">
-                <SelectValue placeholder="No plan selected" />
+            <Label htmlFor="plan">Workout Plan (Optional)</Label>
+            <Select
+              value={selectedPlan || ''}
+              onValueChange={setSelectedPlan}
+              disabled={isUploading}
+            >
+              <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white">
+                <SelectValue placeholder="Select workout plan" />
               </SelectTrigger>
               <SelectContent className="bg-[#1a1a1a] border-[#333] text-white">
-                <SelectItem value="">General</SelectItem>
-                {workoutPlans.map((plan) => (
-                  <SelectItem key={plan.id} value={plan.id}>
-                    {plan.title}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Plans</SelectLabel>
+                  <SelectItem value="">General (No specific plan)</SelectItem>
+                  {plans.map(plan => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.title}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
           
           <div>
-            <Label htmlFor="file-name">File Name</Label>
+            <Label htmlFor="file">Select File</Label>
+            <div className="mt-1 flex items-center">
+              <Input
+                id="file"
+                type="file"
+                onChange={handleFileChange}
+                className="hidden"
+                disabled={isUploading}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('file')?.click()}
+                className="bg-[#1a1a1a] border-[#333] text-white hover:bg-[#333] mr-2 w-full"
+                disabled={isUploading}
+              >
+                <FileUp className="h-4 w-4 mr-2" />
+                {file ? 'Change File' : 'Select File'}
+              </Button>
+            </div>
+            {file && (
+              <p className="mt-2 text-sm text-gray-400">
+                Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              </p>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="fileName">File Name (Optional)</Label>
             <Input
-              type="text"
-              id="file-name"
-              placeholder="Enter file name"
-              className="bg-[#1a1a1a] border-[#333] text-white focus:ring-[#ea384c]"
+              id="fileName"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
+              placeholder="Custom file name (defaults to original file name)"
+              className="bg-[#1a1a1a] border-[#333] text-white"
+              disabled={isUploading}
             />
           </div>
           
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Description (Optional)</Label>
             <Textarea
               id="description"
-              placeholder="Enter file description"
-              className="bg-[#1a1a1a] border-[#333] text-white focus:ring-[#ea384c]"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter a description for this file"
+              className="bg-[#1a1a1a] border-[#333] text-white min-h-[80px]"
+              disabled={isUploading}
             />
           </div>
           
-          <div>
-            <Label htmlFor="file-upload">Upload File</Label>
-            <Input
-              type="file"
-              id="file-upload"
-              className="bg-[#1a1a1a] file:bg-[#333] file:border-0 file:text-white file:h-11 file:py-3 file:px-4 file:rounded-md border-[#333] text-white focus:ring-[#ea384c]"
-              onChange={handleFileChange}
-            />
-          </div>
-          
-          {uploadProgress > 0 && (
-            <Progress value={uploadProgress} className="bg-[#1a1a1a]" />
+          {isUploading && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Uploading...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="h-2 bg-[#333]" indicatorClassName="bg-sinner-red" />
+            </div>
           )}
           
-          <Button 
-            type="submit"
-            className="bg-[#ea384c] hover:bg-red-700 text-white w-full"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                  <path fill="currentColor" d="M12 2V4M12 20V22M4.22 4.22L5.64 5.64M18.36 18.36L19.78 19.78M2 12H4M20 12H22M4.22 19.78L5.64 18.36M18.36 5.64L19.78 4.22"/>
-                </svg>
-                Uploading...
-              </>
-            ) : (
-              <>
-                <FilePlus className="h-4 w-4 mr-2" />
-                Upload File
-              </>
-            )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="border-[#333] text-white hover:bg-[#1a1a1a]"
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleUpload}
+              className="bg-sinner-red hover:bg-red-700 text-white"
+              disabled={!file || !selectedUser || isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload File
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

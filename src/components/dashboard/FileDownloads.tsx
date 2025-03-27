@@ -8,6 +8,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
+interface WorkoutPlan {
+  title: string | null;
+}
+
 interface UserFile {
   id: string;
   file_name: string;
@@ -18,9 +22,7 @@ interface UserFile {
   uploaded_at: string;
   plan_id?: string;
   plan_name?: string;
-  workout_plans?: {
-    title: string | null;
-  } | null;
+  workout_plans?: WorkoutPlan | null;
 }
 
 const FileDownloads = () => {
