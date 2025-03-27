@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard,
   User,
@@ -105,7 +105,6 @@ const DashboardNav = () => {
   const [balance, setBalance] = useState<UserBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Close the mobile menu when the route changes
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
@@ -119,7 +118,6 @@ const DashboardNav = () => {
   const fetchUserSubscriptionAndBalance = async () => {
     setIsLoading(true);
     try {
-      // Fetch active subscription
       const { data: subscriptionData, error: subError } = await supabase
         .from('subscriptions')
         .select('id, plan_id, current_period_end, status')
@@ -136,13 +134,12 @@ const DashboardNav = () => {
       if (subscriptionData) {
         setSubscription({
           id: subscriptionData.id,
-          plan_name: getPlanName(subscriptionData.plan_id), // Helper function to get name from plan ID
+          plan_name: getPlanName(subscriptionData.plan_id),
           end_date: subscriptionData.current_period_end,
           status: subscriptionData.status
         });
       }
       
-      // Fetch user balance
       const { data: balanceData, error: balanceError } = await supabase
         .from('payment_balance')
         .select('balance, currency')
@@ -167,8 +164,7 @@ const DashboardNav = () => {
       setIsLoading(false);
     }
   };
-  
-  // Helper to map plan ID to a human-readable name
+
   const getPlanName = (planId: string): string => {
     const planNames: Record<string, string> = {
       'basic': 'Basic Plan',
@@ -201,7 +197,6 @@ const DashboardNav = () => {
 
   return (
     <>
-      {/* Mobile Navigation Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black border-b border-[#333]">
         <div className="flex justify-between items-center h-16 px-4">
           <Link to="/dashboard" className="flex items-center">
@@ -217,12 +212,10 @@ const DashboardNav = () => {
         </div>
       </div>
 
-      {/* Mobile Navigation Overlay */}
       {isMenuOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={toggleMenu}></div>
       )}
 
-      {/* Sidebar for both Mobile and Desktop */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 w-64 bg-black border-r border-[#333] transition-transform transform-gpu",
@@ -230,14 +223,12 @@ const DashboardNav = () => {
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Sidebar Header */}
           <div className="h-16 flex items-center px-6 border-b border-[#333] hidden md:flex">
             <Link to="/dashboard" className="flex items-center">
               <Logo size="small" />
             </Link>
           </div>
 
-          {/* Sidebar Content */}
           <div className="flex-1 overflow-y-auto py-6 px-4">
             <nav className="space-y-6">
               <div className="space-y-1">
@@ -270,7 +261,6 @@ const DashboardNav = () => {
             </nav>
           </div>
 
-          {/* User Subscription & Balance Info */}
           <div className="p-4 border-t border-[#333]">
             {isLoading ? (
               <div className="flex justify-center py-2">
