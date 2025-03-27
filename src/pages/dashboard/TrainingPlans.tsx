@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Download, Activity, ClipboardList, DollarSign, Check, ShoppingCart, AlertTriangle } from "lucide-react";
+import { Loader2, FileText, Download, Activity, ClipboardList, DollarSign, Check, ShoppingCart, AlertTriangle, Clock } from "lucide-react";
 import TrainingPlanQuiz from "@/components/plans/TrainingPlanQuiz";
 
 interface WorkoutPlan {
@@ -21,6 +21,7 @@ interface WorkoutPlan {
   custom_plan_result_id?: string;
   custom_plan_price?: number;
   is_purchased?: boolean;
+  is_ready?: boolean;
 }
 
 interface CustomPlanResult {
@@ -87,9 +88,13 @@ const TrainingPlans = () => {
       // Process the data to include purchase status
       const processedPlans = data?.map(plan => {
         const isPurchased = plan.payments && plan.payments.some(payment => payment.status === 'completed');
+        // Add a flag to indicate if the plan is ready (has PDF)
+        const isReady = !!plan.pdf_url;
+        
         return {
           ...plan,
-          is_purchased: isPurchased
+          is_purchased: isPurchased,
+          is_ready: isReady
         };
       }) || [];
       
@@ -226,8 +231,8 @@ const TrainingPlans = () => {
   // Loading state
   if (isLoading || !isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C]">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -238,7 +243,7 @@ const TrainingPlans = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#1A1F2C] text-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-black text-white">
       <DashboardNav />
       
       <div className="flex-1 overflow-auto p-4 md:p-6">
@@ -250,7 +255,7 @@ const TrainingPlans = () => {
             <div className="mt-4">
               <Button 
                 onClick={() => setShowQuiz(true)}
-                className="bg-sinner-red hover:bg-red-700"
+                className="bg-[#ea384c] hover:bg-red-700"
               >
                 Get Custom Plan
               </Button>
@@ -259,7 +264,7 @@ const TrainingPlans = () => {
           
           {isLoadingPlans ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#ea384c]" />
             </div>
           ) : showQuiz ? (
             <div className="py-4">
@@ -279,9 +284,10 @@ const TrainingPlans = () => {
                 const customPlan = plan.custom_plan_result_id ? customPlanData[plan.custom_plan_result_id] : null;
                 const price = customPlan?.selected_plan_price || 99.99;
                 const isPurchased = plan.is_purchased;
+                const isReady = plan.is_ready;
                 
                 return (
-                  <Card key={plan.id} className={`bg-gray-900 border-gray-800 ${isPurchased ? 'ring-1 ring-green-500' : ''}`}>
+                  <Card key={plan.id} className={`bg-[#0f0f0f] border-[#1a1a1a] ${isPurchased ? 'ring-1 ring-green-500' : ''}`}>
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
@@ -291,7 +297,7 @@ const TrainingPlans = () => {
                           </span>
                         </div>
                         {customPlan && (
-                          <Badge className="bg-sinner-red">
+                          <Badge className="bg-[#ea384c]">
                             <DollarSign className="h-3 w-3 mr-1" />
                             ${customPlan.selected_plan_price.toFixed(2)}
                           </Badge>
@@ -329,7 +335,7 @@ const TrainingPlans = () => {
                       )}
                       
                       {!isPurchased && (
-                        <div className="mt-4 p-3 bg-gray-800 rounded-md border border-gray-700">
+                        <div className="mt-4 p-3 bg-[#1a1a1a] rounded-md border border-[#333]">
                           <div className="flex items-center mb-2">
                             <AlertTriangle className="h-4 w-4 text-yellow-500 mr-2" />
                             <span className="text-sm font-medium">Purchase Required</span>
@@ -339,12 +345,24 @@ const TrainingPlans = () => {
                           </p>
                         </div>
                       )}
+                      
+                      {isPurchased && !isReady && (
+                        <div className="mt-4 p-3 bg-[#1a1a1a] rounded-md border border-[#333]">
+                          <div className="flex items-center mb-2">
+                            <Clock className="h-4 w-4 text-[#ea384c] mr-2" />
+                            <span className="text-sm font-medium">Plan Being Prepared</span>
+                          </div>
+                          <p className="text-xs text-gray-400 mb-3">
+                            Your plan is currently being prepared by our coaches. Check back soon!
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
-                    <CardFooter className="border-t border-gray-800 pt-4 flex justify-between">
+                    <CardFooter className="border-t border-[#333] pt-4 flex justify-between">
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="text-gray-300"
+                        className="text-gray-300 border-[#333] hover:bg-[#1a1a1a]"
                         disabled={!isPurchased}
                       >
                         <FileText className="h-4 w-4 mr-1" />
@@ -352,11 +370,11 @@ const TrainingPlans = () => {
                       </Button>
                       
                       {isPurchased ? (
-                        plan.pdf_url ? (
+                        isReady ? (
                           <Button
                             variant="default"
                             size="sm"
-                            className="bg-[#9b87f5] hover:bg-[#8a76e4]"
+                            className="bg-[#ea384c] hover:bg-red-700"
                             onClick={() => window.open(plan.pdf_url!, '_blank')}
                           >
                             <Download className="h-4 w-4 mr-1" />
@@ -367,7 +385,9 @@ const TrainingPlans = () => {
                             variant="secondary"
                             size="sm"
                             disabled
+                            className="bg-[#333] text-gray-400"
                           >
+                            <Clock className="h-4 w-4 mr-1" />
                             PDF Pending
                           </Button>
                         )
@@ -375,7 +395,7 @@ const TrainingPlans = () => {
                         <Button
                           variant="default"
                           size="sm"
-                          className="bg-sinner-red hover:bg-red-700"
+                          className="bg-[#ea384c] hover:bg-red-700"
                           onClick={() => handlePurchasePlan(plan.id, price)}
                           disabled={purchasingPlanId === plan.id}
                         >
@@ -400,14 +420,13 @@ const TrainingPlans = () => {
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-400 mb-4">
-                You've completed our training plan quiz. 
-                Our coaches are reviewing your responses and will create a personalized plan for you soon.
+                You don't have any training plans yet. Take our quiz to get a personalized plan.
               </p>
               <Button 
                 onClick={() => setShowQuiz(true)}
-                className="bg-sinner-red hover:bg-red-700"
+                className="bg-[#ea384c] hover:bg-red-700"
               >
-                Retake Quiz
+                Take Training Quiz
               </Button>
             </div>
           )}

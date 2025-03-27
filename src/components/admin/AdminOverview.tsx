@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -106,13 +107,22 @@ const formatTimeAgo = (timestamp: number) => {
   }
 };
 
+// Define interface for statistics
+interface StatCardProps {
+  title: string;
+  value: string;
+  change: string;
+  positive: boolean;
+  icon: React.ReactNode;
+}
+
 const AdminOverview = () => {
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [statistics, setStatistics] = useState([
-    { id: 'total-users', title: 'Total Users', value: '587', change: '+12%', positive: true, icon: <Users className="h-5 w-5" /> },
-    { id: 'monthly-revenue', title: 'Monthly Revenue', value: '$32,580', change: '+8%', positive: true, icon: <DollarSign className="h-5 w-5" /> },
-    { id: 'session-completion', title: 'Session Completion', value: '92%', change: '-3%', positive: false, icon: <CheckCircle2 className="h-5 w-5" /> },
-    { id: 'active-subscriptions', title: 'Active Subscriptions', value: '427', change: '+5%', positive: true, icon: <TrendingUp className="h-5 w-5" /> },
+  const [statistics, setStatistics] = useState<StatCardProps[]>([
+    { title: 'Total Users', value: '587', change: '+12%', positive: true, icon: <Users className="h-5 w-5" /> },
+    { title: 'Monthly Revenue', value: '$32,580', change: '+8%', positive: true, icon: <DollarSign className="h-5 w-5" /> },
+    { title: 'Session Completion', value: '92%', change: '-3%', positive: false, icon: <CheckCircle2 className="h-5 w-5" /> },
+    { title: 'Active Subscriptions', value: '427', change: '+5%', positive: true, icon: <TrendingUp className="h-5 w-5" /> },
   ]);
   
   useEffect(() => {
@@ -134,7 +144,7 @@ const AdminOverview = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statistics.map((stat) => (
           <StatCard 
-            key={stat.id}
+            key={stat.title}
             title={stat.title} 
             value={stat.value} 
             change={stat.change} 
@@ -330,14 +340,6 @@ const AdminOverview = () => {
     </div>
   );
 };
-
-interface StatCardProps {
-  title: string;
-  value: string;
-  change: string;
-  positive: boolean;
-  icon: React.ReactNode;
-}
 
 const StatCard = ({ title, value, change, positive, icon }: StatCardProps) => {
   return (
