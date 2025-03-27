@@ -37,17 +37,22 @@ export const initializeSupabaseAuth = () => {
 export const setupSupabase = () => {
   console.log('Setting up Supabase client...');
   
-  // Check if the Supabase client is initialized properly
-  if (!supabase) {
-    console.error('Supabase client is not initialized properly');
+  try {
+    // Check if the Supabase client is initialized properly
+    if (!supabase) {
+      console.error('Supabase client is not initialized properly');
+      return false;
+    }
+    
+    initializeSupabaseAuth();
+    
+    // Add additional initialization steps as needed
+    console.log('Supabase setup completed successfully');
+    return true;
+  } catch (error) {
+    console.error('Error during Supabase setup:', error);
     return false;
   }
-  
-  initializeSupabaseAuth();
-  
-  // Add additional initialization steps as needed
-  console.log('Supabase setup completed successfully');
-  return true;
 };
 
 /**
