@@ -16,9 +16,8 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, subDays } from "date-fns";
+import { format, subDays, addDays } from "date-fns";
 
-// Sample data - in a real application, this would come from an API
 const recentActivity = [
   { type: 'subscription', user: 'John Smith', plan: 'Elite Plan', amount: 249.99 },
   { type: 'payment', user: 'Sarah Johnson', plan: 'Pro Plan', amount: 99.99 },
@@ -58,7 +57,6 @@ const planDistribution = [
   { name: 'Elite Plan', value: 20, color: '#82ca9d' },
 ];
 
-// Generate random timestamps for the last 30 days
 const generateRecentActivity = () => {
   const activities = [
     { type: 'subscription', user: 'John Smith', plan: 'Elite Plan', amount: 249.99 },
@@ -117,7 +115,6 @@ const AdminOverview = () => {
     { id: 'active-subscriptions', title: 'Active Subscriptions', value: '427', change: '+5%', positive: true, icon: <TrendingUp className="h-5 w-5" /> },
   ]);
   
-  // Generate activity data on component mount
   useEffect(() => {
     setRecentActivity(generateRecentActivity());
   }, []);
