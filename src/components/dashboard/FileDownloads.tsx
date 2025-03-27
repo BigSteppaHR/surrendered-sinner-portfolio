@@ -54,7 +54,7 @@ const FileDownloads = () => {
             
             if (file.workout_plans) {
               // Cast to any to handle different possible shapes of data
-              const workoutPlanData = file.workout_plans as any;
+              const workoutPlanData = file.workout_plans as WorkoutPlanData;
               
               if (Array.isArray(workoutPlanData)) {
                 if (workoutPlanData.length > 0 && workoutPlanData[0]?.title) {
@@ -75,7 +75,7 @@ const FileDownloads = () => {
                 workoutPlan = {
                   id: '',
                   user_id: '',
-                  title: workoutPlanData.title,
+                  title: workoutPlanData.title || '',
                   description: null,
                   pdf_url: null,
                   plan_type: '',
