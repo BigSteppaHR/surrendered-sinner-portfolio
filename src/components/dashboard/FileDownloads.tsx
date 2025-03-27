@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const FileDownloads = () => {
             description, 
             download_url, 
             uploaded_at,
+            file_path,
             plan_id,
             workout_plans:plan_id (title)
           `)
@@ -56,7 +58,7 @@ const FileDownloads = () => {
                     workoutPlan = { 
                       id: '',
                       user_id: '',
-                      title: firstPlan.title, 
+                      title: firstPlan.title as string, 
                       description: null,
                       pdf_url: null,
                       plan_type: '',
@@ -70,11 +72,11 @@ const FileDownloads = () => {
               else if (typeof file.workout_plans === 'object' && file.workout_plans !== null) {
                 // Check if the title property exists on the object
                 if ('title' in file.workout_plans) {
-                  planName = file.workout_plans.title || 'General';
+                  planName = file.workout_plans.title as string || 'General';
                   workoutPlan = { 
                     id: '',
                     user_id: '',
-                    title: file.workout_plans.title, 
+                    title: file.workout_plans.title as string, 
                     description: null,
                     pdf_url: null,
                     plan_type: '',
