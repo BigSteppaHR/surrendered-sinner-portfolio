@@ -19,6 +19,7 @@ export const useAuthState = () => {
   const initializeAttempted = useRef(false);
   const profileFetchAttempted = useRef(false);
   const authSubscription = useRef<{ unsubscribe: () => void } | null>(null);
+  const initializationTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Handle profile updates - improved with better error handling
   const refreshProfileData = async (currentUser: User | null) => {
@@ -116,6 +117,15 @@ export const useAuthState = () => {
   };
 
   useEffect(() => {
+    // Force initialization to complete after 5 seconds regardless of auth state
+    initializationTimeout.current = setTimeout(() => {
+      if (!isInitialized) {
+        console.warn('Auth initialization timed out - forcing completion');
+        setIsLoading(false);
+        setIsInitialized(true);
+      }
+    }, 5000);
+
     // Prevent multiple initializations which can cause loops
     if (initializeAttempted.current) return;
     initializeAttempted.current = true;
@@ -146,6 +156,15 @@ export const useAuthState = () => {
               logDebug('Profile updated after auth state change:', profileData);
             } else {
               console.warn('No profile data available after auth state change');
+              // Still provide minimal profile to prevent UI errors
+              setProfile({
+                id: currentSession.user.id,
+                email: currentSession.user.email,
+                email_confirmed: !!currentSession.user.email_confirmed_at,
+                is_admin: false,
+                login_count: 0,
+                last_active_at: new Date().toISOString()
+              });
             }
           } else {
             setProfile(null);
@@ -154,6 +173,11 @@ export const useAuthState = () => {
           // Complete loading
           setIsLoading(false);
           setIsInitialized(true);
+          
+          // Clear timeout if auth completed successfully
+          if (initializationTimeout.current) {
+            clearTimeout(initializationTimeout.current);
+          }
         });
         
         authSubscription.current = data.subscription;
@@ -174,6 +198,15 @@ export const useAuthState = () => {
               logDebug('Profile loaded during initialization:', profileData);
             } else {
               console.warn('No profile data available during initialization');
+              // Still provide minimal profile to prevent UI errors
+              setProfile({
+                id: currentSession.user.id,
+                email: currentSession.user.email,
+                email_confirmed: !!currentSession.user.email_confirmed_at,
+                is_admin: false,
+                login_count: 0,
+                last_active_at: new Date().toISOString()
+              });
             }
           }
         }
@@ -181,20 +214,33 @@ export const useAuthState = () => {
         // Always complete loading even if there's no session
         setIsLoading(false);
         setIsInitialized(true);
+        
+        // Clear timeout if auth completed successfully
+        if (initializationTimeout.current) {
+          clearTimeout(initializationTimeout.current);
+        }
       } catch (error) {
         console.error('Error initializing auth:', error);
         setIsLoading(false); // Complete loading to not block the UI
         setIsInitialized(true);
+        
+        // Clear timeout if auth completed with error
+        if (initializationTimeout.current) {
+          clearTimeout(initializationTimeout.current);
+        }
       }
     };
 
     // Initialize
     initializeAuth();
     
-    // Clean up subscription on unmount
+    // Clean up subscription and timeout on unmount
     return () => {
       if (authSubscription.current) {
         authSubscription.current.unsubscribe();
+      }
+      if (initializationTimeout.current) {
+        clearTimeout(initializationTimeout.current);
       }
     };
   }, []);

@@ -14,7 +14,7 @@ window.addEventListener('error', (event) => {
 // Add logging to help with debugging
 console.log('Initializing application...');
 
-// Basic Error Boundary Component
+// Basic Error Boundary Component defined BEFORE it's used
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
   constructor(props: {children: React.ReactNode}) {
     super(props);

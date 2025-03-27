@@ -89,11 +89,25 @@ const AppRoutes = () => {
     return () => cleanupMonitoring();
   }, []);
   
+  // Set page as loaded when auth is initialized
   useEffect(() => {
     if (isInitialized) {
+      console.log("Auth initialized, setting page as loaded");
       setIsPageLoaded(true);
     }
   }, [isInitialized]);
+  
+  // Force timeout to prevent infinite loading
+  useEffect(() => {
+    const forceTimeout = setTimeout(() => {
+      if (!isPageLoaded) {
+        console.log("Force timeout reached, setting page as loaded anyway");
+        setIsPageLoaded(true);
+      }
+    }, 3000); // Force page load after 3 seconds regardless of auth state
+    
+    return () => clearTimeout(forceTimeout);
+  }, [isPageLoaded]);
   
   // AdminRedirect component, defined within the AuthProvider context
   const AdminRedirect = () => {
@@ -126,10 +140,14 @@ const AppRoutes = () => {
     }
   };
   
-  if (isLoading || !isInitialized || !isPageLoaded) {
+  // Loading state with force timeout
+  if (isLoading && !isPageLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full mb-4"></div>
+          <p className="text-white text-sm">Loading application...</p>
+        </div>
       </div>
     );
   }

@@ -19,6 +19,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
   const { toast } = useToast();
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const isPublicPage = publicPages.includes(location.pathname);
   const isDebugMode = profile?.debug_mode || false;
@@ -43,13 +44,28 @@ const DashboardLayout = () => {
     if (isInitialized) {
       setIsPageLoaded(true);
     }
-  }, [isInitialized]);
+    
+    // Force page load after timeout to prevent infinite loading
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (!isPageLoaded) {
+        console.warn("Forcing dashboard load after timeout");
+        setIsPageLoaded(true);
+      }
+    }, 5000);
+    
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [isInitialized, isPageLoaded]);
   
   // Show loading state while checking auth
   if (isLoading || !isInitialized || !isPageLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#000000]">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#000000]">
+        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full mb-4"></div>
+        <p className="text-white text-sm">Loading dashboard...</p>
       </div>
     );
   }
