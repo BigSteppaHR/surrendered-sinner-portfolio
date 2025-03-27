@@ -187,6 +187,28 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
     );
   }
 
+  if (requiresAuth) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-center">Authentication Required</CardTitle>
+          <CardDescription className="text-center text-gray-400">
+            Please log in to complete your quiz.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          <Button 
+            variant="default" 
+            onClick={redirectToLogin}
+            className="w-full"
+          >
+            Log in
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (currentStep < quizSteps.length) {
     const currentQuestion = quizSteps[currentStep];
     
@@ -238,28 +260,6 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (requiresAuth) {
-    return (
-      <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-center">Authentication Required</CardTitle>
-          <CardDescription className="text-center text-gray-400">
-            Please log in to complete your quiz.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          <Button 
-            variant="primary" 
-            onClick={redirectToLogin}
-            className="w-full"
-          >
-            Log in
-          </Button>
         </CardContent>
       </Card>
     );
