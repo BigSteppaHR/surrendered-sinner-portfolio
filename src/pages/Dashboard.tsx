@@ -146,10 +146,10 @@ const Dashboard = () => {
       
       <div className="flex-1 overflow-auto md:ml-64">
         <div className="p-6 max-w-7xl mx-auto">
-          <div className="mb-8 p-6 rounded-lg relative overflow-hidden after:absolute after:inset-0 after:p-[2px] after:rounded-lg after:bg-gradient-to-r after:from-[#ea384c] after:via-red-500 after:to-[#ea384c] after:opacity-75 after:animate-[gradient_5s_ease_infinite] bg-zinc-900 backdrop-blur-sm">
+          <div className="mb-8 p-6 rounded-lg relative overflow-hidden bg-zinc-900 border border-[#333333] hover:border-[#ea384c] transition-colors">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ea384c] to-red-400">
+                <h1 className="text-3xl font-bold text-white">
                   Welcome Back, {profile?.full_name || 'Athlete'}!
                 </h1>
                 <p className="text-gray-400 mt-1">Your training journey continues today</p>
@@ -158,6 +158,7 @@ const Dashboard = () => {
                   <span>Last activity: {formatLastActive()}</span>
                 </div>
               </div>
+              
               <div className="mt-4 md:mt-0 w-full md:w-auto">
                 <DailyQuote />
               </div>

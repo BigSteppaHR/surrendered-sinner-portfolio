@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,6 +53,14 @@ const TrainingPlans = () => {
     if (isAuthenticated && profile) {
       fetchWorkoutPlans();
       
+      // Check URL params for showing quiz
+      const urlParams = new URLSearchParams(location.search);
+      if (urlParams.get('showQuiz') === 'true') {
+        setShowQuiz(true);
+        // Clean URL
+        window.history.replaceState({}, document.title, location.pathname);
+      }
+      
       // Check for restored quiz state from login redirect
       const pendingAnswers = sessionStorage.getItem('dashboardPendingQuizAnswers');
       if (pendingAnswers) {
@@ -60,7 +69,7 @@ const TrainingPlans = () => {
         sessionStorage.removeItem('dashboardPendingQuizStep');
       }
     }
-  }, [isAuthenticated, isLoading, profile, isInitialized]);
+  }, [isAuthenticated, isLoading, profile, isInitialized, location]);
   
   const fetchWorkoutPlans = async () => {
     try {
@@ -104,11 +113,6 @@ const TrainingPlans = () => {
           });
           setCustomPlanData(planMap);
         }
-      }
-      
-      // Show quiz if no plans exist
-      if (processedPlans.length === 0) {
-        setShowQuiz(true);
       }
     } catch (error: any) {
       console.error("Error fetching workout plans:", error);
@@ -242,6 +246,15 @@ const TrainingPlans = () => {
           <div className="mb-6 md:mb-8">
             <h1 className="text-2xl md:text-3xl font-bold">Training Plans</h1>
             <p className="text-gray-400 mt-1">View and manage your personalized workout routines</p>
+            
+            <div className="mt-4">
+              <Button 
+                onClick={() => setShowQuiz(true)}
+                className="bg-sinner-red hover:bg-red-700"
+              >
+                Get Custom Plan
+              </Button>
+            </div>
           </div>
           
           {isLoadingPlans ? (

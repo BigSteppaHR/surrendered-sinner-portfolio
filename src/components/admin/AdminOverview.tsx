@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -20,6 +19,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, subDays } from "date-fns";
 
 // Sample data - in a real application, this would come from an API
+const recentActivity = [
+  { type: 'subscription', user: 'John Smith', plan: 'Elite Plan', amount: 249.99 },
+  { type: 'payment', user: 'Sarah Johnson', plan: 'Pro Plan', amount: 99.99 },
+  { type: 'session', user: 'Michael Brown', plan: 'Basic Plan' },
+  { type: 'payment', user: 'Emily Davis', plan: 'Pro Plan', amount: 99.99 },
+  { type: 'subscription', user: 'Robert Wilson', plan: 'Basic Plan', amount: 29.99 },
+  { type: 'support', user: 'Jessica Thompson', plan: 'Elite Plan' },
+  { type: 'subscription', user: 'David Miller', plan: 'Pro Plan', amount: 99.99 },
+  { type: 'session', user: 'Amanda Anderson', plan: 'Elite Plan' },
+  { type: 'payment', user: 'Daniel Johnson', plan: 'Basic Plan', amount: 29.99 },
+  { type: 'support', user: 'Sophia Rodriguez', plan: 'Pro Plan' },
+];
+
 const revenueData = [
   { name: 'Mon', value: 2500 },
   { name: 'Tue', value: 3200 },
@@ -356,7 +368,6 @@ const StatCard = ({ title, value, change, positive, icon }: StatCardProps) => {
   );
 };
 
-// Placeholder for Upcoming Sessions tab content
 const UpcomingSessions = () => {
   return (
     <Card className="bg-[#0f0f0f] border-[#1a1a1a]">
@@ -389,14 +400,6 @@ const UpcomingSessions = () => {
   );
 };
 
-// Helper function for date formatting
-function addDays(date: Date, days: number) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-// Placeholder for Pending Payments tab content
 const PendingPayments = () => {
   return (
     <Card className="bg-[#0f0f0f] border-[#1a1a1a]">
@@ -430,7 +433,6 @@ const PendingPayments = () => {
   );
 };
 
-// Placeholder for Support Tickets tab content
 const SupportTickets = () => {
   return (
     <Card className="bg-[#0f0f0f] border-[#1a1a1a]">
