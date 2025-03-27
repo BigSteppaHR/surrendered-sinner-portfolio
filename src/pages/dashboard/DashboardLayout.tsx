@@ -82,7 +82,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   }
   
   // If authenticated admin, redirect to admin dashboard using Navigate component
-  if (isAuthenticated && profile?.is_admin) {
+  if (isAuthenticated && isAdmin) {
     logDebug("User is admin, redirecting to admin dashboard");
     return <Navigate to="/admin" replace />;
   }
