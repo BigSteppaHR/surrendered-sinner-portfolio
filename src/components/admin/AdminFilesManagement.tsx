@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import AdminFileUpload from './AdminFileUpload';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { handleDatabaseError } from "@/utils/databaseErrorHandler";
 
 interface ProfileData {
   full_name: string;
@@ -65,7 +67,10 @@ const AdminFilesManagement = () => {
         `)
         .order('uploaded_at', { ascending: false });
         
-      if (error) throw error;
+      if (error) {
+        handleDatabaseError(error);
+        throw error;
+      }
       
       if (data) {
         const formattedFiles: FileRecord[] = data.map(file => ({

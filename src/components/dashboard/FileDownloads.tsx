@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { UserFile, WorkoutPlan } from "@/types";
+
+// Define a type for the workout plans data that might come from Supabase
+interface WorkoutPlanData {
+  title?: string;
+  [key: string]: any;
+}
 
 const FileDownloads = () => {
   const [files, setFiles] = useState<UserFile[]>([]);
@@ -46,6 +53,7 @@ const FileDownloads = () => {
             let workoutPlan: WorkoutPlan | null = null;
             
             if (file.workout_plans) {
+              // Cast to any to handle different possible shapes of data
               const workoutPlanData = file.workout_plans as any;
               
               if (Array.isArray(workoutPlanData)) {
