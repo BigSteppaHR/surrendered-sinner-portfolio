@@ -8,6 +8,12 @@
     <!-- Preload critical assets -->
     <link rel="preload" href="/src/index.css" as="style">
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <!-- Error handling and fallback script -->
+    <script type="text/javascript">
+      window.addEventListener('error', function(e) {
+        console.error('Global error caught:', e.error);
+      });
+    </script>
   </head>
 
   <body>

@@ -46,10 +46,8 @@ export const setupSupabase = () => {
     
     initializeSupabaseAuth();
     
-    // Test connection and log results
-    testSupabaseConnection().then(isConnected => {
-      console.log('Supabase connection test result:', isConnected ? 'Success' : 'Failed');
-    }).catch(err => {
+    // Test connection and log results but don't block initialization
+    testSupabaseConnection().catch(err => {
       console.error('Error testing Supabase connection:', err);
     });
     
@@ -69,23 +67,18 @@ export const testSupabaseConnection = async () => {
   try {
     console.log('Testing Supabase connection...');
     
-    // First test - check if we can call a simple function
-    const { data: healthData, error: healthError } = await supabase.rpc('get_quote_of_the_day');
+    // Use a simple anonymous query that doesn't require authentication
+    const { data, error } = await supabase
+      .from('daily_quotes')
+      .select('id')
+      .limit(1);
     
-    if (healthError) {
-      console.warn('DB function test failed:', healthError);
-      
-      // Second test - try a simple table query if function fails
-      const { error: queryError } = await supabase.from('profiles').select('id').limit(1);
-      
-      if (queryError) {
-        console.warn('Table query test failed:', queryError);
-        return false;
-      }
-      
-      return true;
+    if (error) {
+      console.warn('Supabase connection test failed:', error.message);
+      return false;
     }
     
+    console.log('Supabase connection test successful!');
     return true;
   } catch (err) {
     console.error('Error testing Supabase connection:', err);
