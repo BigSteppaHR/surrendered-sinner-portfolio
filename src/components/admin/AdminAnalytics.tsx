@@ -22,7 +22,6 @@ const AdminAnalytics = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // Stats data
   const [stats, setStats] = useState({
     totalMembers: '0',
     activeSubscriptions: '0',
@@ -38,7 +37,6 @@ const AdminAnalytics = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch revenue data
         const { data: revenueResult, error: revenueError } = await supabase
           .from('revenue_data')
           .select('*')
@@ -47,7 +45,6 @@ const AdminAnalytics = () => {
         if (revenueError) throw revenueError;
         setRevenueData(revenueResult || []);
 
-        // Fetch user signups by month
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('created_at')
@@ -55,7 +52,6 @@ const AdminAnalytics = () => {
           
         if (profilesError) throw profilesError;
         
-        // Process profile data into monthly signup counts
         const signupsByMonth: {[key: string]: number} = {};
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
@@ -68,14 +64,12 @@ const AdminAnalytics = () => {
         const signupData = Object.entries(signupsByMonth).map(([name, value]) => ({ name, value }));
         setUserSignupData(signupData);
         
-        // Fetch session data by day of week
         const { data: sessionsData, error: sessionsError } = await supabase
           .from('user_sessions')
           .select('session_time');
           
         if (sessionsError) throw sessionsError;
         
-        // Process session data by day of week
         const sessionsByDay: {[key: string]: number} = {};
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         
@@ -85,12 +79,10 @@ const AdminAnalytics = () => {
           sessionsByDay[dayKey] = (sessionsByDay[dayKey] || 0) + 1;
         });
         
-        // Ensure all days are represented
         days.forEach(day => {
           if (!sessionsByDay[day]) sessionsByDay[day] = 0;
         });
         
-        // Sort by day order
         const sortedSessionData = days.map(day => ({
           name: day,
           value: sessionsByDay[day] || 0
@@ -98,7 +90,6 @@ const AdminAnalytics = () => {
         
         setSessionData(sortedSessionData);
         
-        // Fetch subscription plan distribution
         const { data: subscriptionsData, error: subscriptionsError } = await supabase
           .from('user_subscriptions')
           .select(`
@@ -109,11 +100,19 @@ const AdminAnalytics = () => {
           
         if (subscriptionsError) throw subscriptionsError;
         
-        // Process subscription data
         const planCounts: {[key: string]: number} = {};
         subscriptionsData?.forEach(subscription => {
-          // Fix: Access the name property correctly from the nested object
-          const planName = subscription.subscription_packages?.name || 'Unknown Plan';
+          let planName = 'Unknown Plan';
+          
+          if (subscription.subscription_packages) {
+            if (Array.isArray(subscription.subscription_packages) && subscription.subscription_packages.length > 0) {
+              planName = subscription.subscription_packages[0].name || 'Unknown Plan';
+            } 
+            else if (typeof subscription.subscription_packages === 'object' && 'name' in subscription.subscription_packages) {
+              planName = subscription.subscription_packages.name || 'Unknown Plan';
+            }
+          }
+          
           planCounts[planName] = (planCounts[planName] || 0) + 1;
         });
         
@@ -133,7 +132,6 @@ const AdminAnalytics = () => {
         
         setPlanDistribution(planDistributionData);
         
-        // Fetch recent activity
         const { data: recentActivity, error: activityError } = await supabase
           .from('support_tickets')
           .select('id, subject, created_at, status')
@@ -142,7 +140,6 @@ const AdminAnalytics = () => {
           
         if (activityError) throw activityError;
         
-        // Fetch recent payments
         const { data: recentPayments, error: paymentsError } = await supabase
           .from('payments')
           .select('id, amount, created_at, status')
@@ -151,7 +148,6 @@ const AdminAnalytics = () => {
           
         if (paymentsError) throw paymentsError;
         
-        // Combine and format activity data
         const activityItems = [
           ...(recentActivity?.map(ticket => ({
             id: ticket.id,
@@ -169,12 +165,10 @@ const AdminAnalytics = () => {
         
         setActivityData(activityItems);
         
-        // Fetch stats
         const totalMembers = profilesData?.length || 0;
         const activeSubscriptions = subscriptionsData?.length || 0;
         const monthlyRevenue = recentPayments?.reduce((total, payment) => total + (payment.amount || 0), 0) || 0;
         
-        // Calculate changes (mock data for now)
         setStats({
           totalMembers: totalMembers.toString(),
           activeSubscriptions: activeSubscriptions.toString(),
@@ -199,7 +193,6 @@ const AdminAnalytics = () => {
     
     fetchData();
     
-    // Set up realtime subscriptions
     const channel = supabase
       .channel('analytics-changes')
       .on('postgres_changes', 
@@ -229,7 +222,6 @@ const AdminAnalytics = () => {
     };
   }, [toast]);
   
-  // Helper function to format time ago
   const formatTimeAgo = (date: Date) => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     
@@ -242,7 +234,6 @@ const AdminAnalytics = () => {
     return new Date(date).toLocaleDateString();
   };
   
-  // Helper function to convert time ago format to seconds for sorting
   const timeAgoToSeconds = (timeAgo: string) => {
     if (timeAgo.includes('seconds')) return parseInt(timeAgo.split(' ')[0]);
     if (timeAgo.includes('minutes')) return parseInt(timeAgo.split(' ')[0]) * 60;
@@ -252,9 +243,7 @@ const AdminAnalytics = () => {
     return 604800; // default to a week
   };
   
-  // Helper function to export data
   const handleExportData = () => {
-    // Create CSV from revenueData
     const csvData = revenueData.map(item => `${item.name},${item.value}`).join('\n');
     const blob = new Blob([`Month,Revenue\n${csvData}`], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
