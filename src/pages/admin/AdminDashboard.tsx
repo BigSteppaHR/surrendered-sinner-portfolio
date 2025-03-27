@@ -1,7 +1,7 @@
 
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import AdminOverview from "@/components/admin/AdminOverview";
 import AdminSessions from "@/components/admin/AdminSessions";
@@ -13,12 +13,14 @@ import AdminNotifications from "@/components/admin/AdminNotifications";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { Loader2 } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAuthenticated, isAdmin, isLoading, profile } = useAuth();
   const location = useLocation();
   const isDebugMode = profile?.debug_mode || false;
   const { toast } = useToast();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Authentication & access control
   useEffect(() => {
@@ -31,11 +33,19 @@ const AdminDashboard = () => {
     }
   }, [isAuthenticated, isAdmin, isLoading, toast]);
 
+  // Toggle sidebar function
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#000000]">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 text-[#ea384c] animate-spin" />
+          <p className="text-white text-sm">Loading admin dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -50,16 +60,18 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row w-full bg-[#0f0f0f] text-white">
+    <div className="min-h-screen flex bg-[#0f0f0f] text-white relative">
       {isDebugMode && (
         <div className="fixed top-0 left-0 right-0 bg-[#ea384c]/20 border border-[#ea384c]/40 p-2 text-xs text-white z-50">
           <strong>DEBUG MODE</strong>: Admin User ID: {profile?.id}, Debug Enabled
         </div>
       )}
       
-      <AdminSidebar />
+      {/* Admin Sidebar with toggle state */}
+      <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       
-      <div className="flex-1 p-0 md:p-6 mt-16 md:mt-0 md:ml-64 overflow-auto">
+      {/* Main content area - adjust padding based on sidebar state */}
+      <div className={`flex-1 p-4 transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} overflow-auto`}>
         <Routes>
           <Route path="/" element={<AdminOverview />} />
           <Route path="/overview" element={<AdminOverview />} />
