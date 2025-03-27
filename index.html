@@ -5,11 +5,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Surrendered Sinner Fitness</title>
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/src/index.css" as="style">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
   </head>
 
   <body>
     <div id="root"></div>
+    <!-- GPT Engineer script must be loaded before main app script -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <!-- Main application script -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
