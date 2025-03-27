@@ -67,7 +67,7 @@ const FileDownloads = () => {
             uploaded_at: new Date(file.uploaded_at).toLocaleDateString(),
             plan_id: file.plan_id,
             plan_name: file.workout_plans?.title || 'General',
-            workout_plans: file.workout_plans
+            workout_plans: file.workout_plans as WorkoutPlan | null
           }));
           
           setFiles(formattedFiles);

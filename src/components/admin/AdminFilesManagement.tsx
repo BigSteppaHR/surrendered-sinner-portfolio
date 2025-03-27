@@ -26,6 +26,7 @@ interface FileRecord {
   user_name: string;
   user_email: string;
   profiles: ProfileData;
+  file_path: string;
 }
 
 const AdminFilesManagement = () => {
@@ -79,7 +80,8 @@ const AdminFilesManagement = () => {
           user_id: file.user_id,
           user_name: file.profiles?.full_name || 'Unknown',
           user_email: file.profiles?.email || 'No email',
-          profiles: file.profiles
+          profiles: file.profiles,
+          file_path: file.file_path
         }));
         
         setFiles(formattedFiles);
