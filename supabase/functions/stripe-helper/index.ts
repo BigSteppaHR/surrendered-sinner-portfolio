@@ -2,11 +2,12 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.4.0?target=deno";
 
-// Define CORS headers - allow any origin or use environment variable if set
+// Define enhanced CORS headers with more comprehensive options
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOW_ORIGIN') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Max-Age': '86400', // 24 hours cache for preflight requests
 };
 
 serve(async (req) => {
@@ -19,15 +20,38 @@ serve(async (req) => {
   }
 
   try {
-    // Get the Stripe secret key from environment variables
+    // Get the Stripe secret key from environment variables with explicit logging
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     
     // Enhanced debug logging for Stripe key detection
     console.log("Stripe key availability check:", {
       keyExists: !!stripeSecretKey,
       keyLength: stripeSecretKey ? stripeSecretKey.length : 0,
-      keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 5) + '...' : 'none'
+      keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 5) + '...' : 'none',
+      envVars: Object.keys(Deno.env.toObject()).filter(key => !key.includes('KEY')).join(', ') // List available env vars without exposing sensitive ones
     });
+    
+    // Create a test endpoint for checking connection
+    const { action, params } = await req.json();
+    
+    if (action === 'test-connection') {
+      console.log("Testing Supabase function connection...");
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Connection successful",
+          timestamp: new Date().toISOString(),
+          stripeKeyAvailable: !!stripeSecretKey
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+          status: 200,
+        }
+      );
+    }
     
     if (!stripeSecretKey) {
       console.error("Missing Stripe secret key in environment variables");
@@ -40,9 +64,6 @@ serve(async (req) => {
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16', // Use the latest stable API version
     });
-    
-    // Get the request body
-    const { action, params } = await req.json();
     
     console.log(`Stripe helper: Executing action ${action}`);
     
@@ -131,7 +152,7 @@ serve(async (req) => {
         throw new Error(`Unknown action: ${action}`);
     }
     
-    // Return successful response with CORS headers
+    // Return successful response with enhanced CORS headers
     return new Response(
       JSON.stringify(result),
       {

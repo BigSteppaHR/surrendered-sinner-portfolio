@@ -26,11 +26,30 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const [isStripeLoaded, setIsStripeLoaded] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [connectionTested, setConnectionTested] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
-  // Test connection to Stripe via our edge function
+  // Test connection to Stripe via our edge function with enhanced error handling
   const testStripeConnection = async () => {
     try {
+      setIsTesting(true);
       console.log("Testing Stripe connection via edge function...");
+      
+      // First test basic connection to the function
+      const testResponse = await supabase.functions.invoke('stripe-helper', {
+        body: { 
+          action: 'test-connection',
+          params: {}
+        }
+      });
+      
+      if (testResponse.error) {
+        console.error("Function connection test failed:", testResponse.error);
+        return false;
+      }
+      
+      console.log("Function connection test result:", testResponse.data);
+      
+      // Then test the full Stripe API connection
       const { data, error } = await supabase.functions.invoke('stripe-helper', {
         body: { 
           action: 'get-dashboard-data',
@@ -39,15 +58,17 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
       });
       
       if (error) {
-        console.error("Stripe connection test failed:", error);
+        console.error("Stripe API connection test failed:", error);
         return false;
       }
       
-      console.log("Stripe connection test result:", data);
+      console.log("Stripe API connection test result:", data);
       return data && data.status === 'connected';
     } catch (err) {
       console.error("Error testing Stripe connection:", err);
       return false;
+    } finally {
+      setIsTesting(false);
     }
   };
 
