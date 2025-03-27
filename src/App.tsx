@@ -14,6 +14,7 @@ import DashboardProgress from '@/pages/dashboard/Progress';
 import DashboardPayment from '@/pages/dashboard/Payment';
 import DashboardSupport from '@/pages/dashboard/Support';
 import DashboardSettings from '@/pages/dashboard/Settings';
+import DashboardDownloads from '@/pages/dashboard/Downloads';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import NotFound from '@/pages/NotFound';
 import Schedule from '@/pages/Schedule';
@@ -57,6 +58,7 @@ function App() {
               <Route path="/dashboard/payment" element={<DashboardPayment />} />
               <Route path="/dashboard/support" element={<DashboardSupport />} />
               <Route path="/dashboard/settings" element={<DashboardSettings />} />
+              <Route path="/dashboard/downloads" element={<DashboardDownloads />} />
               
               {/* Admin Routes */}
               <Route path="/admin/*" element={<AdminDashboard />} />

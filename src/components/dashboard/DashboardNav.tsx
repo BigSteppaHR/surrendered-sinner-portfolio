@@ -1,395 +1,145 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { User, LayoutDashboard, Calendar, ChartBar, CreditCard, LifeBuoy, Settings, Menu, X, LogOut, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  LayoutDashboard,
-  User,
-  Dumbbell,
-  Calendar,
-  Wallet,
-  BarChart3,
-  MessageCircle,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  ChevronRight,
-  CreditCard,
-  Package,
-  Clock,
-  Shield,
-  AlertCircle
-} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import Logo from '@/components/Logo';
 import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
-import { format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
-
-const sidebarLinks = [
-  {
-    path: '/dashboard',
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    label: 'Dashboard',
-    exact: true,
-  },
-  {
-    path: '/dashboard/account',
-    icon: <User className="h-5 w-5" />,
-    label: 'Account',
-  },
-  {
-    path: '/dashboard/plans',
-    icon: <Dumbbell className="h-5 w-5" />,
-    label: 'Training Plans',
-  },
-  {
-    path: '/dashboard/schedule',
-    icon: <Calendar className="h-5 w-5" />,
-    label: 'Schedule',
-  },
-  {
-    path: '/dashboard/progress',
-    icon: <BarChart3 className="h-5 w-5" />,
-    label: 'Progress',
-  },
-  {
-    path: '/dashboard/payment',
-    icon: <Wallet className="h-5 w-5" />,
-    label: 'Payment',
-  },
-  {
-    path: '/dashboard/support',
-    icon: <MessageCircle className="h-5 w-5" />,
-    label: 'Support',
-  },
-  {
-    path: '/dashboard/settings',
-    icon: <Settings className="h-5 w-5" />,
-    label: 'Settings',
-  },
-];
-
-const utilityLinks = [
-  {
-    path: '/plans-catalog',
-    icon: <Package className="h-5 w-5" />,
-    label: 'Plan Catalog',
-  },
-  {
-    path: '/payment-portal',
-    icon: <CreditCard className="h-5 w-5" />,
-    label: 'Payment Portal',
-  },
-];
-
-interface UserSubscription {
-  id: string;
-  plan_name: string;
-  end_date: string;
-  status: string;
-}
-
-interface UserBalance {
-  amount: number;
-  currency: string;
-}
 
 const DashboardNav = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { logout, user } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
-  const [balance, setBalance] = useState<UserBalance | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { logout, profile } = useAuth();
 
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (user) {
-      fetchUserSubscriptionAndBalance();
-    }
-  }, [user]);
-
-  const fetchUserSubscriptionAndBalance = async () => {
-    setIsLoading(true);
-    try {
-      const { data: subscriptionData, error: subError } = await supabase
-        .from('subscriptions')
-        .select('id, plan_id, current_period_end, status')
-        .eq('user_id', user?.id)
-        .eq('status', 'active')
-        .order('current_period_end', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (subError && subError.code !== 'PGRST116') {
-        console.error('Error fetching subscription:', subError);
-      }
-      
-      if (subscriptionData) {
-        setSubscription({
-          id: subscriptionData.id,
-          plan_name: getPlanName(subscriptionData.plan_id),
-          end_date: subscriptionData.current_period_end,
-          status: subscriptionData.status
-        });
-      }
-      
-      const { data: balanceData, error: balanceError } = await supabase
-        .from('payment_balance')
-        .select('balance, currency')
-        .eq('user_id', user?.id)
-        .limit(1)
-        .single();
-        
-      if (balanceError && balanceError.code !== 'PGRST116') {
-        console.error('Error fetching balance:', balanceError);
-      }
-      
-      if (balanceData) {
-        setBalance({
-          amount: balanceData.balance,
-          currency: balanceData.currency
-        });
-      }
-      
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const isActive = (path: string) => {
+    return location.pathname === path;
   };
 
-  const getPlanName = (planId: string): string => {
-    const planNames: Record<string, string> = {
-      'basic': 'Basic Plan',
-      'pro': 'Pro Plan',
-      'elite': 'Elite Plan',
-      'price_1OxCvNGXXtKP1NLsUOjDC8bD': 'Monthly Subscription',
-      'price_1OxChEGXXtKP1NLssfb58nfD': 'Annual Subscription',
-    };
-    
-    return planNames[planId] || 'Premium Plan';
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleLogout = async () => {
-    try {
-      const { success, redirectTo } = await logout();
-      if (success && redirectTo) {
-        toast({
-          title: "Logged out",
-          description: "You have been successfully logged out.",
-        });
-        navigate(redirectTo);
-      }
-    } catch (error) {
-      console.error('Error during logout:', error);
-      toast({
-        variant: "destructive",
-        title: "Logout failed",
-        description: "There was a problem logging you out. Please try again.",
-      });
-    }
-  };
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const formatCurrency = (amount: number, currency: string = 'USD'): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-    }).format(amount);
-  };
-
-  const getDaysRemaining = (endDate: string): number => {
-    const end = new Date(endDate);
-    const now = new Date();
-    const diffTime = end.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
+  const NavItem = ({ path, icon, label }: { path: string; icon: React.ReactNode; label: string }) => (
+    <Link to={path} className={cn(
+      "flex items-center text-sm py-3 px-4 rounded-md transition-colors",
+      isActive(path) 
+        ? "bg-[#ea384c] text-white" 
+        : "text-gray-400 hover:text-white hover:bg-zinc-800"
+    )}>
+      {icon}
+      <span className="ml-3">{label}</span>
+    </Link>
+  );
 
   return (
     <>
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black border-b border-[#333]">
-        <div className="flex justify-between items-center h-16 px-4">
-          <Link to="/dashboard" className="flex items-center">
-            <Logo size="small" />
-          </Link>
-          <button
-            onClick={toggleMenu}
-            className="text-white p-2"
-            aria-label="Toggle navigation menu"
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
+      {/* Mobile Menu Button */}
+      <div className="fixed top-4 left-4 z-30 md:hidden">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleMobileMenu}
+          className="border-[#333] bg-black/50 backdrop-blur-md"
+        >
+          {isMobileMenuOpen ? 
+            <X className="h-5 w-5 text-white" /> : 
+            <Menu className="h-5 w-5 text-white" />
+          }
+        </Button>
       </div>
 
-      {isMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={toggleMenu}></div>
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-20 md:hidden" 
+          onClick={toggleMobileMenu}
+        />
       )}
 
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-black border-r border-[#333] transition-transform transform-gpu",
-          isMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        )}
-      >
-        <div className="flex flex-col h-full">
-          <div className="h-16 flex items-center px-6 border-b border-[#333] hidden md:flex">
-            <Link to="/dashboard" className="flex items-center">
-              <Logo size="small" />
-            </Link>
-          </div>
+      {/* Sidebar */}
+      <div className={cn(
+        "fixed top-0 left-0 bottom-0 z-20 w-64 bg-[#0a0a0a] border-r border-[#222] overflow-y-auto transition-transform duration-300 transform",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )}>
+        <div className="px-4 py-5 flex items-center border-b border-[#222]">
+          <img 
+            src="/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png" 
+            alt="Logo" 
+            className="h-8 w-8 mr-2"
+          />
+          <h2 className="text-xl font-bold text-white">Dashboard</h2>
+        </div>
 
-          <div className="flex-1 overflow-y-auto py-6 px-4">
-            <nav className="space-y-6">
-              <div className="space-y-1">
-                {sidebarLinks.map((link) => (
-                  <NavLink
-                    key={link.path}
-                    to={link.path}
-                    icon={link.icon}
-                    label={link.label}
-                    exact={link.exact}
-                  />
-                ))}
-              </div>
-
-              <div className="pt-6 border-t border-[#333]">
-                <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Utilities
-                </p>
-                <div className="space-y-1">
-                  {utilityLinks.map((link) => (
-                    <NavLink
-                      key={link.path}
-                      to={link.path}
-                      icon={link.icon}
-                      label={link.label}
-                    />
-                  ))}
-                </div>
-              </div>
+        <div className="p-4">
+          <div className="mb-6">
+            <small className="text-xs text-gray-500 uppercase font-bold tracking-wider">Navigation</small>
+            <nav className="mt-2 space-y-1">
+              <NavItem 
+                path="/dashboard" 
+                icon={<LayoutDashboard className="h-4 w-4" />} 
+                label="Overview" 
+              />
+              <NavItem 
+                path="/dashboard/account" 
+                icon={<User className="h-4 w-4" />} 
+                label="Account" 
+              />
+              <NavItem 
+                path="/dashboard/plans" 
+                icon={<LayoutDashboard className="h-4 w-4" />} 
+                label="Training Plans" 
+              />
+              <NavItem 
+                path="/dashboard/schedule" 
+                icon={<Calendar className="h-4 w-4" />} 
+                label="Schedule" 
+              />
+              <NavItem 
+                path="/dashboard/progress" 
+                icon={<ChartBar className="h-4 w-4" />} 
+                label="Progress" 
+              />
+              <NavItem 
+                path="/dashboard/downloads" 
+                icon={<FileDown className="h-4 w-4" />} 
+                label="Downloads" 
+              />
+              <NavItem 
+                path="/dashboard/payment" 
+                icon={<CreditCard className="h-4 w-4" />} 
+                label="Payment" 
+              />
+              <NavItem 
+                path="/dashboard/support" 
+                icon={<LifeBuoy className="h-4 w-4" />} 
+                label="Support" 
+              />
+              <NavItem 
+                path="/dashboard/settings" 
+                icon={<Settings className="h-4 w-4" />} 
+                label="Settings" 
+              />
             </nav>
           </div>
 
-          <div className="p-4 border-t border-[#333]">
-            {isLoading ? (
-              <div className="flex justify-center py-2">
-                <div className="w-5 h-5 border-2 border-[#ea384c] border-t-transparent rounded-full animate-spin"></div>
+          <div className="mt-auto">
+            <div className="border-t border-[#222] pt-4">
+              <div className="mb-4 px-4">
+                <div className="text-sm font-medium text-white">{profile?.full_name}</div>
+                <div className="text-xs text-gray-400 truncate">{profile?.email}</div>
               </div>
-            ) : (
-              <Card className="bg-[#0f0f0f] border-[#333] mb-4">
-                <CardContent className="p-3 space-y-3">
-                  {subscription ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-400">Current Plan:</span>
-                        <Badge className="bg-[#ea384c]">{subscription.plan_name}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center text-gray-400">
-                          <Clock className="h-3 w-3 mr-1" />
-                          <span>Expires:</span>
-                        </div>
-                        <div className="font-medium text-white">
-                          {format(new Date(subscription.end_date), 'MMM d, yyyy')}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-400">Days remaining:</span>
-                        <span className={cn(
-                          "font-medium",
-                          getDaysRemaining(subscription.end_date) < 7 ? "text-yellow-500" : "text-white"
-                        )}>
-                          {getDaysRemaining(subscription.end_date)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center text-gray-400">
-                        <AlertCircle className="h-3 w-3 mr-1 text-yellow-500" />
-                        <span>No active subscription</span>
-                      </div>
-                      <Button 
-                        variant="link" 
-                        size="sm" 
-                        className="h-auto p-0 text-[#ea384c]"
-                        onClick={() => navigate('/dashboard/payment')}
-                      >
-                        Upgrade
-                      </Button>
-                    </div>
-                  )}
-                  
-                  <div className="h-px bg-[#333] my-2"></div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-400">Balance:</span>
-                    <span className="font-semibold">
-                      {balance ? formatCurrency(balance.amount, balance.currency) : '$0.00'}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            <Button
-              variant="outline"
-              className="w-full justify-start text-[#ea384c] hover:text-white border-[#333] hover:bg-[#ea384c]/20"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-5 w-5 mr-2" />
-              Log Out
-            </Button>
+              <button 
+                onClick={logout}
+                className="w-full flex items-center text-sm py-3 px-4 rounded-md transition-colors text-gray-400 hover:text-white hover:bg-zinc-800"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="ml-3">Logout</span>
+              </button>
+            </div>
           </div>
         </div>
-      </aside>
+      </div>
     </>
-  );
-};
-
-interface NavLinkProps {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  exact?: boolean;
-}
-
-const NavLink = ({ to, icon, label, exact }: NavLinkProps) => {
-  const location = useLocation();
-  const isActive = exact
-    ? location.pathname === to
-    : location.pathname.startsWith(to);
-
-  return (
-    <Link
-      to={to}
-      className={cn(
-        "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-        isActive
-          ? "bg-[#ea384c] text-white"
-          : "text-gray-300 hover:text-white hover:bg-[#333]"
-      )}
-    >
-      <span className="mr-3">{icon}</span>
-      <span className="flex-1">{label}</span>
-      {isActive && <ChevronRight className="h-4 w-4" />}
-    </Link>
   );
 };
 

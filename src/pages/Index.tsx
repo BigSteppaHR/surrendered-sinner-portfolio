@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import About from '@/components/About';
@@ -9,20 +9,17 @@ import VeteransWall from '@/components/VeteransWall';
 import Contact from '@/components/Contact';
 import Footer from '@/components/Footer';
 import { Separator } from '@/components/ui/separator';
-import FloatingCTA from '@/components/FloatingCTA';
 import SEO from '@/components/SEO';
 import FeaturedProducts from '@/components/FeaturedProducts';
 import { Button } from '@/components/ui/button';
 import { Dumbbell, Target, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import TrainingPackages from '@/components/TrainingPackages';
 
 const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
   
   // Determine if we're on codecove.dev
   const isCodecove = typeof window !== 'undefined' && 
@@ -40,13 +37,8 @@ const Index = () => {
     if (isAuthenticated) {
       navigate('/dashboard/plans?showQuiz=true');
     } else {
-      setQuizDialogOpen(true);
+      navigate('/signup', { state: { redirectAfterLogin: '/dashboard/plans?showQuiz=true' } });
     }
-  };
-
-  const handleQuizConfirm = () => {
-    setQuizDialogOpen(false);
-    navigate('/signup', { state: { redirectAfterLogin: '/dashboard/plans?showQuiz=true' } });
   };
 
   return (
@@ -171,21 +163,6 @@ const Index = () => {
       <Contact />
       
       <Footer />
-      
-      {/* Floating CTA */}
-      <FloatingCTA />
-
-      {/* Quiz confirmation dialog */}
-      <ConfirmationDialog
-        isOpen={quizDialogOpen}
-        onClose={() => setQuizDialogOpen(false)}
-        onConfirm={handleQuizConfirm}
-        title="Get Your Custom Training Plan"
-        description="Create a free account to take our fitness assessment quiz and receive a personalized training plan tailored to your goals and abilities."
-        confirmText="Sign Up Now"
-        cancelText="Maybe Later"
-        icon={<Sparkles size={32} className="text-sinner-red relative z-10 animate-pulse" />}
-      />
     </div>
   );
 };
