@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import FloatingCTA from '@/components/FloatingCTA';
 import AssessmentQuiz from '@/components/AssessmentQuiz';
 import SEO from '@/components/SEO';
+import FeaturedProducts from '@/components/FeaturedProducts';
 
 const Index = () => {
   const [quizOpen, setQuizOpen] = useState(false);
@@ -83,6 +84,13 @@ const Index = () => {
       </div>
       
       <VeteransWall />
+      
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
+      {/* Add Featured Products section */}
+      <FeaturedProducts />
       
       <div className="section-divider">
         <Separator className="bg-sinner-red/20 h-0.5" />

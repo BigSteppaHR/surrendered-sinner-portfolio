@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Menu, X, LogIn, User, LogOut } from 'lucide-react';
+import { Menu, X, LogIn, User, LogOut, ShoppingBag } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -37,6 +36,7 @@ const Navbar: React.FC = () => {
     { name: 'About', href: '#about' },
     { name: 'Services', href: '#services' },
     { name: 'Testimonials', href: '#testimonials' },
+    { name: 'Shop', href: '#shop' },
     { name: 'Contact', href: '#contact' },
   ];
 
@@ -45,8 +45,6 @@ const Navbar: React.FC = () => {
       console.log("Logout initiated from Navbar");
       const result = await logout();
       console.log("Logout result:", result);
-      
-      // Note: We no longer need to navigate here since the logout function now handles it
     } catch (error) {
       console.error("Error during logout:", error);
     }
@@ -79,6 +77,16 @@ const Navbar: React.FC = () => {
               </li>
             ))}
           </ul>
+
+          {/* Shop Button for desktop */}
+          <a
+            href="https://shop.surrenderedsinnerfitness.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white hover:text-[#ea384c] mr-4 hidden md:flex items-center"
+          >
+            <ShoppingBag className="h-5 w-5 mr-1" />
+          </a>
 
           {isAuthenticated ? (
             <DropdownMenu>
