@@ -409,7 +409,7 @@ const CustomPlanQuiz = () => {
     // Store quiz state in sessionStorage
     sessionStorage.setItem('pendingQuizAnswers', JSON.stringify(answers));
     sessionStorage.setItem('pendingQuizStep', currentStep.toString());
-    navigate('/login', { state: { redirectAfterLogin: '/?showQuiz=true' } });
+    navigate('/login', { state: { redirectAfterLogin: '/dashboard/plans' } });
   };
   
   // Restore quiz state if returning from login
@@ -468,23 +468,33 @@ const CustomPlanQuiz = () => {
         
         <div className="p-6">
           {requiresAuth ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-sinner-red/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <LogIn className="h-8 w-8 text-sinner-red" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Login Required</h3>
-              <p className="text-gray-400 mb-6">
-                You need to be logged in to save your custom plan. Your quiz answers will be preserved.
-              </p>
-              <div className="space-x-3">
-                <Button onClick={redirectToLogin} className="bg-sinner-red hover:bg-red-700">
-                  Login or Sign Up
-                </Button>
-                <Button variant="outline" onClick={() => setRequiresAuth(false)}>
-                  Go Back
-                </Button>
-              </div>
-            </div>
+            <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-center">Login Required</CardTitle>
+                <CardDescription className="text-center text-gray-400">
+                  Create an account to purchase and save your custom plan
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 flex flex-col items-center justify-center min-h-[300px]">
+                <p className="text-center text-gray-300 mb-6">
+                  Your custom plan will be available for purchase after you sign in
+                </p>
+                <div className="flex space-x-4">
+                  <Button 
+                    onClick={redirectToLogin}
+                    className="bg-sinner-red hover:bg-red-700"
+                  >
+                    Login or Sign Up
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setRequiresAuth(false)}
+                  >
+                    Go Back
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ) : isSubmitting ? (
             <div className="text-center py-12">
               <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mb-4"></div>

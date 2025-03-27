@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronRight, Check, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,10 +47,12 @@ interface TrainingPlanQuizProps {
 
 const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const { profile, isAuthenticated } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requiresAuth, setRequiresAuth] = useState(false);
   
   const handleSelect = (option: string) => {
     if (currentStep >= quizSteps.length) return;
@@ -61,6 +63,10 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
     if (currentStep < quizSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
+      if (!isAuthenticated) {
+        setRequiresAuth(true);
+        return;
+      }
       submitQuizResults(newAnswers);
     }
   };
@@ -78,7 +84,6 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
     setIsSubmitting(true);
     
     try {
-      // Create a description based on the quiz results
       const description = `
         Goal: ${results.goal}
         Training frequency: ${results.frequency}
@@ -87,33 +92,55 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
         Training type: ${results.type}
       `;
       
-      // Determine the plan type based on quiz answers
       let planType = "custom";
+      let planPrice = 149.99;
+      
       if (results.goal === "Competition Prep") {
         planType = "competition";
+        planPrice = 299.99;
       } else if (results.goal === "Weight Loss") {
         planType = "weight_loss";
+        planPrice = 179.99;
       } else if (results.goal === "Muscle Building") {
         planType = "muscle_building";
+        planPrice = 199.99;
       }
       
-      // Create a request in the database
-      const { error } = await supabase
-        .from('workout_plans')
+      if (results.level === "Advanced" || results.level === "Elite") {
+        planPrice += 50;
+      }
+      
+      const { data: customPlanResult, error: customPlanError } = await supabase
+        .from('custom_plan_results')
         .insert({
           user_id: profile.id,
-          title: `Custom plan based on ${results.goal}`,
-          description: description.trim(),
-          plan_type: planType,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+          quiz_answers: results,
+          selected_plan_name: `Custom ${results.goal} Plan`,
+          selected_plan_price: planPrice,
+          plan_features: [
+            `Personalized ${results.goal} program`,
+            `Designed for ${results.level} fitness level`,
+            `Optimized for ${results.frequency} training frequency`,
+            `Focus on ${results.focus} development`,
+            `${results.type} training methodology`
+          ]
+        })
+        .select()
+        .single();
         
-      if (error) throw error;
+      if (customPlanError) throw customPlanError;
+      
+      const { error: workoutError } = await supabase
+        .rpc('add_custom_plan_to_workout_plans', {
+          p_user_id: profile.id,
+          p_custom_plan_result_id: customPlanResult.id
+        });
+      
+      if (workoutError) throw workoutError;
       
       toast({
         title: "Quiz completed",
-        description: "Your responses have been submitted. A coach will review and create your plan soon."
+        description: "Your custom plan has been created and added to your dashboard."
       });
       
       onComplete();
@@ -135,7 +162,12 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
     }
   };
 
-  // Skip to end if we're in submission state
+  const redirectToLogin = () => {
+    sessionStorage.setItem('dashboardPendingQuizAnswers', JSON.stringify(answers));
+    sessionStorage.setItem('dashboardPendingQuizStep', currentStep.toString());
+    navigate('/login', { state: { redirectAfterLogin: '/dashboard/plans' } });
+  };
+
   if (isSubmitting) {
     return (
       <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
@@ -155,7 +187,6 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
     );
   }
 
-  // Show the current quiz step
   if (currentStep < quizSteps.length) {
     const currentQuestion = quizSteps[currentStep];
     
@@ -211,8 +242,29 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
       </Card>
     );
   }
-  
-  // This shouldn't happen, but show a fallback if we're in an invalid state
+
+  if (requiresAuth) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-center">Authentication Required</CardTitle>
+          <CardDescription className="text-center text-gray-400">
+            Please log in to complete your quiz.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          <Button 
+            variant="primary" 
+            onClick={redirectToLogin}
+            className="w-full"
+          >
+            Log in
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return null;
 };
 

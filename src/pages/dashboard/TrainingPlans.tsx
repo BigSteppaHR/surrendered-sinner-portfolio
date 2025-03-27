@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Download, Activity, ClipboardList, DollarSign, Check } from "lucide-react";
+import { Loader2, FileText, Download, Activity, ClipboardList, DollarSign, Check, ShoppingCart, AlertTriangle } from "lucide-react";
 import TrainingPlanQuiz from "@/components/plans/TrainingPlanQuiz";
 
 interface WorkoutPlan {
@@ -20,6 +19,7 @@ interface WorkoutPlan {
   created_at: string;
   custom_plan_result_id?: string;
   custom_plan_price?: number;
+  is_purchased?: boolean;
 }
 
 interface CustomPlanResult {
@@ -39,6 +39,7 @@ const TrainingPlans = () => {
   const [customPlanData, setCustomPlanData] = useState<Record<string, CustomPlanResult>>({});
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [purchasingPlanId, setPurchasingPlanId] = useState<string | null>(null);
   
   useEffect(() => {
     if (!isInitialized) return;
@@ -68,17 +69,26 @@ const TrainingPlans = () => {
       // Get workout plans
       const { data, error } = await supabase
         .from('workout_plans')
-        .select('*')
+        .select('*, payments(status)')
         .eq('user_id', profile?.id)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
       
-      setPlans(data || []);
+      // Process the data to include purchase status
+      const processedPlans = data?.map(plan => {
+        const isPurchased = plan.payments && plan.payments.some(payment => payment.status === 'completed');
+        return {
+          ...plan,
+          is_purchased: isPurchased
+        };
+      }) || [];
+      
+      setPlans(processedPlans);
       
       // For plans with custom_plan_result_id, fetch the pricing details
-      const customPlanIds = data
-        ?.filter(plan => plan.custom_plan_result_id)
+      const customPlanIds = processedPlans
+        .filter(plan => plan.custom_plan_result_id)
         .map(plan => plan.custom_plan_result_id) || [];
       
       if (customPlanIds.length > 0) {
@@ -97,7 +107,7 @@ const TrainingPlans = () => {
       }
       
       // Show quiz if no plans exist
-      if (data && data.length === 0) {
+      if (processedPlans.length === 0) {
         setShowQuiz(true);
       }
     } catch (error: any) {
@@ -140,6 +150,72 @@ const TrainingPlans = () => {
         return 'Competition Prep';
       default:
         return 'Custom Plan';
+    }
+  };
+  
+  const handlePurchasePlan = async (planId: string, price: number) => {
+    if (!profile?.id) return;
+    
+    setPurchasingPlanId(planId);
+    
+    try {
+      // Create a payment record for the plan
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          user_id: profile.id,
+          amount: Math.round(price * 100), // Convert to cents for Stripe
+          metadata: { plan_id: planId, payment_type: 'training_plan' },
+          status: 'pending',
+        })
+        .select()
+        .single();
+      
+      if (paymentError) throw paymentError;
+      
+      // Link the payment to the workout plan
+      const { error: linkError } = await supabase
+        .from('workout_plans')
+        .update({ payment_id: payment.id })
+        .eq('id', planId);
+      
+      if (linkError) throw linkError;
+      
+      // Create a Stripe payment intent
+      const { data: stripeData, error: stripeError } = await supabase.functions.invoke('stripe-helper', {
+        body: {
+          action: 'createPaymentIntent',
+          params: {
+            amount: Math.round(price * 100),
+            currency: 'usd',
+            payment_id: payment.id,
+            description: `Training Plan: ${planId}`,
+          }
+        }
+      });
+      
+      if (stripeError) throw stripeError;
+      
+      // Redirect to payment page with necessary info
+      navigate('/dashboard/payment', { 
+        state: { 
+          clientSecret: stripeData.client_secret,
+          paymentId: payment.id,
+          amount: price,
+          paymentType: 'training_plan',
+          returnUrl: '/dashboard/plans'
+        } 
+      });
+      
+    } catch (error: any) {
+      console.error("Error initiating payment:", error);
+      toast({
+        title: "Payment Error",
+        description: error.message || "Failed to initiate payment",
+        variant: "destructive"
+      });
+    } finally {
+      setPurchasingPlanId(null);
     }
   };
   
@@ -188,9 +264,11 @@ const TrainingPlans = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {plans.map((plan) => {
                 const customPlan = plan.custom_plan_result_id ? customPlanData[plan.custom_plan_result_id] : null;
+                const price = customPlan?.selected_plan_price || 99.99;
+                const isPurchased = plan.is_purchased;
                 
                 return (
-                  <Card key={plan.id} className="bg-gray-900 border-gray-800">
+                  <Card key={plan.id} className={`bg-gray-900 border-gray-800 ${isPurchased ? 'ring-1 ring-green-500' : ''}`}>
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
@@ -203,6 +281,13 @@ const TrainingPlans = () => {
                           <Badge className="bg-sinner-red">
                             <DollarSign className="h-3 w-3 mr-1" />
                             ${customPlan.selected_plan_price.toFixed(2)}
+                          </Badge>
+                        )}
+                        
+                        {isPurchased && (
+                          <Badge className="ml-2 bg-green-600">
+                            <Check className="h-3 w-3 mr-1" />
+                            Purchased
                           </Badge>
                         )}
                       </div>
@@ -229,34 +314,69 @@ const TrainingPlans = () => {
                           {plan.description || "No description available."}
                         </p>
                       )}
+                      
+                      {!isPurchased && (
+                        <div className="mt-4 p-3 bg-gray-800 rounded-md border border-gray-700">
+                          <div className="flex items-center mb-2">
+                            <AlertTriangle className="h-4 w-4 text-yellow-500 mr-2" />
+                            <span className="text-sm font-medium">Purchase Required</span>
+                          </div>
+                          <p className="text-xs text-gray-400 mb-3">
+                            You need to purchase this plan to access its contents
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                     <CardFooter className="border-t border-gray-800 pt-4 flex justify-between">
                       <Button 
                         variant="outline" 
                         size="sm"
                         className="text-gray-300"
+                        disabled={!isPurchased}
                       >
                         <FileText className="h-4 w-4 mr-1" />
                         View Details
                       </Button>
                       
-                      {plan.pdf_url ? (
+                      {isPurchased ? (
+                        plan.pdf_url ? (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-[#9b87f5] hover:bg-[#8a76e4]"
+                            onClick={() => window.open(plan.pdf_url!, '_blank')}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Download PDF
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled
+                          >
+                            PDF Pending
+                          </Button>
+                        )
+                      ) : (
                         <Button
                           variant="default"
                           size="sm"
-                          className="bg-[#9b87f5] hover:bg-[#8a76e4]"
-                          onClick={() => window.open(plan.pdf_url!, '_blank')}
+                          className="bg-sinner-red hover:bg-red-700"
+                          onClick={() => handlePurchasePlan(plan.id, price)}
+                          disabled={purchasingPlanId === plan.id}
                         >
-                          <Download className="h-4 w-4 mr-1" />
-                          Download PDF
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled
-                        >
-                          PDF Pending
+                          {purchasingPlanId === plan.id ? (
+                            <>
+                              <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingCart className="h-4 w-4 mr-1" />
+                              Purchase ${price.toFixed(2)}
+                            </>
+                          )}
                         </Button>
                       )}
                     </CardFooter>

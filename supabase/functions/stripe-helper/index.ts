@@ -1,8 +1,6 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.4.0?target=deno";
 
-// Define enhanced CORS headers with more comprehensive options
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOW_ORIGIN') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -10,9 +8,7 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400', // 24 hours cache for preflight requests
 };
 
-// Simple handler function - avoiding any Node.js specific code patterns
 async function handler(req: Request): Promise<Response> {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: corsHeaders,
@@ -21,17 +17,14 @@ async function handler(req: Request): Promise<Response> {
   }
 
   try {
-    // Get the Stripe secret key from environment variables
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     
-    // Debug logging for Stripe key detection
     console.log("Stripe key availability check:", {
       keyExists: !!stripeSecretKey,
       keyLength: stripeSecretKey ? stripeSecretKey.length : 0,
       keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 5) + '...' : 'none'
     });
     
-    // Parse the request body to get action and parameters
     let action = "test-connection";
     let params = {};
     
@@ -43,7 +36,6 @@ async function handler(req: Request): Promise<Response> {
       console.log("Could not parse request body, using defaults:", parseError);
     }
     
-    // Create a test endpoint for checking connection that doesn't require Stripe
     if (action === 'test-connection') {
       console.log("Testing Supabase function connection...");
       return new Response(
@@ -63,7 +55,6 @@ async function handler(req: Request): Promise<Response> {
       );
     }
     
-    // Check if we have a Stripe key for actions that need it
     if (!stripeSecretKey) {
       console.error("Missing Stripe secret key in environment variables");
       throw new Error("Missing Stripe secret key");
@@ -71,8 +62,6 @@ async function handler(req: Request): Promise<Response> {
     
     console.log("Stripe secret key found, initializing Stripe...");
     
-    // Initialize Stripe with explicit apiVersion to avoid warnings
-    // No httpClient configuration to avoid Node.js dependencies
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16',
     });
@@ -81,10 +70,8 @@ async function handler(req: Request): Promise<Response> {
     
     let result;
     
-    // Process different actions
     switch (action) {
       case 'get-dashboard-data':
-        // For testing connection only
         result = { status: 'connected' };
         break;
       
@@ -118,7 +105,6 @@ async function handler(req: Request): Promise<Response> {
         break;
       
       case 'createPaymentIntent':
-        // Support the case in StripeCheckout.tsx
         if (!params.amount) {
           throw new Error("Amount is required for creating a payment intent");
         }
@@ -151,8 +137,19 @@ async function handler(req: Request): Promise<Response> {
         
         console.log(`Updating payment status for payment_id: ${params.payment_id}, status: ${params.status}`);
         
-        // This would typically update your database record
-        // For now, just return a success confirmation
+        const { data: updatedPayment, error: updateError } = await supabase
+          .rpc('update_payment_status', {
+            payment_id: params.payment_id,
+            new_status: params.status,
+            payment_intent_id: params.payment_intent_id,
+            payment_method: params.payment_method
+          });
+          
+        if (updateError) {
+          console.error("Error updating payment status:", updateError);
+          throw new Error(`Failed to update payment status: ${updateError.message}`);
+        }
+        
         result = {
           success: true,
           payment_id: params.payment_id,
@@ -164,7 +161,6 @@ async function handler(req: Request): Promise<Response> {
         throw new Error(`Unknown action: ${action}`);
     }
     
-    // Return successful response with enhanced CORS headers
     return new Response(
       JSON.stringify(result),
       {
@@ -176,13 +172,11 @@ async function handler(req: Request): Promise<Response> {
       }
     );
   } catch (error) {
-    // Safe error handling that works in Deno
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorType = error instanceof Error ? error.name : "unknown_error";
     
     console.error("Stripe helper error:", errorMessage);
     
-    // Return error response with CORS headers
     return new Response(
       JSON.stringify({
         error: errorMessage,
@@ -200,5 +194,4 @@ async function handler(req: Request): Promise<Response> {
   }
 }
 
-// Use a simple serve approach
 serve(handler);
