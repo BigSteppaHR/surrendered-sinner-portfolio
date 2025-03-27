@@ -13,6 +13,15 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  isAdmin: boolean;
+  loginCount: number;
+  lastActive: Date | null;
+  login: (email: string, password: string) => Promise<{ error: any | null, data: any | null }>;
+  signup: (email: string, password: string, fullName: string) => Promise<{ error: any | null, data: any | null }>;
+  logout: () => Promise<{ success: boolean, redirectTo?: string }>;
+  refreshProfile: () => Promise<Profile | null>;
+  resetPassword: (email: string) => Promise<{ error: any | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: any | null }>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -22,6 +31,15 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   profile: null,
+  isAdmin: false,
+  loginCount: 0,
+  lastActive: null,
+  login: async () => ({ error: null, data: null }),
+  signup: async () => ({ error: null, data: null }),
+  logout: async () => ({ success: false }),
+  refreshProfile: async () => null,
+  resetPassword: async () => ({ error: null }),
+  updatePassword: async () => ({ error: null }),
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -95,6 +113,100 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshProfile = async (): Promise<Profile | null> => {
+    if (!user) return null;
+    
+    try {
+      const { profile, error } = await fetchUserProfile(user.id);
+      
+      if (error) {
+        console.error('Error refreshing profile:', error);
+        return null;
+      }
+      
+      if (profile) {
+        setProfile(profile);
+        return profile;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error in refreshProfile:', error);
+      return null;
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      return { data, error };
+    } catch (error: any) {
+      return { data: null, error };
+    }
+  };
+
+  const signup = async (email: string, password: string, fullName: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+      
+      return { data, error };
+    } catch (error: any) {
+      return { data: null, error };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Error logging out:', error);
+        return { success: false };
+      }
+      
+      return { success: true, redirectTo: '/' };
+    } catch (error) {
+      console.error('Error in logout:', error);
+      return { success: false };
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      return { error };
+    } catch (error: any) {
+      return { error };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      return { error };
+    } catch (error: any) {
+      return { error };
+    }
+  };
+
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -141,15 +253,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
   }, []);
 
+  // Calculate derived properties
+  const isAuthenticated = !!user;
+  const isAdmin = !!profile?.is_admin;
+  const loginCount = profile?.login_count || 0;
+  const lastActive = profile?.last_active_at ? new Date(profile.last_active_at) : null;
+
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated: !!user,
+        isAuthenticated,
         isLoading,
         isInitialized,
         user,
         session,
         profile,
+        isAdmin,
+        loginCount,
+        lastActive,
+        login,
+        signup,
+        logout,
+        refreshProfile,
+        resetPassword,
+        updatePassword,
       }}
     >
       {children}
