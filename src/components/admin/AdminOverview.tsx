@@ -99,7 +99,7 @@ const formatTimeAgo = (timestamp: number) => {
 const AdminOverview = () => {
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [statistics, setStatistics] = useState([
-    { id: 'total-users', title: 'Total Users', value: 587, change: '+12%', positive: true, icon: <Users className="h-5 w-5" /> },
+    { id: 'total-users', title: 'Total Users', value: '587', change: '+12%', positive: true, icon: <Users className="h-5 w-5" /> },
     { id: 'monthly-revenue', title: 'Monthly Revenue', value: '$32,580', change: '+8%', positive: true, icon: <DollarSign className="h-5 w-5" /> },
     { id: 'session-completion', title: 'Session Completion', value: '92%', change: '-3%', positive: false, icon: <CheckCircle2 className="h-5 w-5" /> },
     { id: 'active-subscriptions', title: 'Active Subscriptions', value: '427', change: '+5%', positive: true, icon: <TrendingUp className="h-5 w-5" /> },
