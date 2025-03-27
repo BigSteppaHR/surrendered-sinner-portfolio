@@ -13,7 +13,7 @@ import FloatingCTA from '@/components/FloatingCTA';
 import SEO from '@/components/SEO';
 import FeaturedProducts from '@/components/FeaturedProducts';
 import { Button } from '@/components/ui/button';
-import { Dumbbell, Target, ArrowRight } from 'lucide-react';
+import { Dumbbell, Target, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -73,9 +73,12 @@ const Index = () => {
           </div>
           <Button 
             onClick={handleStartPlanQuiz}
-            className="bg-sinner-red hover:bg-red-700 text-white"
+            className="bg-sinner-red hover:bg-red-700 text-white group relative overflow-hidden"
           >
-            Take the Quiz <ArrowRight className="ml-2 h-4 w-4" />
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-sinner-red via-red-600 to-sinner-red bg-[length:200%_100%] animate-shimmer"></span>
+            <span className="relative flex items-center">
+              Take the Quiz <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </span>
           </Button>
         </div>
       </div>
@@ -89,9 +92,14 @@ const Index = () => {
       <Services />
       
       {/* Middle Quiz CTA */}
-      <div className="w-full bg-zinc-900 py-12 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <Target className="h-12 w-12 text-sinner-red mx-auto mb-4" />
+      <div className="w-full bg-zinc-900 py-12 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(234,56,76,0.15),transparent_70%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(234,56,76,0.1),transparent_70%)]"></div>
+        
+        <div className="max-w-3xl mx-auto text-center relative z-10">
+          <div className="inline-block p-3 bg-black/50 rounded-full mb-4 border border-sinner-red/20 shadow-[0_0_15px_rgba(234,56,76,0.2)]">
+            <Target className="h-10 w-10 text-sinner-red" />
+          </div>
           <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">Not Sure Which Training Plan Is Right For You?</h3>
           <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
             Take our quick fitness assessment quiz and get a personalized recommendation 
@@ -100,9 +108,14 @@ const Index = () => {
           <Button 
             onClick={handleStartPlanQuiz}
             size="lg"
-            className="bg-sinner-red hover:bg-red-700 text-white px-8"
+            className="bg-sinner-red hover:bg-red-700 text-white px-8 group shadow-[0_0_15px_rgba(234,56,76,0.3)] relative overflow-hidden"
           >
-            Get Your Custom Plan <ArrowRight className="ml-2 h-4 w-4" />
+            <span className="absolute inset-0 w-0 bg-gradient-to-r from-red-700 to-red-500 transition-all duration-300 ease-out group-hover:w-full"></span>
+            <span className="relative flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Get Your Custom Plan 
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </span>
           </Button>
         </div>
       </div>
@@ -124,17 +137,25 @@ const Index = () => {
       </div>
       
       {/* Bottom Quiz CTA */}
-      <div className="w-full bg-black py-8 px-4">
-        <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
-          <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Ready to Transform Your Fitness Journey?</h3>
+      <div className="w-full bg-black py-8 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(234,56,76,0.1),transparent_70%)]"></div>
+        <div className="max-w-4xl mx-auto flex flex-col items-center text-center relative z-10">
+          <h3 className="text-xl md:text-2xl font-bold text-white mb-4 flex items-center">
+            <Zap className="h-5 w-5 text-sinner-red mr-2" />
+            Ready to Transform Your Fitness Journey?
+            <Zap className="h-5 w-5 text-sinner-red ml-2" />
+          </h3>
           <p className="text-gray-300 mb-6">
             Our custom training plans are designed specifically for your body, goals, and lifestyle.
           </p>
           <Button 
             onClick={handleStartPlanQuiz}
-            className="bg-sinner-red hover:bg-red-700 text-white"
+            className="bg-sinner-red hover:bg-red-700 text-white relative shadow-[0_0_10px_rgba(234,56,76,0.3)] group overflow-hidden"
           >
-            Create Your Plan Now <ArrowRight className="ml-2 h-4 w-4" />
+            <span className="absolute -inset-[100%] w-[400%] h-[200%] rotate-45 translate-x-[-98%] bg-white/10 group-hover:translate-x-[60%] transition-transform duration-700 ease-in-out"></span>
+            <span className="relative flex items-center">
+              Create Your Plan Now <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </span>
           </Button>
         </div>
       </div>
@@ -151,10 +172,11 @@ const Index = () => {
         isOpen={quizDialogOpen}
         onClose={() => setQuizDialogOpen(false)}
         onConfirm={handleQuizConfirm}
-        title="Sign Up to Take the Quiz"
-        description="Create an account to take our fitness assessment quiz and get your personalized training plan. It only takes a minute!"
-        confirmText="Sign Up"
+        title="Get Your Custom Training Plan"
+        description="Create a free account to take our fitness assessment quiz and receive a personalized training plan tailored to your goals and abilities."
+        confirmText="Sign Up Now"
         cancelText="Maybe Later"
+        icon={<Sparkles size={32} className="text-sinner-red relative z-10 animate-pulse" />}
       />
     </div>
   );
