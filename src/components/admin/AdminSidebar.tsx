@@ -1,250 +1,286 @@
 
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import Logo from '@/components/Logo';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import {
   LayoutDashboard,
   Users,
-  ClipboardList,
+  Calendar,
   CreditCard,
   BarChart3,
-  LifeBuoy,
+  MessageCircle,
   Settings,
   LogOut,
-  Bell,
-  Quote,
+  Menu,
+  X,
+  ChevronRight,
   FileText,
-  ChevronDown
-} from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/hooks/useAuth";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
-import { 
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger 
-} from "@/components/ui/collapsible";
+  Bell,
+  ShieldAlert,
+  Globe,
+  Database,
+  Sparkles
+} from 'lucide-react';
+
+const sidebarLinks = [
+  {
+    path: '/admin',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    label: 'Overview',
+    exact: true,
+  },
+  {
+    path: '/admin/sessions',
+    icon: <Calendar className="h-5 w-5" />,
+    label: 'Sessions',
+  },
+  {
+    path: '/admin/payments',
+    icon: <CreditCard className="h-5 w-5" />,
+    label: 'Payments',
+  },
+  {
+    path: '/admin/invoices',
+    icon: <FileText className="h-5 w-5" />,
+    label: 'Invoices',
+  },
+  {
+    path: '/admin/analytics',
+    icon: <BarChart3 className="h-5 w-5" />,
+    label: 'Analytics',
+  },
+  {
+    path: '/admin/tickets',
+    icon: <MessageCircle className="h-5 w-5" />,
+    label: 'Support',
+    badge: 3,
+  },
+  {
+    path: '/admin/notifications',
+    icon: <Bell className="h-5 w-5" />,
+    label: 'Notifications',
+    badge: 5,
+  },
+  {
+    path: '/admin/quotes',
+    icon: <Sparkles className="h-5 w-5" />,
+    label: 'Daily Quotes',
+  },
+  {
+    path: '/admin/settings',
+    icon: <Settings className="h-5 w-5" />,
+    label: 'Settings',
+  },
+];
+
+const utilityLinks = [
+  {
+    path: '/dashboard',
+    icon: <Globe className="h-5 w-5" />,
+    label: 'User Dashboard',
+  },
+  {
+    path: '/admin/database',
+    icon: <Database className="h-5 w-5" />,
+    label: 'Database',
+  },
+];
 
 const AdminSidebar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { logout, profile } = useAuth();
   const location = useLocation();
-  const { profile, logout } = useAuth();
-  const [openGroups, setOpenGroups] = useState<string[]>(['main', 'financials']);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const toggleGroup = (group: string) => {
-    setOpenGroups(prev => 
-      prev.includes(group) 
-        ? prev.filter(g => g !== group) 
-        : [...prev, group]
-    );
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  const handleLogout = async () => {
+    try {
+      const { success, redirectTo } = await logout();
+      if (success && redirectTo) {
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+        navigate(redirectTo);
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+      toast({
+        variant: "destructive",
+        title: "Logout failed",
+        description: "There was a problem logging you out. Please try again.",
+      });
+    }
   };
 
-  const getFirstLetters = (name: string) => {
-    if (!name) return "A";
-    return name
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
-  const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path);
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
 
   return (
-    <Sidebar className="border-r border-[#1a1a1a] bg-[#0a0a0a] max-w-[280px] min-w-[280px]">
-      <SidebarHeader className="p-4 border-b border-[#1a1a1a]">
-        <div className="flex items-center space-x-2">
-          <Avatar className="h-10 w-10 border border-[#333]">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-[#ea384c]/10 text-[#ea384c]">
-              {getFirstLetters(profile?.full_name || "Admin")}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 overflow-hidden">
-            <h3 className="font-medium text-white truncate">
-              {profile?.full_name || "Admin User"}
-            </h3>
-            <p className="text-xs text-gray-400 truncate">Administrator</p>
-          </div>
-          <SidebarTrigger>
-            <button className="p-1 rounded-md hover:bg-[#1a1a1a]">
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </button>
-          </SidebarTrigger>
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent className="py-4">
-        <SidebarGroup>
-          <Collapsible open={openGroups.includes('main')} onOpenChange={() => toggleGroup('main')}>
-            <CollapsibleTrigger className="w-full">
-              <div className="flex items-center justify-between px-3 py-2">
-                <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Main</p>
-                <ChevronDown className={cn(
-                  "h-4 w-4 text-gray-500 transition-transform",
-                  openGroups.includes('main') ? "transform rotate-180" : ""
-                )} />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <Link to="/admin/overview" className="w-full">
-                      <SidebarMenuButton active={isActive("/admin/overview")}>
-                        <LayoutDashboard className="h-4 w-4 mr-2" />
-                        Overview
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                  
-                  <SidebarMenuItem>
-                    <Link to="/admin/sessions" className="w-full">
-                      <SidebarMenuButton active={isActive("/admin/sessions")}>
-                        <ClipboardList className="h-4 w-4 mr-2" />
-                        Sessions
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-
-                  <SidebarMenuItem>
-                    <Link to="/admin/quotes" className="w-full">
-                      <SidebarMenuButton active={isActive("/admin/quotes")}>
-                        <Quote className="h-4 w-4 mr-2" />
-                        Daily Quotes
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <Collapsible open={openGroups.includes('financials')} onOpenChange={() => toggleGroup('financials')}>
-            <CollapsibleTrigger className="w-full">
-              <div className="flex items-center justify-between px-3 py-2">
-                <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Financials</p>
-                <ChevronDown className={cn(
-                  "h-4 w-4 text-gray-500 transition-transform",
-                  openGroups.includes('financials') ? "transform rotate-180" : ""
-                )} />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <Link to="/admin/payments" className="w-full">
-                      <SidebarMenuButton active={isActive("/admin/payments")}>
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Payments
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                  
-                  <SidebarMenuItem>
-                    <Link to="/admin/invoices" className="w-full">
-                      <SidebarMenuButton active={isActive("/admin/invoices")}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Invoices
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-
-                  <SidebarMenuItem>
-                    <Link to="/admin/analytics" className="w-full">
-                      <SidebarMenuButton active={isActive("/admin/analytics")}>
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Analytics
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <Collapsible open={openGroups.includes('support')} onOpenChange={() => toggleGroup('support')}>
-            <CollapsibleTrigger className="w-full">
-              <div className="flex items-center justify-between px-3 py-2">
-                <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Support</p>
-                <ChevronDown className={cn(
-                  "h-4 w-4 text-gray-500 transition-transform",
-                  openGroups.includes('support') ? "transform rotate-180" : ""
-                )} />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <Link to="/admin/tickets" className="w-full">
-                      <SidebarMenuButton active={isActive("/admin/tickets")}>
-                        <LifeBuoy className="h-4 w-4 mr-2" />
-                        Support Tickets
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                  
-                  <SidebarMenuItem>
-                    <Link to="/admin/notifications" className="w-full">
-                      <SidebarMenuButton active={isActive("/admin/notifications")}>
-                        <Bell className="h-4 w-4 mr-2" />
-                        Notifications
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <Link to="/admin/settings" className="w-full">
-            <div className={cn(
-              "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
-              isActive("/admin/settings") 
-                ? "bg-[#ea384c] text-white" 
-                : "text-gray-300 hover:text-white hover:bg-[#1a1a1a]"
-            )}>
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </div>
+    <>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black border-b border-[#333]">
+        <div className="flex justify-between items-center h-16 px-4">
+          <Link to="/admin" className="flex items-center">
+            <Logo size="small" />
+            <span className="ml-2 font-bold text-white">Admin</span>
           </Link>
-        </SidebarGroup>
-      </SidebarContent>
+          <button
+            onClick={toggleMenu}
+            className="text-white p-2"
+            aria-label="Toggle navigation menu"
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
+      </div>
 
-      <SidebarFooter className="p-4 border-t border-[#1a1a1a]">
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start text-gray-400 hover:text-[#ea384c]"
-          onClick={() => logout()}
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
-      </SidebarFooter>
-    </Sidebar>
+      {isMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={toggleMenu}></div>
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 bg-[#0a0a0a] border-r border-[#333] transition-transform transform-gpu",
+          isMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+      >
+        <div className="flex flex-col h-full">
+          <div className="h-16 flex items-center px-6 border-b border-[#333]">
+            <Link to="/admin" className="flex items-center">
+              <Logo size="small" />
+              <div className="ml-2">
+                <span className="font-bold text-white">Admin Portal</span>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                  <span className="text-xs text-gray-400">System Online</span>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-6 px-4">
+            <div className="mb-6 bg-[#ea384c]/10 border border-[#ea384c]/20 rounded-md p-3">
+              <div className="flex items-center">
+                <ShieldAlert className="h-5 w-5 text-[#ea384c] mr-2" />
+                <div>
+                  <p className="text-sm font-medium text-white">Admin Access</p>
+                  <p className="text-xs text-gray-400">Full system privileges</p>
+                </div>
+              </div>
+            </div>
+            
+            <nav className="space-y-6">
+              <div className="space-y-1">
+                {sidebarLinks.map((link) => (
+                  <NavLink
+                    key={link.path}
+                    to={link.path}
+                    icon={link.icon}
+                    label={link.label}
+                    badge={link.badge}
+                    exact={link.exact}
+                  />
+                ))}
+              </div>
+
+              <div className="pt-6 border-t border-[#333]">
+                <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  System
+                </p>
+                <div className="space-y-1">
+                  {utilityLinks.map((link) => (
+                    <NavLink
+                      key={link.path}
+                      to={link.path}
+                      icon={link.icon}
+                      label={link.label}
+                    />
+                  ))}
+                </div>
+              </div>
+            </nav>
+          </div>
+
+          <div className="p-4 border-t border-[#333]">
+            <div className="flex items-center mb-4 px-2">
+              <div className="flex-shrink-0 mr-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ea384c] to-red-700 flex items-center justify-center text-white font-bold">
+                  {profile?.full_name?.charAt(0) || 'A'}
+                </div>
+              </div>
+              <div className="overflow-hidden">
+                <p className="font-medium text-white truncate">
+                  {profile?.full_name || 'Admin User'}
+                </p>
+                <p className="text-xs text-gray-400 truncate">
+                  {profile?.email || 'admin@example.com'}
+                </p>
+              </div>
+            </div>
+            
+            <Button
+              variant="outline"
+              className="w-full justify-start text-[#ea384c] hover:text-white border-[#333] hover:bg-[#ea384c]/20"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-5 w-5 mr-2" />
+              Log Out
+            </Button>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+};
+
+interface NavLinkProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  badge?: number;
+  exact?: boolean;
+}
+
+const NavLink = ({ to, icon, label, badge, exact }: NavLinkProps) => {
+  const location = useLocation();
+  const isActive = exact
+    ? location.pathname === to
+    : location.pathname.startsWith(to);
+
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors group relative",
+        isActive
+          ? "bg-[#ea384c] text-white"
+          : "text-gray-300 hover:text-white hover:bg-[#333]"
+      )}
+    >
+      <span className="mr-3">{icon}</span>
+      <span className="flex-1">{label}</span>
+      
+      {badge && (
+        <Badge className={cn(
+          "ml-1",
+          isActive ? "bg-white text-[#ea384c]" : "bg-[#ea384c] text-white"
+        )}>
+          {badge}
+        </Badge>
+      )}
+      
+      {isActive && <ChevronRight className="h-4 w-4" />}
+    </Link>
   );
 };
 

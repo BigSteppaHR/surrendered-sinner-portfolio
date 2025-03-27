@@ -1,7 +1,5 @@
 
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +12,7 @@ import AdminTickets from "@/components/admin/AdminTickets";
 import AdminNotifications from "@/components/admin/AdminNotifications";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
+import AdminSidebar from "@/components/admin/AdminSidebar";
 
 const AdminDashboard = () => {
   const { isAuthenticated, isAdmin, isLoading, profile } = useAuth();
@@ -51,32 +50,30 @@ const AdminDashboard = () => {
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-[#0f0f0f] text-white">
-        {isDebugMode && (
-          <div className="fixed top-0 left-0 right-0 bg-[#ea384c]/20 border border-[#ea384c]/40 p-2 text-xs text-white z-50">
-            <strong>DEBUG MODE</strong>: Admin User ID: {profile?.id}, Debug Enabled
-          </div>
-        )}
-        
-        <AdminSidebar />
-        
-        <div className="flex-1 p-6 overflow-auto">
-          <Routes>
-            <Route path="/" element={<AdminOverview />} />
-            <Route path="/overview" element={<AdminOverview />} />
-            <Route path="/sessions" element={<AdminSessions />} />
-            <Route path="/payments" element={<AdminPayments />} />
-            <Route path="/invoices" element={<AdminInvoices />} />
-            <Route path="/analytics" element={<AdminAnalytics />} />
-            <Route path="/tickets" element={<AdminTickets />} />
-            <Route path="/notifications" element={<AdminNotifications />} />
-            <Route path="/settings" element={<AdminSettings />} />
-            <Route path="/quotes" element={<AdminQuotes />} />
-          </Routes>
+    <div className="min-h-screen flex flex-col md:flex-row w-full bg-[#0f0f0f] text-white">
+      {isDebugMode && (
+        <div className="fixed top-0 left-0 right-0 bg-[#ea384c]/20 border border-[#ea384c]/40 p-2 text-xs text-white z-50">
+          <strong>DEBUG MODE</strong>: Admin User ID: {profile?.id}, Debug Enabled
         </div>
+      )}
+      
+      <AdminSidebar />
+      
+      <div className="flex-1 p-0 md:p-6 mt-16 md:mt-0 md:ml-64 overflow-auto">
+        <Routes>
+          <Route path="/" element={<AdminOverview />} />
+          <Route path="/overview" element={<AdminOverview />} />
+          <Route path="/sessions" element={<AdminSessions />} />
+          <Route path="/payments" element={<AdminPayments />} />
+          <Route path="/invoices" element={<AdminInvoices />} />
+          <Route path="/analytics" element={<AdminAnalytics />} />
+          <Route path="/tickets" element={<AdminTickets />} />
+          <Route path="/notifications" element={<AdminNotifications />} />
+          <Route path="/settings" element={<AdminSettings />} />
+          <Route path="/quotes" element={<AdminQuotes />} />
+        </Routes>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 

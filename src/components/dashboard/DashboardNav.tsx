@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,8 @@ import {
   CreditCard,
   Package,
   Clock,
-  Shield
+  Shield,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +28,7 @@ import Logo from '@/components/Logo';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const sidebarLinks = [
   {
@@ -78,7 +81,7 @@ const utilityLinks = [
     label: 'Plan Catalog',
   },
   {
-    path: '/payment',
+    path: '/payment-portal',
     icon: <CreditCard className="h-5 w-5" />,
     label: 'Payment Portal',
   },
@@ -101,6 +104,7 @@ const DashboardNav = () => {
   const { logout, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [balance, setBalance] = useState<UserBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -178,9 +182,22 @@ const DashboardNav = () => {
   };
 
   const handleLogout = async () => {
-    const { success, redirectTo } = await logout();
-    if (success && redirectTo) {
-      navigate(redirectTo);
+    try {
+      const { success, redirectTo } = await logout();
+      if (success && redirectTo) {
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+        navigate(redirectTo);
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+      toast({
+        variant: "destructive",
+        title: "Logout failed",
+        description: "There was a problem logging you out. Please try again.",
+      });
     }
   };
 
@@ -193,6 +210,14 @@ const DashboardNav = () => {
       style: 'currency',
       currency,
     }).format(amount);
+  };
+
+  const getDaysRemaining = (endDate: string): number => {
+    const end = new Date(endDate);
+    const now = new Date();
+    const diffTime = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
   };
 
   return (
@@ -275,14 +300,31 @@ const DashboardNav = () => {
                         <span className="text-sm text-gray-400">Current Plan:</span>
                         <Badge className="bg-[#ea384c]">{subscription.plan_name}</Badge>
                       </div>
-                      <div className="flex items-center text-xs text-gray-400">
-                        <Clock className="h-3 w-3 mr-1" />
-                        <span>Expires: {format(new Date(subscription.end_date), 'MMM d, yyyy')}</span>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center text-gray-400">
+                          <Clock className="h-3 w-3 mr-1" />
+                          <span>Expires:</span>
+                        </div>
+                        <div className="font-medium text-white">
+                          {format(new Date(subscription.end_date), 'MMM d, yyyy')}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">Days remaining:</span>
+                        <span className={cn(
+                          "font-medium",
+                          getDaysRemaining(subscription.end_date) < 7 ? "text-yellow-500" : "text-white"
+                        )}>
+                          {getDaysRemaining(subscription.end_date)}
+                        </span>
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">No active subscription</span>
+                      <div className="flex items-center text-gray-400">
+                        <AlertCircle className="h-3 w-3 mr-1 text-yellow-500" />
+                        <span>No active subscription</span>
+                      </div>
                       <Button 
                         variant="link" 
                         size="sm" 

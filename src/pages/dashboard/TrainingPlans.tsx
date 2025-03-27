@@ -1,433 +1,197 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import DashboardNav from "@/components/dashboard/DashboardNav";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Download, Activity, ClipboardList, DollarSign, Check, ShoppingCart, AlertTriangle, Clock } from "lucide-react";
-import TrainingPlanQuiz from "@/components/plans/TrainingPlanQuiz";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Download, FileText, Clock, Plus, Check, AlertTriangle } from 'lucide-react';
+import DashboardNav from '@/components/dashboard/DashboardNav';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 interface WorkoutPlan {
   id: string;
   title: string;
-  description: string;
-  pdf_url: string | null;
+  description: string | null;
   plan_type: string;
+  pdf_url: string | null;
   created_at: string;
-  custom_plan_result_id?: string;
-  custom_plan_price?: number;
-  is_purchased?: boolean;
-  is_ready?: boolean;
-}
-
-interface CustomPlanResult {
-  id: string;
-  selected_plan_price: number;
-  selected_plan_name: string;
-  plan_features: string[];
+  updated_at: string;
 }
 
 const TrainingPlans = () => {
-  const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { toast } = useToast();
-  
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
-  const [customPlanData, setCustomPlanData] = useState<Record<string, CustomPlanResult>>({});
-  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [purchasingPlanId, setPurchasingPlanId] = useState<string | null>(null);
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   useEffect(() => {
-    if (!isInitialized) return;
-    
-    if (!isLoading && !isAuthenticated) {
-      navigate("/login", { replace: true, state: { redirectAfterLogin: location.pathname } });
-      return;
-    }
-    
-    if (isAuthenticated && profile) {
+    if (user) {
       fetchWorkoutPlans();
-      
-      // Check URL params for showing quiz
-      const urlParams = new URLSearchParams(location.search);
-      if (urlParams.get('showQuiz') === 'true') {
-        setShowQuiz(true);
-        // Clean URL
-        window.history.replaceState({}, document.title, location.pathname);
-      }
-      
-      // Check for restored quiz state from login redirect
-      const pendingAnswers = sessionStorage.getItem('dashboardPendingQuizAnswers');
-      if (pendingAnswers) {
-        setShowQuiz(true);
-        sessionStorage.removeItem('dashboardPendingQuizAnswers');
-        sessionStorage.removeItem('dashboardPendingQuizStep');
-      }
     }
-  }, [isAuthenticated, isLoading, profile, isInitialized, location]);
-  
+  }, [user]);
+
   const fetchWorkoutPlans = async () => {
+    setIsLoading(true);
     try {
-      setIsLoadingPlans(true);
-      
-      // Get workout plans
       const { data, error } = await supabase
         .from('workout_plans')
-        .select('*, payments(status)')
-        .eq('user_id', profile?.id)
+        .select('*')
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      // Process the data to include purchase status
-      const processedPlans = data?.map(plan => {
-        const isPurchased = plan.payments && plan.payments.some(payment => payment.status === 'completed');
-        // Add a flag to indicate if the plan is ready (has PDF)
-        const isReady = !!plan.pdf_url;
-        
-        return {
-          ...plan,
-          is_purchased: isPurchased,
-          is_ready: isReady
-        };
-      }) || [];
-      
-      setPlans(processedPlans);
-      
-      // For plans with custom_plan_result_id, fetch the pricing details
-      const customPlanIds = processedPlans
-        .filter(plan => plan.custom_plan_result_id)
-        .map(plan => plan.custom_plan_result_id) || [];
-      
-      if (customPlanIds.length > 0) {
-        const { data: customPlans, error: customError } = await supabase
-          .from('custom_plan_results')
-          .select('id, selected_plan_price, selected_plan_name, plan_features')
-          .in('id', customPlanIds);
-          
-        if (!customError && customPlans) {
-          const planMap: Record<string, CustomPlanResult> = {};
-          customPlans.forEach(plan => {
-            planMap[plan.id] = plan;
-          });
-          setCustomPlanData(planMap);
-        }
+
+      if (error) {
+        throw error;
       }
-    } catch (error: any) {
-      console.error("Error fetching workout plans:", error);
+
+      setPlans(data || []);
+    } catch (error) {
+      console.error('Error fetching workout plans:', error);
       toast({
-        title: "Error",
-        description: "Failed to load workout plans",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Failed to load plans",
+        description: "There was a problem loading your training plans."
       });
     } finally {
-      setIsLoadingPlans(false);
+      setIsLoading(false);
     }
   };
-  
-  const handleQuizComplete = () => {
-    setShowQuiz(false);
-    fetchWorkoutPlans();
-  };
-  
-  const getPlanTypeIcon = (planType: string) => {
-    switch (planType) {
-      case 'weight_loss':
-        return <Activity className="h-5 w-5 text-green-500" />;
-      case 'muscle_building':
-        return <Activity className="h-5 w-5 text-blue-500" />;
-      case 'competition':
-        return <Activity className="h-5 w-5 text-purple-500" />;
-      default:
-        return <ClipboardList className="h-5 w-5 text-gray-500" />;
+
+  const handleDownload = async (plan: WorkoutPlan) => {
+    if (!plan.pdf_url) {
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: "This plan doesn't have a PDF available yet."
+      });
+      return;
     }
-  };
-  
-  const getPlanTypeLabel = (planType: string) => {
-    switch (planType) {
-      case 'weight_loss':
-        return 'Weight Loss';
-      case 'muscle_building':
-        return 'Muscle Building';
-      case 'competition':
-        return 'Competition Prep';
-      default:
-        return 'Custom Plan';
-    }
-  };
-  
-  const handlePurchasePlan = async (planId: string, price: number) => {
-    if (!profile?.id) return;
-    
-    setPurchasingPlanId(planId);
-    
+
     try {
-      // Create a payment record for the plan
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          user_id: profile.id,
-          amount: Math.round(price * 100), // Convert to cents for Stripe
-          metadata: { plan_id: planId, payment_type: 'training_plan' },
-          status: 'pending',
-        })
-        .select()
-        .single();
+      // Open the PDF in a new tab
+      window.open(plan.pdf_url, '_blank');
       
-      if (paymentError) throw paymentError;
-      
-      // Link the payment to the workout plan
-      const { error: linkError } = await supabase
-        .from('workout_plans')
-        .update({ payment_id: payment.id })
-        .eq('id', planId);
-      
-      if (linkError) throw linkError;
-      
-      // Create a Stripe payment intent
-      const { data: stripeData, error: stripeError } = await supabase.functions.invoke('stripe-helper', {
-        body: {
-          action: 'createPaymentIntent',
-          params: {
-            amount: Math.round(price * 100),
-            currency: 'usd',
-            payment_id: payment.id,
-            description: `Training Plan: ${planId}`,
-          }
-        }
-      });
-      
-      if (stripeError) throw stripeError;
-      
-      // Redirect to payment page with necessary info
-      navigate('/dashboard/payment', { 
-        state: { 
-          clientSecret: stripeData.client_secret,
-          paymentId: payment.id,
-          amount: price,
-          paymentType: 'training_plan',
-          returnUrl: '/dashboard/plans'
-        } 
-      });
-      
-    } catch (error: any) {
-      console.error("Error initiating payment:", error);
       toast({
-        title: "Payment Error",
-        description: error.message || "Failed to initiate payment",
-        variant: "destructive"
+        title: "Download initiated",
+        description: "Your training plan PDF is being downloaded."
       });
-    } finally {
-      setPurchasingPlanId(null);
+    } catch (error) {
+      console.error('Error downloading plan:', error);
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: "There was a problem downloading your plan."
+      });
     }
   };
-  
-  // Loading state
-  if (isLoading || !isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="animate-spin h-8 w-8 border-4 border-[#ea384c] border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
-  
-  // Don't render anything if not authenticated (will redirect)
-  if (!isAuthenticated) {
-    return null;
-  }
-  
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-black text-white">
       <DashboardNav />
       
-      <div className="flex-1 overflow-auto p-4 md:p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold">Training Plans</h1>
-            <p className="text-gray-400 mt-1">View and manage your personalized workout routines</p>
-            
-            <div className="mt-4">
-              <Button 
-                onClick={() => setShowQuiz(true)}
-                className="bg-[#ea384c] hover:bg-red-700"
-              >
-                Get Custom Plan
-              </Button>
-            </div>
+      <div className="flex-1 p-6 md:ml-64">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Your Training Plans</h1>
+            <Button 
+              className="bg-[#ea384c] hover:bg-red-700 transition-colors"
+              onClick={() => navigate('/plans-catalog')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Get New Plan
+            </Button>
           </div>
           
-          {isLoadingPlans ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-[#ea384c]" />
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="w-8 h-8 border-4 border-[#ea384c] border-t-transparent rounded-full animate-spin"></div>
             </div>
-          ) : showQuiz ? (
-            <div className="py-4">
-              <div className="mb-6 text-center max-w-2xl mx-auto">
-                <h2 className="text-xl font-semibold mb-2">No Training Plans Yet</h2>
-                <p className="text-gray-400">
-                  Take our quick quiz to help us understand your fitness goals and preferences. 
-                  We'll use this information to create a personalized training plan for you.
+          ) : plans.length === 0 ? (
+            <Card className="bg-zinc-900 border-[#333] hover:border-[#ea384c] transition-all duration-300">
+              <CardContent className="p-6 flex flex-col items-center justify-center h-64">
+                <FileText className="h-16 w-16 text-gray-600 mb-4" />
+                <h3 className="text-xl font-medium text-gray-300 mb-2">No Training Plans Yet</h3>
+                <p className="text-gray-400 text-center mb-4">
+                  You don't have any training plans yet. Get started by exploring our plan catalog.
                 </p>
-              </div>
-              
-              <TrainingPlanQuiz onComplete={handleQuizComplete} />
-            </div>
-          ) : plans.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {plans.map((plan) => {
-                const customPlan = plan.custom_plan_result_id ? customPlanData[plan.custom_plan_result_id] : null;
-                const price = customPlan?.selected_plan_price || 99.99;
-                const isPurchased = plan.is_purchased;
-                const isReady = plan.is_ready;
-                
-                return (
-                  <Card key={plan.id} className={`bg-[#0f0f0f] border-[#1a1a1a] ${isPurchased ? 'ring-1 ring-green-500' : ''}`}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                          {getPlanTypeIcon(plan.plan_type)}
-                          <span className="text-sm text-gray-400 ml-2">
-                            {getPlanTypeLabel(plan.plan_type)}
-                          </span>
-                        </div>
-                        {customPlan && (
-                          <Badge className="bg-[#ea384c]">
-                            <DollarSign className="h-3 w-3 mr-1" />
-                            ${customPlan.selected_plan_price.toFixed(2)}
-                          </Badge>
-                        )}
-                        
-                        {isPurchased && (
-                          <Badge className="ml-2 bg-green-600">
-                            <Check className="h-3 w-3 mr-1" />
-                            Purchased
-                          </Badge>
-                        )}
-                      </div>
-                      <CardTitle>{customPlan?.selected_plan_name || plan.title}</CardTitle>
-                      <CardDescription className="text-gray-400">
-                        Created on {new Date(plan.created_at).toLocaleDateString()}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {customPlan && customPlan.plan_features ? (
-                        <div className="mb-3">
-                          <h4 className="text-sm font-medium mb-2">Plan Features:</h4>
-                          <ul className="text-sm text-gray-300 space-y-1">
-                            {customPlan.plan_features.map((feature, idx) => (
-                              <li key={idx} className="flex items-start">
-                                <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                                <span>{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-300 whitespace-pre-line">
-                          {plan.description || "No description available."}
-                        </p>
-                      )}
-                      
-                      {!isPurchased && (
-                        <div className="mt-4 p-3 bg-[#1a1a1a] rounded-md border border-[#333]">
-                          <div className="flex items-center mb-2">
-                            <AlertTriangle className="h-4 w-4 text-yellow-500 mr-2" />
-                            <span className="text-sm font-medium">Purchase Required</span>
-                          </div>
-                          <p className="text-xs text-gray-400 mb-3">
-                            You need to purchase this plan to access its contents
-                          </p>
-                        </div>
-                      )}
-                      
-                      {isPurchased && !isReady && (
-                        <div className="mt-4 p-3 bg-[#1a1a1a] rounded-md border border-[#333]">
-                          <div className="flex items-center mb-2">
-                            <Clock className="h-4 w-4 text-[#ea384c] mr-2" />
-                            <span className="text-sm font-medium">Plan Being Prepared</span>
-                          </div>
-                          <p className="text-xs text-gray-400 mb-3">
-                            Your plan is currently being prepared by our coaches. Check back soon!
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter className="border-t border-[#333] pt-4 flex justify-between">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="text-gray-300 border-[#333] hover:bg-[#1a1a1a]"
-                        disabled={!isPurchased}
-                      >
-                        <FileText className="h-4 w-4 mr-1" />
-                        View Details
-                      </Button>
-                      
-                      {isPurchased ? (
-                        isReady ? (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="bg-[#ea384c] hover:bg-red-700"
-                            onClick={() => window.open(plan.pdf_url!, '_blank')}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            Download PDF
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            disabled
-                            className="bg-[#333] text-gray-400"
-                          >
-                            <Clock className="h-4 w-4 mr-1" />
-                            PDF Pending
-                          </Button>
-                        )
-                      ) : (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="bg-[#ea384c] hover:bg-red-700"
-                          onClick={() => handlePurchasePlan(plan.id, price)}
-                          disabled={purchasingPlanId === plan.id}
-                        >
-                          {purchasingPlanId === plan.id ? (
-                            <>
-                              <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <ShoppingCart className="h-4 w-4 mr-1" />
-                              Purchase ${price.toFixed(2)}
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
+                <Button 
+                  className="bg-[#ea384c] hover:bg-red-700 transition-colors"
+                  onClick={() => navigate('/plans-catalog')}
+                >
+                  Browse Plans
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-400 mb-4">
-                You don't have any training plans yet. Take our quiz to get a personalized plan.
-              </p>
-              <Button 
-                onClick={() => setShowQuiz(true)}
-                className="bg-[#ea384c] hover:bg-red-700"
-              >
-                Take Training Quiz
-              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {plans.map((plan) => (
+                <Card 
+                  key={plan.id} 
+                  className="bg-zinc-900 border-[#333] hover:border-[#ea384c] transition-all duration-300"
+                >
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-white">{plan.title}</CardTitle>
+                        <CardDescription className="text-gray-400 mt-1">
+                          {plan.plan_type.charAt(0).toUpperCase() + plan.plan_type.slice(1)} Plan
+                        </CardDescription>
+                      </div>
+                      {plan.pdf_url ? (
+                        <div className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-full flex items-center">
+                          <Check className="h-3 w-3 mr-1" />
+                          Ready
+                        </div>
+                      ) : (
+                        <div className="bg-yellow-500/20 text-yellow-400 text-xs px-2 py-1 rounded-full flex items-center">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Processing
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    <p className="text-gray-300 text-sm mb-4 line-clamp-3">
+                      {plan.description || "No description available for this training plan."}
+                    </p>
+                    <div className="flex items-center text-xs text-gray-400">
+                      <Clock className="h-3 w-3 mr-1" />
+                      <span>Created: {format(new Date(plan.created_at), 'MMMM d, yyyy')}</span>
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter className="flex justify-between pt-2">
+                    <Button 
+                      variant="outline"
+                      className="border-[#333] text-gray-300 hover:bg-[#333] hover:text-white"
+                      onClick={() => {
+                        // View plan details (could expand in future)
+                        toast({
+                          title: "Plan Details",
+                          description: "Detailed view coming soon!"
+                        });
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Details
+                    </Button>
+                    
+                    <Button 
+                      className={plan.pdf_url 
+                        ? "bg-[#ea384c] hover:bg-red-700" 
+                        : "bg-gray-700 hover:bg-gray-600 cursor-not-allowed"}
+                      onClick={() => handleDownload(plan)}
+                      disabled={!plan.pdf_url}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
             </div>
           )}
         </div>

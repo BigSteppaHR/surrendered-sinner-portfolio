@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import WorkoutPlans from "@/components/dashboard/WorkoutPlans";
 import UserAccountStatus from "@/components/dashboard/UserAccountStatus";
 import WeightTracker from "@/components/dashboard/WeightTracker";
+import UserNotifications from "@/components/dashboard/UserNotifications";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardNav from "@/components/dashboard/DashboardNav";
 import { useToast } from "@/hooks/use-toast";
@@ -223,10 +225,13 @@ const Dashboard = () => {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <UpcomingSessions />
-            <WeightTracker />
+            <UserNotifications />
           </div>
           
-          <WorkoutPlans />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <WeightTracker />
+            <WorkoutPlans />
+          </div>
         </div>
       </div>
     </div>
