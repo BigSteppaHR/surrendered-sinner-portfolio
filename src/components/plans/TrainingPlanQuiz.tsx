@@ -1,7 +1,8 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Check, X } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronRight, Check, X, LogIn, ShoppingCart } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -53,6 +54,42 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requiresAuth, setRequiresAuth] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [planDetails, setPlanDetails] = useState<{
+    name: string;
+    price: number;
+    discountedPrice: number;
+    planType: string;
+    features: string[];
+  } | null>(null);
+  
+  useEffect(() => {
+    // Check for saved quiz data in sessionStorage when component mounts
+    const savedAnswers = sessionStorage.getItem('dashboardPendingQuizAnswers');
+    const savedStep = sessionStorage.getItem('dashboardPendingQuizStep');
+    
+    if (savedAnswers) {
+      try {
+        const parsedAnswers = JSON.parse(savedAnswers);
+        setAnswers(parsedAnswers);
+        
+        // If we have all answers, simulate quiz completion
+        if (Object.keys(parsedAnswers).length === quizSteps.length) {
+          processResults(parsedAnswers);
+        }
+        
+        if (savedStep) {
+          setCurrentStep(parseInt(savedStep));
+        }
+        
+        // Clear storage after restoring
+        sessionStorage.removeItem('dashboardPendingQuizAnswers');
+        sessionStorage.removeItem('dashboardPendingQuizStep');
+      } catch (e) {
+        console.error('Error restoring saved quiz state:', e);
+      }
+    }
+  }, []);
   
   const handleSelect = (option: string) => {
     if (currentStep >= quizSteps.length) return;
@@ -63,12 +100,64 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
     if (currentStep < quizSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      if (!isAuthenticated) {
-        setRequiresAuth(true);
-        return;
-      }
-      submitQuizResults(newAnswers);
+      processResults(newAnswers);
     }
+  };
+  
+  const processResults = (results: Record<string, string>) => {
+    // Determine the plan type and price based on quiz answers
+    let planType = "custom";
+    // Increased base prices
+    let planPrice = 199.99; // Default price increase from 149.99
+    let planName = `Custom ${results.goal} Plan`;
+    
+    if (results.goal === "Competition Prep") {
+      planType = "competition";
+      planPrice = 399.99; // Increased from 299.99
+    } else if (results.goal === "Weight Loss") {
+      planType = "weight_loss";
+      planPrice = 249.99; // Increased from 179.99
+    } else if (results.goal === "Muscle Building") {
+      planType = "muscle_building";
+      planPrice = 279.99; // Increased from 199.99
+    }
+    
+    if (results.level === "Advanced" || results.level === "Elite") {
+      planPrice += 75; // Increased from 50
+    }
+    
+    // Apply small discount (5%) for taking the quiz
+    const discountedPrice = parseFloat((planPrice * 0.95).toFixed(2));
+    
+    // Create plan features
+    const features = [
+      `Personalized ${results.goal} program`,
+      `Designed for ${results.level} fitness level`,
+      `Optimized for ${results.frequency} training frequency`,
+      `Focus on ${results.focus} development`,
+      `${results.type} training methodology`,
+      `5% discount for completing the quiz`
+    ];
+    
+    // Set plan details
+    setPlanDetails({
+      name: planName,
+      price: planPrice,
+      discountedPrice: discountedPrice,
+      planType: planType,
+      features: features
+    });
+    
+    setQuizCompleted(true);
+    
+    // If not authenticated, we'll show options instead of immediately submitting
+    if (!isAuthenticated) {
+      setRequiresAuth(false); // Don't immediately show auth screen
+      return;
+    }
+    
+    // If authenticated, continue to save result
+    submitQuizResults(results);
   };
   
   const submitQuizResults = async (results: Record<string, string>) => {
@@ -84,30 +173,8 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
     setIsSubmitting(true);
     
     try {
-      const description = `
-        Goal: ${results.goal}
-        Training frequency: ${results.frequency}
-        Fitness level: ${results.level}
-        Focus area: ${results.focus}
-        Training type: ${results.type}
-      `;
-      
-      let planType = "custom";
-      let planPrice = 149.99;
-      
-      if (results.goal === "Competition Prep") {
-        planType = "competition";
-        planPrice = 299.99;
-      } else if (results.goal === "Weight Loss") {
-        planType = "weight_loss";
-        planPrice = 179.99;
-      } else if (results.goal === "Muscle Building") {
-        planType = "muscle_building";
-        planPrice = 199.99;
-      }
-      
-      if (results.level === "Advanced" || results.level === "Elite") {
-        planPrice += 50;
+      if (!planDetails) {
+        throw new Error("Plan details not available");
       }
       
       const { data: customPlanResult, error: customPlanError } = await supabase
@@ -115,15 +182,9 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
         .insert({
           user_id: profile.id,
           quiz_answers: results,
-          selected_plan_name: `Custom ${results.goal} Plan`,
-          selected_plan_price: planPrice,
-          plan_features: [
-            `Personalized ${results.goal} program`,
-            `Designed for ${results.level} fitness level`,
-            `Optimized for ${results.frequency} training frequency`,
-            `Focus on ${results.focus} development`,
-            `${results.type} training methodology`
-          ]
+          selected_plan_name: planDetails.name,
+          selected_plan_price: planDetails.discountedPrice,
+          plan_features: planDetails.features
         })
         .select()
         .single();
@@ -163,9 +224,14 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
   };
 
   const redirectToLogin = () => {
+    // Store quiz state in sessionStorage
     sessionStorage.setItem('dashboardPendingQuizAnswers', JSON.stringify(answers));
     sessionStorage.setItem('dashboardPendingQuizStep', currentStep.toString());
     navigate('/login', { state: { redirectAfterLogin: '/dashboard/plans' } });
+  };
+
+  const goToDashboard = () => {
+    navigate('/dashboard/plans');
   };
 
   if (isSubmitting) {
@@ -205,6 +271,67 @@ const TrainingPlanQuiz = ({ onComplete }: TrainingPlanQuizProps) => {
             Log in
           </Button>
         </CardContent>
+      </Card>
+    );
+  }
+  
+  if (quizCompleted && planDetails) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-center">Your Personalized Plan</CardTitle>
+          <CardDescription className="text-center text-gray-400">
+            Based on your answers, we've created a custom plan just for you
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="bg-gray-800 rounded-lg p-4 mb-4">
+            <h3 className="text-xl font-bold mb-2">{planDetails.name}</h3>
+            <div className="flex items-center mb-4">
+              <span className="text-2xl font-bold text-sinner-red">${planDetails.discountedPrice}</span>
+              <span className="text-sm text-gray-400 line-through ml-2">${planDetails.price}</span>
+              <span className="text-sm text-green-400 ml-2">Save 5%</span>
+            </div>
+            <div className="space-y-2">
+              {planDetails.features.map((feature, index) => (
+                <div key={index} className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">{feature}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col sm:flex-row gap-3 justify-between">
+          {isAuthenticated ? (
+            <Button 
+              onClick={goToDashboard}
+              className="w-full sm:w-auto bg-sinner-red hover:bg-red-700"
+            >
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Purchase Plan
+            </Button>
+          ) : (
+            <Button 
+              onClick={redirectToLogin}
+              className="w-full sm:w-auto bg-sinner-red hover:bg-red-700"
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign Up to Purchase
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setQuizCompleted(false);
+              setCurrentStep(0);
+              setAnswers({});
+            }}
+            className="w-full sm:w-auto border-gray-700"
+          >
+            Retake Quiz
+          </Button>
+        </CardFooter>
       </Card>
     );
   }
