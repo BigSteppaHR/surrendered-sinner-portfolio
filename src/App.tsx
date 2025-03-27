@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
@@ -21,7 +22,7 @@ import NotFound from '@/pages/NotFound';
 import Schedule from '@/pages/Schedule';
 import Plans from '@/pages/Plans';
 import PaymentPortal from '@/pages/PaymentPortal';
-import AuthProvider from '@/components/AuthProvider';
+import { AuthProvider } from '@/components/AuthProvider';
 import StripeProvider from '@/components/StripeProvider';
 
 function App() {
