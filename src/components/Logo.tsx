@@ -2,24 +2,25 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-type LogoProps = {
+interface LogoProps {
   size?: 'small' | 'medium' | 'large';
-  variant?: 'default' | 'light';
-};
+  className?: string;
+}
 
-const Logo: React.FC<LogoProps> = ({ size = 'medium', variant = 'default' }) => {
+const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '' }) => {
   const sizeClasses = {
-    small: 'text-xl h-8',
-    medium: 'text-2xl h-10',
-    large: 'text-4xl h-16'
+    small: 'h-8',
+    medium: 'h-10',
+    large: 'h-12'
   };
 
-  const colorClasses = variant === 'light' ? 'text-white' : 'text-sinner-red';
-
   return (
-    <Link to="/" className="flex items-center">
-      <span className={`font-bold ${colorClasses} ${sizeClasses[size]}`}>
-        SS<span className="text-white">Fitness</span>
+    <Link to="/" className={`flex items-center ${className}`}>
+      <span className={`font-bold text-sinner-red ${size === 'small' ? 'text-xl' : size === 'medium' ? 'text-2xl' : 'text-3xl'}`}>
+        SINNER
+      </span>
+      <span className={`font-light text-white ml-1 ${size === 'small' ? 'text-xl' : size === 'medium' ? 'text-2xl' : 'text-3xl'}`}>
+        FITNESS
       </span>
     </Link>
   );

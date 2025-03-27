@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { CreditCard, DollarSign, CalendarClock, AlertCircle, ExternalLink } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const plans = [
   {
@@ -43,11 +44,25 @@ const AdminPayments = () => {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [stripeKeyInput, setStripeKeyInput] = useState("");
   const [stripeKey, setStripeKey] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleUpdateStripeKey = () => {
+    if (!stripeKeyInput.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid Stripe API key",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setStripeKey(stripeKeyInput);
     localStorage.setItem("stripe-key-hint", "configured");
-    alert("Stripe key updated successfully!");
+    
+    toast({
+      title: "Success",
+      description: "Stripe API key updated successfully!",
+    });
   };
 
   return (
