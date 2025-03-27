@@ -18,6 +18,9 @@ interface UserFile {
   uploaded_at: string;
   plan_id?: string;
   plan_name?: string;
+  workout_plans?: {
+    title: string | null;
+  } | null;
 }
 
 const FileDownloads = () => {
@@ -60,7 +63,8 @@ const FileDownloads = () => {
           download_url: file.download_url,
           uploaded_at: new Date(file.uploaded_at).toLocaleDateString(),
           plan_id: file.plan_id,
-          plan_name: file.workout_plans?.title || 'General'
+          plan_name: file.workout_plans?.title || 'General',
+          workout_plans: file.workout_plans
         }));
         
         setFiles(formattedFiles);

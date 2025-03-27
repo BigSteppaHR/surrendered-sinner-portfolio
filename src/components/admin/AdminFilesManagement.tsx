@@ -23,6 +23,10 @@ interface FileRecord {
   user_id: string;
   user_name?: string;
   user_email?: string;
+  profiles?: { 
+    full_name: string | null; 
+    email: string | null;
+  };
 }
 
 const AdminFilesManagement = () => {
@@ -64,7 +68,8 @@ const AdminFilesManagement = () => {
         uploaded_by: file.uploaded_by,
         user_id: file.user_id,
         user_name: file.profiles?.full_name || 'Unknown',
-        user_email: file.profiles?.email || 'Unknown'
+        user_email: file.profiles?.email || 'Unknown',
+        profiles: file.profiles
       }));
       
       setFiles(formattedFiles);
@@ -97,7 +102,7 @@ const AdminFilesManagement = () => {
     };
   }, [toast]);
   
-  const handleDeleteFile = async (fileId: string, filePath: string) => {
+  const handleDeleteFile = async (fileId: string) => {
     if (!confirm("Are you sure you want to delete this file? This action cannot be undone.")) {
       return;
     }
@@ -252,7 +257,7 @@ const AdminFilesManagement = () => {
                                 variant="destructive" 
                                 size="icon"
                                 className="h-8 w-8"
-                                onClick={() => handleDeleteFile(file.id, '')}
+                                onClick={() => handleDeleteFile(file.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
