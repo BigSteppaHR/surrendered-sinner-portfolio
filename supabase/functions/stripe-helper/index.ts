@@ -10,7 +10,8 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400', // 24 hours cache for preflight requests
 };
 
-const handler = async (req: Request): Promise<Response> => {
+// Simple handler function - avoiding any Node.js specific code patterns
+async function handler(req: Request): Promise<Response> {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -20,20 +21,29 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Get the Stripe secret key from environment variables with explicit logging
+    // Get the Stripe secret key from environment variables
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     
-    // Enhanced debug logging for Stripe key detection
+    // Debug logging for Stripe key detection
     console.log("Stripe key availability check:", {
       keyExists: !!stripeSecretKey,
       keyLength: stripeSecretKey ? stripeSecretKey.length : 0,
-      keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 5) + '...' : 'none',
-      envVarsAvailable: !!Deno.env
+      keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 5) + '...' : 'none'
     });
     
-    // Create a test endpoint for checking connection
-    const { action, params } = await req.json();
+    // Parse the request body to get action and parameters
+    let action = "test-connection";
+    let params = {};
     
+    try {
+      const body = await req.json();
+      action = body.action || "test-connection";
+      params = body.params || {};
+    } catch (parseError) {
+      console.log("Could not parse request body, using defaults:", parseError);
+    }
+    
+    // Create a test endpoint for checking connection that doesn't require Stripe
     if (action === 'test-connection') {
       console.log("Testing Supabase function connection...");
       return new Response(
@@ -53,6 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     
+    // Check if we have a Stripe key for actions that need it
     if (!stripeSecretKey) {
       console.error("Missing Stripe secret key in environment variables");
       throw new Error("Missing Stripe secret key");
@@ -61,9 +72,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Stripe secret key found, initializing Stripe...");
     
     // Initialize Stripe with explicit apiVersion to avoid warnings
+    // No httpClient configuration to avoid Node.js dependencies
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2023-10-16', // Explicitly set API version
-      // IMPORTANT: Removing httpClient usage that was causing Node.js dependency issues
+      apiVersion: '2023-10-16',
     });
     
     console.log(`Stripe helper: Executing action ${action}`);
@@ -165,13 +176,17 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error) {
-    console.error("Stripe helper error:", error);
+    // Safe error handling that works in Deno
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorType = error instanceof Error ? error.name : "unknown_error";
+    
+    console.error("Stripe helper error:", errorMessage);
     
     // Return error response with CORS headers
     return new Response(
       JSON.stringify({
-        error: error.message || "An error occurred while processing the request",
-        errorType: error.type || "unknown_error",
+        error: errorMessage,
+        errorType: errorType,
         timestamp: new Date().toISOString()
       }),
       {
@@ -183,7 +198,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   }
-};
+}
 
-// Use the simple serve function instead of the Deno.serve method that caused issues
+// Use a simple serve approach
 serve(handler);

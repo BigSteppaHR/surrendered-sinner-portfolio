@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { useToast } from '@/hooks/use-toast';
@@ -29,48 +29,57 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const [isTesting, setIsTesting] = useState(false);
 
   // Test connection to Stripe via our edge function with enhanced error handling
-  const testStripeConnection = async () => {
+  const testStripeConnection = useCallback(async () => {
     try {
       setIsTesting(true);
       console.log("Testing Stripe connection via edge function...");
       
-      // First test basic connection to the function
+      // First test basic connection to the function with simple test-connection action
       const testResponse = await supabase.functions.invoke('stripe-helper', {
         body: { 
-          action: 'test-connection',
-          params: {}
+          action: 'test-connection'
         }
       });
       
       if (testResponse.error) {
-        console.error("Function connection test failed:", testResponse.error);
+        console.error("Basic function connection test failed:", testResponse.error);
         return false;
       }
       
-      console.log("Function connection test result:", testResponse.data);
+      console.log("Basic function connection test result:", testResponse.data);
       
-      // Then test the full Stripe API connection
-      const { data, error } = await supabase.functions.invoke('stripe-helper', {
-        body: { 
-          action: 'get-dashboard-data',
-          params: {}
+      // If we don't have a Stripe key configured in the edge function, return early
+      if (testResponse.data && !testResponse.data.stripeKeyAvailable) {
+        console.warn("Stripe API key not configured in edge function");
+        return false;
+      }
+      
+      // Then only if basic test passed, try the Stripe API connection test
+      try {
+        const { data, error } = await supabase.functions.invoke('stripe-helper', {
+          body: { 
+            action: 'get-dashboard-data'
+          }
+        });
+        
+        if (error) {
+          console.error("Stripe API connection test failed:", error);
+          return false;
         }
-      });
-      
-      if (error) {
-        console.error("Stripe API connection test failed:", error);
+        
+        console.log("Stripe API connection test result:", data);
+        return data && data.status === 'connected';
+      } catch (err) {
+        console.error("Error calling stripe-helper with get-dashboard-data:", err);
         return false;
       }
-      
-      console.log("Stripe API connection test result:", data);
-      return data && data.status === 'connected';
     } catch (err) {
       console.error("Error testing Stripe connection:", err);
       return false;
     } finally {
       setIsTesting(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const initializeStripe = async () => {
@@ -97,9 +106,9 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           if (!connected) {
             console.warn("Stripe API connection test failed. Edge function might not be working correctly.");
             toast({
-              title: "Stripe Connection Warning",
-              description: "Could not connect to Stripe API. Payments may not work correctly.",
-              variant: "destructive",
+              title: "Stripe Connection Issue",
+              description: "Could not connect to Stripe API. This won't affect your login or other features.",
+              variant: "default", // Changed from destructive to not alarm users
             });
           } else {
             console.log("Stripe API connection test successful!");
@@ -116,15 +125,15 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     };
 
     initializeStripe();
-  }, [toast, connectionTested]);
+  }, [toast, connectionTested, testStripeConnection]);
 
-  // Show user-friendly error when Stripe fails to initialize
+  // Show user-friendly error when Stripe fails to initialize but don't block the rest of the app
   useEffect(() => {
     if (stripeError) {
       toast({
-        title: "Payment system initialization failed",
-        description: "Please try refreshing the page or contact support if the issue persists.",
-        variant: "destructive",
+        title: "Payment system issue",
+        description: "Payment features may be limited. This won't affect login or other features.",
+        variant: "default", // Changed from destructive to not alarm users
       });
     }
   }, [stripeError, toast]);
