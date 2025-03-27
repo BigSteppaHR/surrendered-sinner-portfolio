@@ -28,7 +28,7 @@ serve(async (req) => {
       keyExists: !!stripeSecretKey,
       keyLength: stripeSecretKey ? stripeSecretKey.length : 0,
       keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 5) + '...' : 'none',
-      envVars: Object.keys(Deno.env.toObject()).filter(key => !key.includes('KEY')).join(', ') // List available env vars without exposing sensitive ones
+      envVarsAvailable: !!Deno.env
     });
     
     // Create a test endpoint for checking connection
@@ -60,9 +60,15 @@ serve(async (req) => {
     
     console.log("Stripe secret key found, initializing Stripe...");
     
-    // Initialize Stripe
+    // Initialize Stripe with explicit apiVersion to avoid warnings
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2023-10-16', // Use the latest stable API version
+      apiVersion: '2023-10-16', // Explicitly set API version
+      httpClient: {
+        // Use custom fetch to avoid Node.js dependencies
+        fetch: async (url, options = {}) => {
+          return await fetch(url, options);
+        },
+      },
     });
     
     console.log(`Stripe helper: Executing action ${action}`);
