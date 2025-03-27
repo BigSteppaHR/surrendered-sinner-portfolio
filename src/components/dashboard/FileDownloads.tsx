@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,23 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-
-interface WorkoutPlan {
-  title: string | null;
-}
-
-interface UserFile {
-  id: string;
-  file_name: string;
-  file_type: string;
-  file_size: number;
-  description: string;
-  download_url: string;
-  uploaded_at: string;
-  plan_id?: string;
-  plan_name?: string;
-  workout_plans?: WorkoutPlan | null;
-}
+import { UserFile, WorkoutPlan } from "@/types";
 
 const FileDownloads = () => {
   const [files, setFiles] = useState<UserFile[]>([]);
@@ -63,15 +46,42 @@ const FileDownloads = () => {
             let workoutPlan: WorkoutPlan | null = null;
             
             if (file.workout_plans) {
-              // If workout_plans is returned as an array with one item, get the first item
-              if (Array.isArray(file.workout_plans) && file.workout_plans.length > 0) {
-                planName = file.workout_plans[0].title || 'General';
-                workoutPlan = { title: file.workout_plans[0].title };
+              // Check if workout_plans is an array
+              if (Array.isArray(file.workout_plans)) {
+                if (file.workout_plans.length > 0) {
+                  // Access the first item's title property
+                  const firstPlan = file.workout_plans[0];
+                  if (firstPlan && typeof firstPlan === 'object' && 'title' in firstPlan) {
+                    planName = firstPlan.title || 'General';
+                    workoutPlan = { 
+                      id: '',
+                      user_id: '',
+                      title: firstPlan.title, 
+                      description: null,
+                      pdf_url: null,
+                      plan_type: '',
+                      created_at: '',
+                      updated_at: ''
+                    };
+                  }
+                }
               } 
-              // If workout_plans is returned as a single object
-              else if (typeof file.workout_plans === 'object') {
-                planName = file.workout_plans.title || 'General';
-                workoutPlan = { title: file.workout_plans.title };
+              // If workout_plans is a single object
+              else if (typeof file.workout_plans === 'object' && file.workout_plans !== null) {
+                // Check if the title property exists on the object
+                if ('title' in file.workout_plans) {
+                  planName = file.workout_plans.title || 'General';
+                  workoutPlan = { 
+                    id: '',
+                    user_id: '',
+                    title: file.workout_plans.title, 
+                    description: null,
+                    pdf_url: null,
+                    plan_type: '',
+                    created_at: '',
+                    updated_at: ''
+                  };
+                }
               }
             }
             
@@ -83,6 +93,7 @@ const FileDownloads = () => {
               description: file.description || '',
               download_url: file.download_url,
               uploaded_at: new Date(file.uploaded_at).toLocaleDateString(),
+              file_path: file.file_path || '',
               plan_id: file.plan_id,
               plan_name: planName,
               workout_plans: workoutPlan
