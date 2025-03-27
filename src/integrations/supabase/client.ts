@@ -31,6 +31,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     headers: {
       apikey: supabaseAnonKey
     }
+  },
+  // Set custom fetch function to add better debug logging
+  fetch: (url, options) => {
+    // Log function invocation requests only in development
+    if (import.meta.env.DEV && url.includes('/functions/v1/')) {
+      console.log(`Calling Supabase function: ${url.split('/functions/v1/')[1]}`);
+    }
+    return fetch(url, {
+      ...options,
+      // Ensure we're sending credentials for all requests
+      credentials: 'include'
+    });
   }
 });
 

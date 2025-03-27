@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Initialize with a null value, we'll assign the promise directly
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -24,6 +25,31 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const { toast } = useToast();
   const [isStripeLoaded, setIsStripeLoaded] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
+  const [connectionTested, setConnectionTested] = useState(false);
+
+  // Test connection to Stripe via our edge function
+  const testStripeConnection = async () => {
+    try {
+      console.log("Testing Stripe connection via edge function...");
+      const { data, error } = await supabase.functions.invoke('stripe-helper', {
+        body: { 
+          action: 'get-dashboard-data',
+          params: {}
+        }
+      });
+      
+      if (error) {
+        console.error("Stripe connection test failed:", error);
+        return false;
+      }
+      
+      console.log("Stripe connection test result:", data);
+      return data && data.status === 'connected';
+    } catch (err) {
+      console.error("Error testing Stripe connection:", err);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const initializeStripe = async () => {
@@ -42,6 +68,23 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         // Initialize Stripe with the key
         stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
         
+        // Test connection to Stripe via our edge function
+        if (!connectionTested) {
+          const connected = await testStripeConnection();
+          setConnectionTested(true);
+          
+          if (!connected) {
+            console.warn("Stripe API connection test failed. Edge function might not be working correctly.");
+            toast({
+              title: "Stripe Connection Warning",
+              description: "Could not connect to Stripe API. Payments may not work correctly.",
+              variant: "destructive",
+            });
+          } else {
+            console.log("Stripe API connection test successful!");
+          }
+        }
+        
         setIsStripeLoaded(true);
       } catch (error: any) {
         console.error("Failed to initialize Stripe:", error);
@@ -52,7 +95,7 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     };
 
     initializeStripe();
-  }, []);
+  }, [toast, connectionTested]);
 
   // Show user-friendly error when Stripe fails to initialize
   useEffect(() => {
