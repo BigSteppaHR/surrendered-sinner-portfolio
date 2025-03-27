@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardNav from "@/components/dashboard/DashboardNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
-import { WeightChart } from "@/components/dashboard/WeightChart";
-import { WeightTracker } from "@/components/dashboard/WeightTracker";
+import PerformanceChart from "@/components/dashboard/PerformanceChart";
+import WeightChart from "@/components/dashboard/WeightChart";
+import WeightTracker from "@/components/dashboard/WeightTracker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Weight, TrendingUp, Calendar } from "lucide-react";
 
