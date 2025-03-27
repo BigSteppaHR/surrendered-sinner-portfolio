@@ -1,4 +1,3 @@
-
 import { createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { AuthContext } from '@/components/AuthProvider';
@@ -15,6 +14,7 @@ export type Profile = {
   debug_mode?: boolean | null;
   login_count?: number | null;
   last_active_at?: string | null;
+  last_login_at?: string | null;
 };
 
 export type AuthContextType = {

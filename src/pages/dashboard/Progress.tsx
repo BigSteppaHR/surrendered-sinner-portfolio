@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import DashboardNav from '@/components/dashboard/DashboardNav';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar, ChevronDown, FileUpload, BarChart, TrendingUp, Award, Dumbbell } from 'lucide-react';
+import { Calendar, ChevronDown, UploadCloud, BarChart, TrendingUp, Award, Dumbbell } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
