@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,7 +65,7 @@ const CustomPlanQuiz = () => {
     {
       id: 'time',
       question: 'How much time can you commit per week?',
-      description: 'We'll design a plan that fits your schedule',
+      description: "We will design a plan that fits your schedule",
       options: [
         { id: 'time-1', label: '2-3 hours', value: 'minimal', icon: <Timer className="w-5 h-5 text-sinner-red" /> },
         { id: 'time-2', label: '4-5 hours', value: 'moderate', icon: <Timer className="w-5 h-5 text-sinner-red" /> },
@@ -77,7 +76,7 @@ const CustomPlanQuiz = () => {
     {
       id: 'equipment',
       question: 'What equipment do you have access to?',
-      description: 'We'll work with what you have available',
+      description: "We will work with what you have available",
       options: [
         { id: 'equip-1', label: 'Home (minimal)', value: 'minimal' },
         { id: 'equip-2', label: 'Home Gym', value: 'home-gym' },
