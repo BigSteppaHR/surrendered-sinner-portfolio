@@ -1,11 +1,7 @@
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import DashboardLayout from './DashboardLayout';
 import Payment from '../Payment';
-
-interface DashboardLayoutProps {
-  children: ReactNode;
-}
 
 const PaymentPage = () => {
   return (

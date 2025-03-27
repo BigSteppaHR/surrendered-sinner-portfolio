@@ -1,11 +1,7 @@
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import DashboardLayout from './DashboardLayout';
 import Schedule from '../Schedule';
-
-interface DashboardLayoutProps {
-  children: ReactNode;
-}
 
 const SchedulePage = () => {
   return (
