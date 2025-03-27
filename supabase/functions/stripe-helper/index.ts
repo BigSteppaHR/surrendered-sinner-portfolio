@@ -10,7 +10,7 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400', // 24 hours cache for preflight requests
 };
 
-serve(async (req) => {
+const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -63,12 +63,7 @@ serve(async (req) => {
     // Initialize Stripe with explicit apiVersion to avoid warnings
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16', // Explicitly set API version
-      httpClient: {
-        // Use custom fetch to avoid Node.js dependencies
-        fetch: async (url, options = {}) => {
-          return await fetch(url, options);
-        },
-      },
+      // IMPORTANT: Removing httpClient usage that was causing Node.js dependency issues
     });
     
     console.log(`Stripe helper: Executing action ${action}`);
@@ -188,4 +183,7 @@ serve(async (req) => {
       }
     );
   }
-});
+};
+
+// Use the simple serve function instead of the Deno.serve method that caused issues
+serve(handler);
