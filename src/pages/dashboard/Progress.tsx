@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,6 +108,7 @@ const Progress = () => {
                     </div>
                     
                     <Button className="w-full bg-sinner-red hover:bg-red-700">
+                      <UploadCloud className="h-4 w-4 mr-2" />
                       Upload Photo
                     </Button>
                   </form>

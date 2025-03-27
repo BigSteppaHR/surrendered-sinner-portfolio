@@ -1,14 +1,8 @@
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/hooks/useAuth';
-
-// Helper for conditional logging
-const isDev = import.meta.env.DEV;
-const logDebug = (message: string, ...args: any[]) => {
-  if (isDev) console.debug(`[Auth] ${message}`, ...args);
-};
+import { Profile } from './useAuth';
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -16,251 +10,213 @@ export const useAuthState = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
-  const initializeAttempted = useRef(false);
-  const profileFetchAttempted = useRef(false);
-  const authSubscription = useRef<{ unsubscribe: () => void } | null>(null);
-  const initializationTimeout = useRef<NodeJS.Timeout | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Handle profile updates - improved with better error handling
-  const refreshProfileData = async (currentUser: User | null) => {
-    if (!currentUser) return null;
-    
-    try {
-      logDebug('Refreshing profile data for user:', currentUser.id);
-      
-      // Try to get profile directly with simplified query
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .maybeSingle();
-      
-      if (!error && data) {
-        logDebug('Profile found:', data);
-        
-        // Update login count when profile is refreshed after successful login
-        if (session) {
-          try {
-            await supabase
-              .from('profiles')
-              .update({
-                login_count: (data.login_count || 0) + 1,
-                last_active_at: new Date().toISOString()
-              })
-              .eq('id', currentUser.id);
-            
-            // Update the local data with the new values
-            data.login_count = (data.login_count || 0) + 1;
-            data.last_active_at = new Date().toISOString();
-            
-            logDebug('Updated login count and activity time');
-          } catch (updateError) {
-            console.error('Error updating login metrics:', updateError);
-          }
-        }
-        
-        return data;
-      }
-      
-      if (error) {
-        console.error('Error in profile fetch:', error);
-        
-        // If profile doesn't exist, create a basic one
-        if (error.code === 'PGRST116') { // No rows returned
-          try {
-            const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
-              .upsert({
-                id: currentUser.id,
-                email: currentUser.email,
-                email_confirmed: !!currentUser.email_confirmed_at,
-                updated_at: new Date().toISOString(),
-                login_count: 1,
-                last_active_at: new Date().toISOString()
-              })
-              .select()
-              .single();
-              
-            if (createError) {
-              console.error('Failed to create basic profile:', createError);
+  useEffect(() => {
+    const initializeAuth = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event);
+            setSession(session);
+            setUser(session?.user ?? null);
+
+            if (session?.user) {
+              const { data: profileData, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+              if (error) {
+                console.error('Error fetching profile:', error);
+              } else {
+                setProfile(profileData);
+              }
             } else {
-              logDebug('Created basic profile successfully:', newProfile);
-              return newProfile;
+              setProfile(null);
             }
-          } catch (e) {
-            console.error('Exception creating basic profile:', e);
           }
+        );
+
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentSession.user.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching profile:', error);
+          } else {
+            setProfile(profileData);
+          }
+        }
+
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+  }, [navigate, location]);
+
+  const isAuthenticated = !!user;
+  const isAdmin = !!profile?.is_admin;
+  const loginCount = profile?.login_count || 0;
+  const lastActive = profile?.last_active_at ? new Date(profile.last_active_at) : null;
+
+  const login = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      // Update login count and last active timestamp
+      if (data.user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('login_count')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (!profileError && profileData) {
+          const newLoginCount = (profileData.login_count || 0) + 1;
+          const now = new Date().toISOString();
+          
+          await supabase
+            .from('profiles')
+            .update({
+              login_count: newLoginCount,
+              last_login_at: now,
+              last_active_at: now
+            })
+            .eq('id', data.user.id);
+            
+          setProfile({
+            ...profile,
+            id: data.user.id,
+            email: data.user.email,
+            login_count: newLoginCount,
+            last_login_at: now,
+            last_active_at: now,
+            email_confirmed: true,
+            is_admin: false,
+            full_name: profile?.full_name || null,
+            avatar_url: profile?.avatar_url || null,
+            username: profile?.username || null
+          });
         }
       }
       
-      // Final fallback - create a minimal profile object for the UI
-      return {
-        id: currentUser.id,
-        email: currentUser.email,
-        email_confirmed: !!currentUser.email_confirmed_at,
-        is_admin: false,
-        login_count: 1,
-        last_active_at: new Date().toISOString()
-      };
+      return { data, error };
     } catch (error: any) {
-      console.error('Exception in refreshProfileData:', error.message);
-      // Return a minimal profile to prevent UI errors
-      return {
-        id: currentUser.id,
-        email: currentUser.email,
-        email_confirmed: !!currentUser.email_confirmed_at,
-        is_admin: false,
-        login_count: 0,
-        last_active_at: new Date().toISOString()
-      };
+      return { data: null, error };
     }
   };
 
-  useEffect(() => {
-    // Force initialization to complete after 5 seconds regardless of auth state
-    initializationTimeout.current = setTimeout(() => {
-      if (!isInitialized) {
-        console.warn('Auth initialization timed out - forcing completion');
-        setIsLoading(false);
-        setIsInitialized(true);
-      }
-    }, 5000);
-
-    // Prevent multiple initializations which can cause loops
-    if (initializeAttempted.current) return;
-    initializeAttempted.current = true;
-    
-    const initializeAuth = async () => {
-      try {
-        logDebug('Initializing auth state...');
-        setIsLoading(true);
-        
-        // Clean up any previous subscription
-        if (authSubscription.current) {
-          authSubscription.current.unsubscribe();
-        }
-        
-        // IMPORTANT: Set up the auth state listener FIRST
-        const { data } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-          logDebug('Auth state changed:', event, currentSession?.user?.email);
-          
-          // Process synchronously to avoid race conditions
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          
-          // Update profile if user exists
-          if (currentSession?.user) {
-            const profileData = await refreshProfileData(currentSession.user);
-            if (profileData) {
-              setProfile(profileData);
-              logDebug('Profile updated after auth state change:', profileData);
-            } else {
-              console.warn('No profile data available after auth state change');
-              // Still provide minimal profile to prevent UI errors
-              setProfile({
-                id: currentSession.user.id,
-                email: currentSession.user.email,
-                email_confirmed: !!currentSession.user.email_confirmed_at,
-                is_admin: false,
-                login_count: 0,
-                last_active_at: new Date().toISOString()
-              });
-            }
-          } else {
-            setProfile(null);
-          }
-          
-          // Complete loading
-          setIsLoading(false);
-          setIsInitialized(true);
-          
-          // Clear timeout if auth completed successfully
-          if (initializationTimeout.current) {
-            clearTimeout(initializationTimeout.current);
-          }
+  const signup = async (email: string, password: string, fullName: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+      
+      if (data.user) {
+        // Initialize profile with defaults
+        const now = new Date().toISOString();
+        setProfile({
+          id: data.user.id,
+          email: data.user.email,
+          login_count: 1,
+          last_login_at: now,
+          last_active_at: now,
+          email_confirmed: false,
+          is_admin: false,
+          full_name: fullName,
+          avatar_url: null,
+          username: null
         });
-        
-        authSubscription.current = data.subscription;
-
-        // THEN get the current session from Supabase
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (currentSession) {
-          // Set session and user state
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          
-          // Update profile if user exists
-          if (currentSession?.user) {
-            const profileData = await refreshProfileData(currentSession.user);
-            if (profileData) {
-              setProfile(profileData);
-              logDebug('Profile loaded during initialization:', profileData);
-            } else {
-              console.warn('No profile data available during initialization');
-              // Still provide minimal profile to prevent UI errors
-              setProfile({
-                id: currentSession.user.id,
-                email: currentSession.user.email,
-                email_confirmed: !!currentSession.user.email_confirmed_at,
-                is_admin: false,
-                login_count: 0,
-                last_active_at: new Date().toISOString()
-              });
-            }
-          }
-        }
-        
-        // Always complete loading even if there's no session
-        setIsLoading(false);
-        setIsInitialized(true);
-        
-        // Clear timeout if auth completed successfully
-        if (initializationTimeout.current) {
-          clearTimeout(initializationTimeout.current);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        setIsLoading(false); // Complete loading to not block the UI
-        setIsInitialized(true);
-        
-        // Clear timeout if auth completed with error
-        if (initializationTimeout.current) {
-          clearTimeout(initializationTimeout.current);
-        }
       }
-    };
-
-    // Initialize
-    initializeAuth();
-    
-    // Clean up subscription and timeout on unmount
-    return () => {
-      if (authSubscription.current) {
-        authSubscription.current.unsubscribe();
-      }
-      if (initializationTimeout.current) {
-        clearTimeout(initializationTimeout.current);
-      }
-    };
-  }, []);
-
-  // This public refreshProfile function matches the expected signature in AuthContextType
-  const refreshProfile = async (): Promise<Profile | null> => {
-    profileFetchAttempted.current = true; // Mark as attempted
-    
-    if (user) {
-      try {
-        const profileData = await refreshProfileData(user);
-        if (profileData) {
-          setProfile(profileData);
-          return profileData;
-        }
-      } catch (err) {
-        console.error("Error in refreshProfile:", err);
-      }
+      
+      return { data, error };
+    } catch (error: any) {
+      return { data: null, error };
     }
-    return profile; // Return current profile if refresh fails
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error logging out:', error);
+        return { success: false };
+      }
+      return { success: true, redirectTo: '/' };
+    } catch (error) {
+      console.error('Error in logout:', error);
+      return { success: false };
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      return { error };
+    } catch (error: any) {
+      return { error };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      return { error };
+    } catch (error: any) {
+      return { error };
+    }
+  };
+
+  const refreshProfile = async (): Promise<Profile | null> => {
+    if (!user) return null;
+
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error refreshing profile:', error);
+        return null;
+      }
+
+      setProfile(profileData);
+      return profileData;
+    } catch (error) {
+      console.error('Error in refreshProfile:', error);
+      return null;
+    }
   };
 
   return {
@@ -269,10 +225,15 @@ export const useAuthState = () => {
     session,
     isLoading,
     isInitialized,
-    isAuthenticated: !!user,
-    isAdmin: !!profile?.is_admin,
+    isAuthenticated,
+    isAdmin,
+    loginCount,
+    lastActive,
+    login,
+    signup,
+    logout,
     refreshProfile,
-    loginCount: profile?.login_count || 0,
-    lastActive: profile?.last_active_at ? new Date(profile.last_active_at) : null
+    resetPassword,
+    updatePassword,
   };
 };
