@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -6,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, ChevronLeft, ChevronRight, Dumbbell, Flame, Scale, Timer, Activity, Target, X } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Dumbbell, Flame, Scale, Timer, Activity, Target, X, LogIn } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/safe-dialog";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 type QuizQuestion = {
   id: string;
@@ -33,11 +36,15 @@ type RecommendedPlan = {
 
 const CustomPlanQuiz = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { isAuthenticated, profile } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
   const [recommendedPlans, setRecommendedPlans] = useState<RecommendedPlan[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requiresAuth, setRequiresAuth] = useState(false);
   
   const questions: QuizQuestion[] = [
     {
@@ -125,6 +132,7 @@ const CustomPlanQuiz = () => {
     setAnswers({});
     setShowResults(false);
     setRecommendedPlans([]);
+    setRequiresAuth(false);
   };
   
   const analyzeResults = () => {
@@ -343,14 +351,99 @@ const CustomPlanQuiz = () => {
     setRecommendedPlans(plans);
   };
   
-  const handleSelectPlan = (plan: RecommendedPlan) => {
-    toast({
-      title: "Plan Selected",
-      description: `${plan.name} has been added to your cart.`,
-    });
-    setIsDialogOpen(false);
-    // In a real app, we would add this plan to the cart or redirect to checkout
+  const handleSelectPlan = async (plan: RecommendedPlan) => {
+    if (!isAuthenticated) {
+      setRequiresAuth(true);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      // Store quiz results and selected plan in the database
+      const { data, error } = await supabase
+        .from('custom_plan_results')
+        .insert({
+          user_id: profile?.id,
+          quiz_answers: answers,
+          selected_plan_id: plan.id,
+          selected_plan_name: plan.name,
+          selected_plan_price: plan.price,
+          plan_features: plan.features
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Add plan to workout_plans using our function
+      const { data: workoutPlan, error: workoutError } = await supabase
+        .rpc('add_custom_plan_to_workout_plans', {
+          p_user_id: profile?.id,
+          p_custom_plan_result_id: data.id
+        });
+      
+      if (workoutError) throw workoutError;
+      
+      toast({
+        title: "Plan Selected",
+        description: `${plan.name} has been added to your plans.`,
+      });
+      
+      // Redirect to dashboard
+      setIsDialogOpen(false);
+      navigate('/dashboard/plans');
+    } catch (error: any) {
+      console.error("Error saving plan:", error);
+      toast({
+        title: "Error saving plan",
+        description: error.message || "There was a problem saving your plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const redirectToLogin = () => {
+    setIsDialogOpen(false);
+    // Store quiz state in sessionStorage
+    sessionStorage.setItem('pendingQuizAnswers', JSON.stringify(answers));
+    sessionStorage.setItem('pendingQuizStep', currentStep.toString());
+    navigate('/login', { state: { redirectAfterLogin: '/?showQuiz=true' } });
+  };
+  
+  // Restore quiz state if returning from login
+  useEffect(() => {
+    const pendingAnswers = sessionStorage.getItem('pendingQuizAnswers');
+    const pendingStep = sessionStorage.getItem('pendingQuizStep');
+    
+    if (pendingAnswers) {
+      try {
+        setAnswers(JSON.parse(pendingAnswers));
+        if (pendingStep) {
+          const step = parseInt(pendingStep);
+          setCurrentStep(step);
+          // If this was the last step, show results
+          if (step >= questions.length - 1) {
+            setShowResults(true);
+            analyzeResults();
+          }
+        }
+        // Clear storage after restoring
+        sessionStorage.removeItem('pendingQuizAnswers');
+        sessionStorage.removeItem('pendingQuizStep');
+      } catch (e) {
+        console.error("Error restoring quiz state:", e);
+      }
+    }
+    
+    // Auto-open dialog if requested in URL
+    if (window.location.search.includes('showQuiz=true')) {
+      setIsDialogOpen(true);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [isAuthenticated]);
   
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -367,14 +460,39 @@ const CustomPlanQuiz = () => {
               <Dumbbell className="h-5 w-5 text-sinner-red mr-2" />
               Custom Training Plan Quiz
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-center text-gray-400">
               Answer a few questions to get personalized program recommendations
             </DialogDescription>
           </DialogHeader>
         </div>
         
         <div className="p-6">
-          {!showResults ? (
+          {requiresAuth ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-sinner-red/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <LogIn className="h-8 w-8 text-sinner-red" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Login Required</h3>
+              <p className="text-gray-400 mb-6">
+                You need to be logged in to save your custom plan. Your quiz answers will be preserved.
+              </p>
+              <div className="space-x-3">
+                <Button onClick={redirectToLogin} className="bg-sinner-red hover:bg-red-700">
+                  Login or Sign Up
+                </Button>
+                <Button variant="outline" onClick={() => setRequiresAuth(false)}>
+                  Go Back
+                </Button>
+              </div>
+            </div>
+          ) : isSubmitting ? (
+            <div className="text-center py-12">
+              <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+              <p className="text-center text-gray-300 mt-4">
+                Saving your custom plan...
+              </p>
+            </div>
+          ) : !showResults ? (
             <>
               <div className="mb-6">
                 <div className="flex justify-between text-sm mb-2">

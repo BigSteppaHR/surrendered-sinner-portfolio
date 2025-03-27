@@ -102,6 +102,42 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_plan_results: {
+        Row: {
+          created_at: string
+          id: string
+          plan_features: Json | null
+          quiz_answers: Json
+          selected_plan_id: string | null
+          selected_plan_name: string | null
+          selected_plan_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan_features?: Json | null
+          quiz_answers: Json
+          selected_plan_id?: string | null
+          selected_plan_name?: string | null
+          selected_plan_price: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan_features?: Json | null
+          quiz_answers?: Json
+          selected_plan_id?: string | null
+          selected_plan_name?: string | null
+          selected_plan_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_quotes: {
         Row: {
           author: string | null
@@ -901,6 +937,7 @@ export type Database = {
       workout_plans: {
         Row: {
           created_at: string
+          custom_plan_result_id: string | null
           description: string | null
           id: string
           pdf_url: string | null
@@ -911,6 +948,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_plan_result_id?: string | null
           description?: string | null
           id?: string
           pdf_url?: string | null
@@ -921,6 +959,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_plan_result_id?: string | null
           description?: string | null
           id?: string
           pdf_url?: string | null
@@ -929,13 +968,28 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workout_plans_custom_plan_result_id_fkey"
+            columns: ["custom_plan_result_id"]
+            isOneToOne: false
+            referencedRelation: "custom_plan_results"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      add_custom_plan_to_workout_plans: {
+        Args: {
+          p_user_id: string
+          p_custom_plan_result_id: string
+        }
+        Returns: string
+      }
       current_user_is_verified: {
         Args: Record<PropertyKey, never>
         Returns: boolean

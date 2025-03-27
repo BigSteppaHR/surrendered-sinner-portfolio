@@ -1,202 +1,281 @@
-import { useEffect, useState } from "react";
+
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import DashboardNav from "@/components/dashboard/DashboardNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, CalendarDays, Clock, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import DashboardNav from "@/components/dashboard/DashboardNav";
+import { Loader2, FileText, Download, Activity, ClipboardList, DollarSign } from "lucide-react";
+import TrainingPlanQuiz from "@/components/plans/TrainingPlanQuiz";
 
-type WorkoutPlan = {
+interface WorkoutPlan {
   id: string;
-  user_id: string;
   title: string;
-  description: string | null;
-  plan_type: string;
+  description: string;
   pdf_url: string | null;
+  plan_type: string;
   created_at: string;
-  updated_at: string;
-};
+  custom_plan_result_id?: string;
+  custom_plan_price?: number;
+}
+
+interface CustomPlanResult {
+  id: string;
+  selected_plan_price: number;
+  selected_plan_name: string;
+  plan_features: string[];
+}
 
 const TrainingPlans = () => {
-  const { user } = useAuth();
+  const { isAuthenticated, isLoading, profile, isInitialized } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
+  const [customPlanData, setCustomPlanData] = useState<Record<string, CustomPlanResult>>({});
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  const [showQuiz, setShowQuiz] = useState(false);
   
   useEffect(() => {
-    // Load plans data
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        
-        if (!user) return;
-        
-        // Fetch user's workout plans
-        const { data, error } = await supabase
-          .from('workout_plans')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-          
-        if (error) throw error;
-        
-        setPlans(data || []);
-      } catch (error) {
-        console.error('Error loading plans:', error);
-        toast({
-          title: "Error loading plans",
-          description: "There was a problem fetching your training plans.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!isInitialized) return;
     
-    loadData();
-  }, [user, toast]);
-  
-  const handleDownload = async (planId: string, pdfUrl: string | null) => {
-    if (!pdfUrl) {
-      toast({
-        title: "No PDF available",
-        description: "This plan doesn't have a downloadable PDF.",
-        variant: "destructive"
-      });
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login", { replace: true, state: { redirectAfterLogin: location.pathname } });
       return;
     }
     
-    try {
-      // Handle PDF download - open in new tab
-      window.open(pdfUrl, '_blank');
+    if (isAuthenticated && profile) {
+      fetchWorkoutPlans();
       
+      // Check for restored quiz state from login redirect
+      const pendingAnswers = sessionStorage.getItem('dashboardPendingQuizAnswers');
+      if (pendingAnswers) {
+        setShowQuiz(true);
+        sessionStorage.removeItem('dashboardPendingQuizAnswers');
+        sessionStorage.removeItem('dashboardPendingQuizStep');
+      }
+    }
+  }, [isAuthenticated, isLoading, profile, isInitialized]);
+  
+  const fetchWorkoutPlans = async () => {
+    try {
+      setIsLoadingPlans(true);
+      
+      // Get workout plans
+      const { data, error } = await supabase
+        .from('workout_plans')
+        .select('*')
+        .eq('user_id', profile?.id)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      setPlans(data || []);
+      
+      // For plans with custom_plan_result_id, fetch the pricing details
+      const customPlanIds = data
+        ?.filter(plan => plan.custom_plan_result_id)
+        .map(plan => plan.custom_plan_result_id) || [];
+      
+      if (customPlanIds.length > 0) {
+        const { data: customPlans, error: customError } = await supabase
+          .from('custom_plan_results')
+          .select('id, selected_plan_price, selected_plan_name, plan_features')
+          .in('id', customPlanIds);
+          
+        if (!customError && customPlans) {
+          const planMap: Record<string, CustomPlanResult> = {};
+          customPlans.forEach(plan => {
+            planMap[plan.id] = plan;
+          });
+          setCustomPlanData(planMap);
+        }
+      }
+      
+      // Show quiz if no plans exist
+      if (data && data.length === 0) {
+        setShowQuiz(true);
+      }
+    } catch (error: any) {
+      console.error("Error fetching workout plans:", error);
       toast({
-        title: "Download started",
-        description: "Your training plan is downloading.",
-      });
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      toast({
-        title: "Download failed",
-        description: "There was a problem downloading the PDF.",
+        title: "Error",
+        description: "Failed to load workout plans",
         variant: "destructive"
       });
+    } finally {
+      setIsLoadingPlans(false);
     }
   };
   
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const handleQuizComplete = () => {
+    setShowQuiz(false);
+    fetchWorkoutPlans();
   };
   
-  const getPlanTypeColor = (type: string) => {
-    switch (type) {
-      case 'strength': return 'bg-blue-500 text-white';
-      case 'hypertrophy': return 'bg-purple-500 text-white';
-      case 'endurance': return 'bg-green-500 text-white';
-      case 'weight_loss': return 'bg-red-500 text-white';
-      case 'custom': return 'bg-sinner-red text-white';
-      default: return 'bg-gray-500 text-white';
+  const getPlanTypeIcon = (planType: string) => {
+    switch (planType) {
+      case 'weight_loss':
+        return <Activity className="h-5 w-5 text-green-500" />;
+      case 'muscle_building':
+        return <Activity className="h-5 w-5 text-blue-500" />;
+      case 'competition':
+        return <Activity className="h-5 w-5 text-purple-500" />;
+      default:
+        return <ClipboardList className="h-5 w-5 text-gray-500" />;
     }
   };
   
-  if (loading) {
+  const getPlanTypeLabel = (planType: string) => {
+    switch (planType) {
+      case 'weight_loss':
+        return 'Weight Loss';
+      case 'muscle_building':
+        return 'Muscle Building';
+      case 'competition':
+        return 'Competition Prep';
+      default:
+        return 'Custom Plan';
+    }
+  };
+  
+  // Loading state
+  if (isLoading || !isInitialized) {
     return (
-      <div className="min-h-screen flex flex-col md:flex-row bg-black text-white">
-        <DashboardNav />
-        <div className="flex-1 overflow-auto md:ml-64 p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-[#333333] rounded w-1/4"></div>
-              <div className="h-4 bg-[#333333] rounded w-2/4"></div>
-              <div className="h-64 bg-[#333333] rounded"></div>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C]">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     );
   }
   
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+  
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-black text-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#1A1F2C] text-white">
       <DashboardNav />
-      <div className="flex-1 overflow-auto md:ml-64">
-        <div className="p-6 max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Training Plans</h1>
-            <p className="text-gray-400 mt-1">View and manage your personalized training programs</p>
+      
+      <div className="flex-1 overflow-auto p-4 md:p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold">Training Plans</h1>
+            <p className="text-gray-400 mt-1">View and manage your personalized workout routines</p>
           </div>
           
-          {plans.length === 0 ? (
-            <Card className="bg-[#111111] border-[#333333] mb-6">
-              <CardContent className="p-12">
-                <div className="text-center">
-                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h2 className="text-xl font-bold mb-2">No Training Plans Yet</h2>
-                  <p className="text-gray-400 mb-6 max-w-md mx-auto">
-                    You don't have any training plans assigned yet. Request a consultation with a coach to get a personalized training plan.
-                  </p>
-                  <Button className="bg-[#ea384c] hover:bg-red-700">
-                    Request Consultation
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          {isLoadingPlans ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : showQuiz ? (
+            <div className="py-4">
+              <div className="mb-6 text-center max-w-2xl mx-auto">
+                <h2 className="text-xl font-semibold mb-2">No Training Plans Yet</h2>
+                <p className="text-gray-400">
+                  Take our quick quiz to help us understand your fitness goals and preferences. 
+                  We'll use this information to create a personalized training plan for you.
+                </p>
+              </div>
+              
+              <TrainingPlanQuiz onComplete={handleQuizComplete} />
+            </div>
+          ) : plans.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {plans.map((plan) => {
+                const customPlan = plan.custom_plan_result_id ? customPlanData[plan.custom_plan_result_id] : null;
+                
+                return (
+                  <Card key={plan.id} className="bg-gray-900 border-gray-800">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          {getPlanTypeIcon(plan.plan_type)}
+                          <span className="text-sm text-gray-400 ml-2">
+                            {getPlanTypeLabel(plan.plan_type)}
+                          </span>
+                        </div>
+                        {customPlan && (
+                          <Badge className="bg-sinner-red">
+                            <DollarSign className="h-3 w-3 mr-1" />
+                            ${customPlan.selected_plan_price.toFixed(2)}
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle>{customPlan?.selected_plan_name || plan.title}</CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Created on {new Date(plan.created_at).toLocaleDateString()}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {customPlan && customPlan.plan_features ? (
+                        <div className="mb-3">
+                          <h4 className="text-sm font-medium mb-2">Plan Features:</h4>
+                          <ul className="text-sm text-gray-300 space-y-1">
+                            {customPlan.plan_features.map((feature, idx) => (
+                              <li key={idx} className="flex items-start">
+                                <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-300 whitespace-pre-line">
+                          {plan.description || "No description available."}
+                        </p>
+                      )}
+                    </CardContent>
+                    <CardFooter className="border-t border-gray-800 pt-4 flex justify-between">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-gray-300"
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
+                      
+                      {plan.pdf_url ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="bg-[#9b87f5] hover:bg-[#8a76e4]"
+                          onClick={() => window.open(plan.pdf_url!, '_blank')}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download PDF
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled
+                        >
+                          PDF Pending
+                        </Button>
+                      )}
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {plans.map((plan) => (
-                <Card key={plan.id} className="bg-[#111111] border-[#333333] overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle>{plan.title}</CardTitle>
-                        <CardDescription className="mt-1">
-                          Created on {formatDate(plan.created_at)}
-                        </CardDescription>
-                      </div>
-                      <Badge className={getPlanTypeColor(plan.plan_type)}>
-                        {plan.plan_type.replace(/_/g, ' ')}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <p className="text-gray-300 mb-4">
-                      {plan.description || "No description available for this training plan."}
-                    </p>
-                    
-                    <div className="flex flex-col space-y-2 pb-3">
-                      <div className="flex items-center text-sm text-gray-400">
-                        <CalendarDays className="h-4 w-4 mr-2 text-sinner-red" />
-                        <span>8-week program</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-400">
-                        <Clock className="h-4 w-4 mr-2 text-sinner-red" />
-                        <span>4 sessions per week</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-400">
-                        <Dumbbell className="h-4 w-4 mr-2 text-sinner-red" />
-                        <span>Intermediate level</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="bg-[#0D0D0D] border-t border-[#333333] pt-3">
-                    <Button 
-                      className="w-full bg-sinner-red hover:bg-red-700 flex items-center justify-center"
-                      onClick={() => handleDownload(plan.id, plan.pdf_url)}
-                      disabled={!plan.pdf_url}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {plan.pdf_url ? "Download PDF" : "No PDF Available"}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+            <div className="text-center py-12">
+              <p className="text-gray-400 mb-4">
+                You've completed our training plan quiz. 
+                Our coaches are reviewing your responses and will create a personalized plan for you soon.
+              </p>
+              <Button 
+                onClick={() => setShowQuiz(true)}
+                className="bg-sinner-red hover:bg-red-700"
+              >
+                Retake Quiz
+              </Button>
             </div>
           )}
         </div>
