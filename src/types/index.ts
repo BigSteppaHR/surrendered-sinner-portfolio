@@ -1,4 +1,3 @@
-
 // User session type
 export interface UserSession {
   id: string;
@@ -35,6 +34,22 @@ export interface WorkoutPlan {
   plan_type: string;
   created_at?: string;
   updated_at?: string;
+}
+
+// User file type
+export interface UserFile {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  description: string;
+  download_url: string;
+  uploaded_at: string;
+  file_path: string;
+  plan_id?: string;
+  plan_name?: string;
+  workout_plans?: WorkoutPlan | null;
+  user_id?: string;
 }
 
 // Quote type

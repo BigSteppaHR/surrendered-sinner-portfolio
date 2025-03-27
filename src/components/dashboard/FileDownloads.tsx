@@ -57,18 +57,37 @@ const FileDownloads = () => {
         if (error) throw error;
         
         if (data) {
-          const formattedFiles: UserFile[] = data.map(file => ({
-            id: file.id,
-            file_name: file.file_name,
-            file_type: file.file_type,
-            file_size: file.file_size,
-            description: file.description || '',
-            download_url: file.download_url,
-            uploaded_at: new Date(file.uploaded_at).toLocaleDateString(),
-            plan_id: file.plan_id,
-            plan_name: file.workout_plans?.title || 'General',
-            workout_plans: file.workout_plans as WorkoutPlan | null
-          }));
+          const formattedFiles: UserFile[] = data.map(file => {
+            // Handle workout_plans correctly - it might be null or an object
+            let planName = 'General';
+            let workoutPlan: WorkoutPlan | null = null;
+            
+            if (file.workout_plans) {
+              // If workout_plans is returned as an array with one item, get the first item
+              if (Array.isArray(file.workout_plans) && file.workout_plans.length > 0) {
+                planName = file.workout_plans[0].title || 'General';
+                workoutPlan = { title: file.workout_plans[0].title };
+              } 
+              // If workout_plans is returned as a single object
+              else if (typeof file.workout_plans === 'object') {
+                planName = file.workout_plans.title || 'General';
+                workoutPlan = { title: file.workout_plans.title };
+              }
+            }
+            
+            return {
+              id: file.id,
+              file_name: file.file_name,
+              file_type: file.file_type,
+              file_size: file.file_size,
+              description: file.description || '',
+              download_url: file.download_url,
+              uploaded_at: new Date(file.uploaded_at).toLocaleDateString(),
+              plan_id: file.plan_id,
+              plan_name: planName,
+              workout_plans: workoutPlan
+            };
+          });
           
           setFiles(formattedFiles);
         }
