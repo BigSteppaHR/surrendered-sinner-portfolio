@@ -44,7 +44,7 @@ const PaymentProcess = () => {
   }, [searchParams, navigate]);
 
   const appearance = {
-    theme: 'night',
+    theme: 'night' as const,
     variables: {
       colorPrimary: '#ea384c',
       colorBackground: '#0f0f0f',
