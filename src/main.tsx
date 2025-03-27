@@ -5,6 +5,9 @@ import App from './App.tsx'
 import './index.css'
 import './styles/animations.css' // Import our custom animations
 
+// Import Tailwind base styles
+import 'tailwindcss/tailwind.css'
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

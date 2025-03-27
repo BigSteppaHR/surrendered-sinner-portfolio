@@ -17,6 +17,7 @@ import { Dumbbell, Target, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useAuth } from '@/hooks/useAuth';
+import TrainingPackages from '@/components/TrainingPackages';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -119,6 +120,13 @@ const Index = () => {
           </Button>
         </div>
       </div>
+      
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
+      {/* Add our Training Packages component */}
+      <TrainingPackages />
       
       <div className="section-divider">
         <Separator className="bg-sinner-red/20 h-0.5" />
