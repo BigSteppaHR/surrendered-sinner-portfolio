@@ -152,6 +152,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
       stripe={stripePromise}
       options={{
         // Configure options for appearance and supported payment methods
+        mode: 'payment', // Add the required mode property for Stripe Elements
         appearance: {
           theme: 'night',
           variables: {
@@ -162,7 +163,6 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        // Fix: paymentMethodConfiguration should be a string, not an array
         paymentMethodConfiguration: 'card',
         locale: 'en'
       }}
