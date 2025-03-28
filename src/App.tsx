@@ -2,7 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/components/AuthProvider';
+import { AuthProvider } from '@/hooks/useAuth'; // Import from hooks instead of components
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StripeProvider } from '@/components/StripeProvider';
 
@@ -39,9 +39,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
-        <AuthProvider>
-          <StripeProvider>
-            <BrowserRouter>
+        <BrowserRouter>
+          <AuthProvider>
+            <StripeProvider>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<LandingPage />} />
@@ -75,10 +75,10 @@ function App() {
                 {/* Catch-all redirect */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-            </BrowserRouter>
-            <Toaster />
-          </StripeProvider>
-        </AuthProvider>
+              <Toaster />
+            </StripeProvider>
+          </AuthProvider>
+        </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>
   );

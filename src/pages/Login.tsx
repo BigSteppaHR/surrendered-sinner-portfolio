@@ -63,11 +63,11 @@ const Login = () => {
     setErrorMessage('');
     
     try {
-      const { error, data } = await login(email, password);
+      const result = await login(email, password);
       
-      if (error) {
-        console.error("Login error:", error);
-        setErrorMessage(error.message || 'Invalid login credentials');
+      if (result.error) {
+        console.error("Login error:", result.error);
+        setErrorMessage(result.error.message || 'Invalid login credentials');
         setIsProcessing(false);
         return;
       }
@@ -82,7 +82,7 @@ const Login = () => {
       
       // Redirect based on location state or default to dashboard
       const state = location.state as { redirectAfterLogin?: string } | undefined;
-      const redirectPath = state?.redirectAfterLogin || data?.redirectTo || '/dashboard';
+      const redirectPath = state?.redirectAfterLogin || result?.data?.redirectTo || '/dashboard';
       navigate(redirectPath);
     } catch (err: any) {
       console.error("Login error:", err);

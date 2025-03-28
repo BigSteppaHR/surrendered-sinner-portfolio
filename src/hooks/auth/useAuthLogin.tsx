@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
-import { useAuth, Profile } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AuthLoginResult {
   isLoading: boolean;
   errorMessage: string;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ error: any | null, data: any | null }>;
 }
 
 export const useAuthLogin = (): AuthLoginResult => {
@@ -16,9 +17,11 @@ export const useAuthLogin = (): AuthLoginResult => {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      await authLogin(email, password);
+      const result = await authLogin(email, password);
+      return result;
     } catch (error: any) {
       setErrorMessage(error.message || 'An unexpected error occurred');
+      return { error, data: null };
     } finally {
       setIsLoading(false);
     }
