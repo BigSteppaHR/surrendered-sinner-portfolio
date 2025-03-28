@@ -153,6 +153,8 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
       options={{
         // Configure options for appearance and supported payment methods
         mode: 'payment', // Add the required mode property for Stripe Elements
+        amount: 1000, // Add a default amount (in cents) - required by Stripe for the payment mode
+        currency: 'usd', // Add currency - also required for payment mode
         appearance: {
           theme: 'night',
           variables: {
