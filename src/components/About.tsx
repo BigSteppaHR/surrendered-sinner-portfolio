@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dumbbell, Target, Award, HeartPulse } from 'lucide-react';
 import GlassCard from './GlassCard';
@@ -28,9 +29,9 @@ const About: React.FC = () => {
   ];
 
   const certifications = [
-    { name: "ISSA Certified Personal Trainer", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
-    { name: "ISSA Nutritionist", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
-    { name: "ISSA Strength & Conditioning Coach", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" }
+    { name: "ISSA Certified Personal Trainer", logo: "https://www.issaonline.com/img/issa-logo.svg" },
+    { name: "ISSA Nutritionist", logo: "https://www.issaonline.com/img/issa-logo.svg" },
+    { name: "ISSA Strength & Conditioning Coach", logo: "https://www.issaonline.com/img/issa-logo.svg" }
   ];
 
   return (
@@ -49,7 +50,7 @@ const About: React.FC = () => {
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-sinner-red/20 rounded-lg"></div>
             <div className="relative overflow-hidden rounded-lg">
               <img 
-                src="https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80" 
+                src="https://images.unsplash.com/photo-1606889464198-fcb18894cf50?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3" 
                 alt="Coach training" 
                 className="w-full h-full object-cover"
               />
@@ -113,7 +114,7 @@ const About: React.FC = () => {
                 className="p-6 flex flex-col items-center text-center hover:border-sinner-red/50"
                 hoverEffect={true}
               >
-                <div className="mb-4 w-16 h-16 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
+                <div className="mb-4 w-16 h-16 rounded-full bg-white flex items-center justify-center overflow-hidden">
                   <img src={cert.logo} alt={cert.name} className="w-12 h-12 object-contain" />
                 </div>
                 <h4 className="font-semibold">{cert.name}</h4>

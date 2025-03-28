@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 // Initialize with a null value, we'll assign the promise directly
 let stripePromise: Promise<Stripe | null> | null = null;
 
-// Define the publishable key - using environment variable with fallback for development
+// Define the publishable key - using environment variable with fallback
 const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
 
 // Helper for conditional logging
