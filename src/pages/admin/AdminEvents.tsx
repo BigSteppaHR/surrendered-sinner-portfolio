@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Calendar as CalendarIcon, Pencil, Trash2, Eye, Plus, Check, X, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Pencil, Trash2, Eye, Plus, Check, X, Loader2, User } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
