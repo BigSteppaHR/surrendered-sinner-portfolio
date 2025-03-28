@@ -92,17 +92,14 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         
         // Use the defined key
         if (!STRIPE_PUBLISHABLE_KEY || !STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
-          console.warn("Using test Stripe publishable key. Payments will only work in test mode.");
+          console.warn("Invalid Stripe publishable key. Payments will not work.");
+          setStripeError("Invalid Stripe publishable key");
+          return;
         }
         
-        // Initialize Stripe with the key and additional configuration for Apple Pay
+        // Initialize Stripe with the key and additional configuration for payment processing
         stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY, {
           apiVersion: '2023-10-16',
-          // You can enable Apple Pay by uncommenting this and configuring the domain in Stripe Dashboard
-          /*
-          betas: ['applepay_beta_1'],
-          merchantIdentifier: 'merchant.com.alpha.fitness',
-          */
         });
         
         // Test connection to Stripe via our edge function
@@ -151,10 +148,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     <Elements 
       stripe={stripePromise}
       options={{
-        // Configure options for appearance and supported payment methods
-        mode: 'payment', // Add the required mode property for Stripe Elements
-        amount: 1000, // Add a default amount (in cents) - required by Stripe for the payment mode
-        currency: 'usd', // Add currency - also required for payment mode
+        // Simplify the options to avoid configuration issues
         appearance: {
           theme: 'night',
           variables: {
@@ -165,7 +159,6 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        paymentMethodConfiguration: 'card',
         locale: 'en'
       }}
     >
