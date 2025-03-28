@@ -114,7 +114,7 @@ export const withErrorHandling = async <T>(
           details: '', 
           hint: '', 
           code: 'UNKNOWN',
-          name: 'UnexpectedError' // Add the missing name property
+          name: 'UnexpectedError' 
         } 
       };
     }
@@ -128,7 +128,7 @@ export const withErrorHandling = async <T>(
       details: '', 
       hint: '', 
       code: 'MAX_RETRIES',
-      name: 'RetryError' // Add the missing name property
+      name: 'RetryError'
     } 
   };
 };

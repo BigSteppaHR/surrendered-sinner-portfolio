@@ -80,10 +80,6 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
           metadata: { description: `Adding ${amountValue.toFixed(2)} to account balance` }
         })
         .select()
-        .headers({
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        })
         .single();
         
       if (dbError) throw new Error(`Database error: ${dbError.message}`);

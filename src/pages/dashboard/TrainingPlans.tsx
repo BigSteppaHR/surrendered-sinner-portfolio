@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,16 +44,11 @@ const TrainingPlans = () => {
       
       const { data, error } = await withErrorHandling(
         async () => {
-          // Add proper headers to prevent 406 errors
           return await supabase
             .from('workout_plans')
             .select('*')
             .eq('user_id', profile.id)
-            .order('created_at', { ascending: false })
-            .headers({
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            });
+            .order('created_at', { ascending: false });
         },
         'Failed to load workout plans'
       );
@@ -86,16 +80,11 @@ const TrainingPlans = () => {
     try {
       const { data, error } = await withErrorHandling(
         async () => {
-          // Add proper headers to prevent 406 errors
           return await supabase
             .from('custom_plan_results')
             .select('*')
             .eq('user_id', profile.id)
-            .order('created_at', { ascending: false })
-            .headers({
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            });
+            .order('created_at', { ascending: false });
         },
         'Failed to load custom plan results'
       );
@@ -137,7 +126,6 @@ const TrainingPlans = () => {
       // Add the payment record first
       const { data: paymentData, error: paymentError } = await withErrorHandling(
         async () => {
-          // Add await here to properly handle the Promise
           return await supabase
             .from('payments')
             .insert([{
@@ -162,7 +150,6 @@ const TrainingPlans = () => {
       // Now add plan to workout_plans with the payment_id
       const { error: workoutError } = await withErrorHandling(
         async () => {
-          // Add await here to properly handle the Promise
           return await supabase
             .rpc('add_custom_plan_to_workout_plans', {
               p_user_id: profile.id,
@@ -177,7 +164,6 @@ const TrainingPlans = () => {
       // Update the newly created workout plan with payment_id
       const { error: updateError } = await withErrorHandling(
         async () => {
-          // Add await here to properly handle the Promise
           return await supabase
             .from('workout_plans')
             .update({ payment_id: paymentData.id })
