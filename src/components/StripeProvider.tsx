@@ -29,6 +29,8 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   // Fetch publishable key from our edge function
   const fetchPublishableKey = async () => {
     try {
+      logDebug("Fetching Stripe publishable key...");
+      
       const { data, error } = await supabase.functions.invoke('stripe-helper', {
         body: { 
           action: 'test-connection'
@@ -41,9 +43,11 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
       }
       
       if (data.publishableKey) {
+        logDebug("Successfully retrieved publishable key");
         return data.publishableKey;
       }
       
+      console.warn("No publishable key returned from server");
       return null;
     } catch (err) {
       console.error("Failed to fetch Stripe publishable key:", err);
@@ -121,6 +125,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         }
         
         setPublishableKey(fetchedKey);
+        logDebug(`Initializing Stripe with key: ${fetchedKey.substring(0, 5)}...`);
         
         // Initialize Stripe with the key
         stripePromise = loadStripe(fetchedKey, {

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.8.0?target=deno';
 
@@ -16,6 +17,7 @@ serve(async (req) => {
   try {
     // Get the Stripe API key from environment variables
     const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_API_KEY');
+    const STRIPE_PUBLISHABLE_KEY = Deno.env.get('STRIPE_PUBLISHABLE_KEY');
     
     if (!STRIPE_SECRET_KEY) {
       console.error("Missing STRIPE_API_KEY environment variable");
@@ -24,9 +26,12 @@ serve(async (req) => {
     
     // Log key availability for debugging (not logging the actual key)
     const keyAvailability = {
-      keyExists: !!STRIPE_SECRET_KEY,
-      keyLength: STRIPE_SECRET_KEY?.length || 0,
-      keyPrefix: STRIPE_SECRET_KEY?.startsWith('sk_') ? 'sk_' : 'none'
+      secretKeyExists: !!STRIPE_SECRET_KEY,
+      secretKeyLength: STRIPE_SECRET_KEY?.length || 0,
+      secretKeyPrefix: STRIPE_SECRET_KEY?.startsWith('sk_') ? 'sk_' : 'none',
+      publishableKeyExists: !!STRIPE_PUBLISHABLE_KEY,
+      publishableKeyLength: STRIPE_PUBLISHABLE_KEY?.length || 0,
+      publishableKeyPrefix: STRIPE_PUBLISHABLE_KEY?.startsWith('pk_') ? 'pk_' : 'none'
     };
     console.log("Stripe key availability check:", keyAvailability);
 
@@ -44,12 +49,11 @@ serve(async (req) => {
     switch (action) {
       case 'test-connection':
         // Return the publishable key along with success message
-        const publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY');
         result = { 
           success: true, 
           message: 'Connection to Stripe helper function successful',
           stripeKeyAvailable: !!STRIPE_SECRET_KEY,
-          publishableKey: publishableKey || null
+          publishableKey: STRIPE_PUBLISHABLE_KEY || null
         };
         break;
         
