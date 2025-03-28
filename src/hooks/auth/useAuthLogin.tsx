@@ -18,7 +18,11 @@ export const useAuthLogin = (): AuthLoginResult => {
     setErrorMessage('');
     try {
       const result = await authLogin(email, password);
-      return result;
+      // Format the result to match our expected return type
+      return { 
+        error: result.error || null, 
+        data: result.data || null 
+      };
     } catch (error: any) {
       setErrorMessage(error.message || 'An unexpected error occurred');
       return { error, data: null };
