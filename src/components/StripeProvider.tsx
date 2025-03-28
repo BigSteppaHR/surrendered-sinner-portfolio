@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 let stripePromise: Promise<Stripe | null> | null = null;
 
 // Define the publishable key - using environment variable with fallback for development
-const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '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';
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_live_51QWJOAJ1axkFIKsVIr2tgEmpRRfSUzGMRP28Xc1LhEacHlkeummL8XudP5ZnIg3EFq0RmKhbAD8DzYgVfLKe9YWb00Z6paGBjS';
 
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
