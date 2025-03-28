@@ -3,6 +3,7 @@ import React from 'react';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const FeaturedProducts = () => {
   const products = [
@@ -12,7 +13,7 @@ const FeaturedProducts = () => {
       description: 'High-quality protein to support muscle recovery and growth.',
       price: '$49.99',
       image: '/placeholder.svg',
-      url: 'https://shop.surrenderedsinnerfitness.com/products/whey-protein'
+      url: '/supplements'
     },
     {
       id: 2,
@@ -20,7 +21,7 @@ const FeaturedProducts = () => {
       description: 'Complete set of resistance bands for home or gym workouts.',
       price: '$34.99',
       image: '/placeholder.svg',
-      url: 'https://shop.surrenderedsinnerfitness.com/products/resistance-bands'
+      url: '/supplements'
     },
     {
       id: 3,
@@ -28,7 +29,7 @@ const FeaturedProducts = () => {
       description: 'Premium workout apparel that performs as hard as you do.',
       price: '$29.99',
       image: '/placeholder.svg',
-      url: 'https://shop.surrenderedsinnerfitness.com/products/apparel'
+      url: '/supplements'
     }
   ];
 
@@ -59,15 +60,13 @@ const FeaturedProducts = () => {
                 <p className="text-white/70 mb-4">{product.description}</p>
                 <div className="flex justify-between items-center">
                   <span className="text-sinner-red font-bold">{product.price}</span>
-                  <a 
-                    href={product.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <Link 
+                    to={product.url}
                     className="text-white hover:text-sinner-red transition-colors flex items-center"
                   >
                     <span>Shop Now</span>
                     <ArrowRight className="ml-1 h-4 w-4" />
-                  </a>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -80,15 +79,13 @@ const FeaturedProducts = () => {
             size="lg"
             asChild
           >
-            <a 
-              href="https://shop.surrenderedsinnerfitness.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
+            <Link 
+              to="/supplements"
               className="flex items-center"
             >
               <ShoppingBag className="mr-2 h-5 w-5" />
               Visit Our Store
-            </a>
+            </Link>
           </Button>
         </div>
       </div>

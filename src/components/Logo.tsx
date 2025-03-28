@@ -8,7 +8,7 @@ interface LogoProps {
   showAlpha?: boolean;
 }
 
-const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '', showAlpha = true }) => {
+const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '', showAlpha = false }) => {
   const sizeClasses = {
     small: 'h-8',
     medium: 'h-10',
@@ -30,15 +30,7 @@ const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '', showAlpha 
         
         {showAlpha && (
           <div className="flex items-center mt-0.5">
-            <span className="text-xs text-gray-400">Powered by</span>
-            <a 
-              href="https://alphanutritionlabs.com" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="ml-1 text-xs font-medium text-[#ea384c] hover:underline"
-            >
-              Alpha Nutrition Labs
-            </a>
+            <span className="text-xs text-gray-400">Premium fitness solutions</span>
           </div>
         )}
       </div>

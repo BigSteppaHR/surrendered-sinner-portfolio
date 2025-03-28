@@ -87,14 +87,7 @@ const Navbar = () => {
               <Link to="/" className="block py-2 text-gray-300 hover:text-white transition-colors">Home</Link>
               <Link to="/about" className="block py-2 text-gray-300 hover:text-white transition-colors">About</Link>
               <Link to="/events" className="block py-2 text-gray-300 hover:text-white transition-colors">Events</Link>
-              <a 
-                href="https://alphanutritionlabs.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block py-2 text-gray-300 hover:text-white transition-colors"
-              >
-                Alpha Nutrition Labs
-              </a>
+              <Link to="/supplements" className="block py-2 text-gray-300 hover:text-white transition-colors">Supplements</Link>
               {isAuthenticated ? (
                 <>
                   <Link to="/dashboard" className="block py-2 text-gray-300 hover:text-white transition-colors">Dashboard</Link>
@@ -123,18 +116,13 @@ const NavLinks = () => {
       <NavLink to="/" active={pathname === '/'}>Home</NavLink>
       <NavLink to="/about" active={pathname === '/about'}>About</NavLink>
       <NavLink to="/events" active={pathname === '/events'}>Events</NavLink>
-      <a 
-        href="https://alphanutritionlabs.com" 
-        target="_blank" 
-        rel="noopener noreferrer"
+      <Link 
+        to="/supplements"
         className="text-gray-300 hover:text-white transition-colors relative group"
       >
-        Alpha Nutrition Labs
-        <span className="absolute -top-1 -right-1 bg-[#ea384c] text-white text-[10px] rounded-full px-1 flex items-center justify-center">
-          ↗
-        </span>
+        Supplements
         <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#ea384c] transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform"></span>
-      </a>
+      </Link>
     </div>
   );
 };

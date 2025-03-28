@@ -11,7 +11,7 @@ const AboutPage = () => {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <SEO 
-        title="About Brad | Alpha Nutrition & Fitness" 
+        title="About Brad | Surrendered Sinner Fitness" 
         description="Learn about Brad, certified personal trainer with ISSA certifications in bodybuilding, strength and conditioning, and functional training."
       />
       
@@ -102,7 +102,7 @@ const AboutPage = () => {
                 </p>
                 
                 <p className="text-lg leading-relaxed mt-4">
-                  As the founder of Alpha Nutrition Labs, Brad combines his passion for fitness with 
+                  As the founder of Surrendered Sinner Fitness, Brad combines his passion for fitness with 
                   cutting-edge nutritional science to deliver holistic training and nutrition programs 
                   tailored to individual needs and goals.
                 </p>
@@ -149,20 +149,18 @@ const AboutPage = () => {
               </div>
               
               <div className="mt-8">
-                <h3 className="text-xl font-semibold mb-4">Alpha Nutrition Labs</h3>
+                <h3 className="text-xl font-semibold mb-4">Supplements</h3>
                 <div className="p-4 bg-zinc-900 rounded-lg border border-[#ea384c]/20 flex items-center justify-between">
                   <div>
-                    <p className="text-lg">Check out Brad's premium nutrition supplements:</p>
+                    <p className="text-lg">Check out our premium supplement line:</p>
                     <p className="text-sm text-gray-400 mt-1">Quality supplements designed for optimal performance and results</p>
                   </div>
-                  <a 
-                    href="https://alphanutritionlabs.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <Link 
+                    to="/supplements"
                     className="px-4 py-2 bg-[#ea384c] text-white rounded-md hover:bg-[#c8313f] transition-colors"
                   >
-                    Visit Store
-                  </a>
+                    View Supplements
+                  </Link>
                 </div>
               </div>
             </div>
