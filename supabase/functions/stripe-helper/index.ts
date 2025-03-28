@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.4.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
@@ -158,6 +157,57 @@ async function handler(req: Request): Promise<Response> {
         if (updateError) {
           console.error("Error updating payment status:", updateError);
           throw new Error(`Failed to update payment status: ${updateError.message}`);
+        }
+        
+        // If payment was completed, update the user's balance
+        if (params.status === 'completed' && params.amount) {
+          try {
+            // Check if user already has a balance record
+            const { data: userData } = await supabase.auth.getUser();
+            if (!userData?.user?.id) {
+              throw new Error("User ID not found");
+            }
+            
+            const { data: balanceData } = await supabase
+              .from('payment_balance')
+              .select('balance, currency')
+              .eq('user_id', userData.user.id)
+              .maybeSingle();
+            
+            if (balanceData) {
+              // Update existing balance
+              await supabase
+                .from('payment_balance')
+                .update({
+                  balance: balanceData.balance + (params.amount / 100), // Convert cents to dollars
+                  updated_at: new Date().toISOString()
+                })
+                .eq('user_id', userData.user.id);
+            } else {
+              // Create new balance record
+              await supabase
+                .from('payment_balance')
+                .insert({
+                  user_id: userData.user.id,
+                  balance: params.amount / 100, // Convert cents to dollars
+                  currency: 'USD'
+                });
+            }
+            
+            // Add to payment history
+            await supabase.from('payment_history').insert({
+              user_id: userData.user.id,
+              amount: params.amount / 100, // Convert cents to dollars
+              currency: 'USD',
+              status: 'completed',
+              payment_method: params.payment_method || 'card',
+              description: params.description || 'Added funds to account',
+              metadata: { payment_id: params.payment_id }
+            });
+          } catch (balanceError) {
+            console.error("Error updating user balance:", balanceError);
+            // Don't throw here - we already updated the payment status successfully
+          }
         }
         
         result = {

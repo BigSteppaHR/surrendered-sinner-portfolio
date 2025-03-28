@@ -95,14 +95,9 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           console.warn("Using test Stripe publishable key. Payments will only work in test mode.");
         }
         
-        // Initialize Stripe with the key and additional configuration for Apple Pay
+        // Initialize Stripe with the key
         stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY, {
           apiVersion: '2023-10-16',
-          // You can enable Apple Pay by uncommenting this and configuring the domain in Stripe Dashboard
-          /*
-          betas: ['applepay_beta_1'],
-          merchantIdentifier: 'merchant.com.alpha.fitness',
-          */
         });
         
         // Test connection to Stripe via our edge function

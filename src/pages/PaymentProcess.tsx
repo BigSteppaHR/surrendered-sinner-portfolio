@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowLeft, CheckCircle, Shield } from 'lucide-react';
 import Logo from '@/components/Logo';
 
-// Load Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH');
 
 const PaymentProcess = () => {
@@ -185,6 +183,9 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
         navigate('/payment-portal?status=error');
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Payment succeeded, update database
+        const amountValue = parseFloat(amount);
+        const amountInCents = Math.round(amountValue * 100);
+        
         await supabase.functions.invoke('stripe-helper', {
           body: {
             action: 'updatePaymentStatus',
@@ -192,49 +193,12 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
               payment_id: paymentId,
               status: 'completed',
               payment_intent_id: paymentIntent.id,
-              payment_method: 'card'
+              payment_method: 'card',
+              amount: amountInCents,
+              description: `Added $${amount} to account`
             }
           }
         });
-        
-        // Insert record into payment_history
-        await supabase.from('payment_history').insert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          amount: parseFloat(amount),
-          currency: 'USD',
-          status: 'completed',
-          payment_method: 'card',
-          stripe_payment_id: paymentIntent.id,
-          description: `Added $${amount} to account`,
-          metadata: { payment_id: paymentId }
-        });
-        
-        // Update user's balance
-        const { data: balanceData } = await supabase
-          .from('payment_balance')
-          .select('balance, currency')
-          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-          .maybeSingle();
-          
-        if (balanceData) {
-          // Update existing balance
-          await supabase
-            .from('payment_balance')
-            .update({ 
-              balance: balanceData.balance + parseFloat(amount),
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
-        } else {
-          // Create new balance record
-          await supabase
-            .from('payment_balance')
-            .insert({
-              user_id: (await supabase.auth.getUser()).data.user?.id,
-              balance: parseFloat(amount),
-              currency: 'USD'
-            });
-        }
         
         toast({
           title: "Payment successful",
