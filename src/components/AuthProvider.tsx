@@ -1,8 +1,8 @@
-
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Profile } from '@/hooks/useAuth';
 
 // Define types for the user profile
 export interface UserProfile {
@@ -37,7 +37,7 @@ export interface AuthContextType {
   loginCount: number;
   lastActive: Date | null;
   error: Error | null;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: () => Promise<Profile | null>;
   signOut: () => Promise<void>;
   login: (email: string, password: string) => Promise<{ error: any | null, data: any | null }>;
   signup: (email: string, password: string, fullName: string) => Promise<{ error: any | null, data: any | null }>;
@@ -58,7 +58,7 @@ export const AuthContext = createContext<AuthContextType>({
   loginCount: 0,
   lastActive: null,
   error: null,
-  refreshProfile: async () => {},
+  refreshProfile: async () => null,
   signOut: async () => {},
   login: async () => ({ error: null, data: null }),
   signup: async () => ({ error: null, data: null }),
@@ -148,11 +148,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.error("Error fetching user profile:", error);
-        return;
+        return null;
       }
 
       if (data) {
         setProfile(data as UserProfile);
+        return data as Profile;
       } else {
         // If profile doesn't exist, create it
         const newProfile = {
@@ -177,21 +178,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (insertError) {
           console.error("Error creating user profile:", insertError);
-          return;
+          return null;
         }
 
         setProfile(newProfile as UserProfile);
+        return newProfile as Profile;
       }
     } catch (e: any) {
       console.error("Error during profile fetch:", e);
       setError(e);
+      return null;
     }
   };
 
-  const refreshProfile = async () => {
+  const refreshProfile = async (): Promise<Profile | null> => {
     if (user) {
-      await fetchUserProfile(user.id);
+      return await fetchUserProfile(user.id);
     }
+    return null;
   };
 
   // Authentication methods
