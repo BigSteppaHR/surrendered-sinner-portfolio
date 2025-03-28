@@ -151,8 +151,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     <Elements 
       stripe={stripePromise}
       options={{
-        // Configure options for appearance and supported payment methods
-        mode: 'payment', // Add this line to specify the mode
+        mode: 'payment',
         appearance: {
           theme: 'night',
           variables: {
@@ -163,7 +162,9 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        paymentMethodConfiguration: 'card,apple_pay,google_pay',
+        currency: 'usd',
+        amount: 1000, // Default amount in cents (e.g., $10.00) for initial setup
+        paymentMethodTypes: ['card'],
         locale: 'en'
       }}
     >
