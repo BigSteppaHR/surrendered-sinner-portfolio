@@ -8,6 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 // Initialize with a null value, we'll assign the promise directly
 let stripePromise: Promise<Stripe | null> | null = null;
 
+// Define the publishable key - using environment variable with fallback for development
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51NyDWJAfsLmHAfOzbscm6EMsc2zGIp3VCz7dXJwTNAgzyjU62h13qeUWI3j8zNpIImBrzLnRkKiLIi7AuxmfaXj600UBcmzWsn';
+
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
 const logDebug = (message: string, ...args: any[]) => {
@@ -24,36 +27,6 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [connectionTested, setConnectionTested] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  const [publishableKey, setPublishableKey] = useState<string | null>(null);
-
-  // Fetch publishable key from our edge function
-  const fetchPublishableKey = async () => {
-    try {
-      logDebug("Fetching Stripe publishable key...");
-      
-      const { data, error } = await supabase.functions.invoke('stripe-helper', {
-        body: { 
-          action: 'test-connection'
-        }
-      });
-      
-      if (error || !data) {
-        console.error("Error fetching Stripe publishable key:", error);
-        return null;
-      }
-      
-      if (data.publishableKey) {
-        logDebug("Successfully retrieved publishable key");
-        return data.publishableKey;
-      }
-      
-      console.warn("No publishable key returned from server");
-      return null;
-    } catch (err) {
-      console.error("Failed to fetch Stripe publishable key:", err);
-      return null;
-    }
-  };
 
   // Test connection to Stripe via our edge function with enhanced error handling
   const testStripeConnection = useCallback(async () => {
@@ -117,19 +90,19 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           return;
         }
         
-        // Get publishable key from edge function if available
-        const fetchedKey = await fetchPublishableKey();
-        
-        if (!fetchedKey) {
-          throw new Error("Could not retrieve Stripe publishable key from the server");
+        // Use the defined key
+        if (!STRIPE_PUBLISHABLE_KEY || !STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
+          console.warn("Using test Stripe publishable key. Payments will only work in test mode.");
         }
         
-        setPublishableKey(fetchedKey);
-        logDebug(`Initializing Stripe with key: ${fetchedKey.substring(0, 5)}...`);
-        
-        // Initialize Stripe with the key
-        stripePromise = loadStripe(fetchedKey, {
+        // Initialize Stripe with the key and additional configuration for Apple Pay
+        stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY, {
           apiVersion: '2023-10-16',
+          // You can enable Apple Pay by uncommenting this and configuring the domain in Stripe Dashboard
+          /*
+          betas: ['applepay_beta_1'],
+          merchantIdentifier: 'merchant.com.alpha.fitness',
+          */
         });
         
         // Test connection to Stripe via our edge function
@@ -178,7 +151,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     <Elements 
       stripe={stripePromise}
       options={{
-        mode: 'subscription', // Changed from 'payment' to 'subscription'
+        // Configure options for appearance and supported payment methods
         appearance: {
           theme: 'night',
           variables: {
@@ -189,9 +162,8 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        currency: 'usd',
-        amount: 5999, // Default amount in cents (e.g., $59.99) for initial setup
-        paymentMethodTypes: ['card'],
+        // This enables Apple Pay, Google Pay, and other digital wallets
+        paymentMethodConfiguration: ['card', 'apple_pay', 'google_pay'],
         locale: 'en'
       }}
     >

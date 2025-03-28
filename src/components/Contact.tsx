@@ -49,7 +49,7 @@ const Contact = () => {
     
     try {
       // Store the form submission in the database
-      const { error: dbError } = await supabase
+      const { error } = await supabase
         .from('support_tickets')
         .insert({
           user_id: null, // For anonymous submissions
@@ -62,39 +62,7 @@ const Contact = () => {
           updated_at: new Date().toISOString(),
         });
         
-      if (dbError) throw dbError;
-      
-      // Also send an email notification to admin via edge function
-      const { error: emailError } = await supabase.functions.invoke('send-contact-notification', {
-        body: {
-          name: data.name,
-          email: data.email,
-          phone: data.phone || 'Not provided',
-          subject: data.subject,
-          message: data.message
-        }
-      });
-      
-      if (emailError) {
-        console.warn("Contact form submitted but email notification failed:", emailError);
-      }
-      
-      // Create admin notification
-      const { error: notifError } = await supabase
-        .from('admin_notifications')
-        .insert({
-          title: 'New Contact Form Submission',
-          message: `From: ${data.name} (${data.email})\nSubject: ${data.subject}`,
-          notification_type: 'info',
-          is_read: false,
-          created_at: new Date().toISOString(),
-          source: 'contact_form',
-          priority: 'normal'
-        });
-        
-      if (notifError) {
-        console.warn("Failed to create admin notification:", notifError);
-      }
+      if (error) throw error;
       
       toast({
         title: "Message Sent",

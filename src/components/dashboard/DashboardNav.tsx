@@ -52,17 +52,18 @@ const NavItem = ({ icon, children, to, active }: NavItemProps) => {
 
 const DashboardNav = () => {
   const location = useLocation();
-  const { user, profile, isLoading, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { toast } = useToast();
   
+  // Close mobile menu when location changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location]);
   
   const handleSignOut = async () => {
     try {
-      await logout();
+      await signOut();
       toast({
         title: "Signed out successfully",
         description: "You have been signed out of your account.",
@@ -83,6 +84,7 @@ const DashboardNav = () => {
   
   return (
     <>
+      {/* Mobile menu button */}
       <div className="fixed top-4 left-4 z-50 md:hidden">
         <Button
           variant="outline"
@@ -94,6 +96,7 @@ const DashboardNav = () => {
         </Button>
       </div>
       
+      {/* Mobile menu overlay */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/80 z-40 md:hidden"
@@ -101,18 +104,21 @@ const DashboardNav = () => {
         />
       )}
       
+      {/* Sidebar */}
       <aside 
         className={`fixed top-0 left-0 h-full w-64 bg-zinc-900 border-r border-zinc-800 z-50 transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         <div className="flex flex-col h-full">
+          {/* Logo */}
           <div className="p-4 flex items-center justify-center">
             <Logo size="small" />
           </div>
           
           <Separator className="bg-zinc-800" />
           
+          {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-4 px-3">
             <ul className="space-y-1">
               <NavItem 
@@ -199,6 +205,7 @@ const DashboardNav = () => {
           
           <Separator className="bg-zinc-800" />
           
+          {/* User info and logout */}
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
@@ -215,12 +222,12 @@ const DashboardNav = () => {
             </div>
             
             <Button 
-              variant="ghost" 
-              className="flex items-center text-gray-400 hover:text-white w-full justify-start"
-              onClick={() => logout()}
+              variant="outline" 
+              className="w-full border-zinc-700 hover:bg-zinc-800 hover:text-white"
+              onClick={handleSignOut}
             >
-              <LogOut className="h-4 w-4 mr-2" />
-              <span>Log Out</span>
+              <LogOut size={16} className="mr-2" />
+              Sign Out
             </Button>
           </div>
         </div>

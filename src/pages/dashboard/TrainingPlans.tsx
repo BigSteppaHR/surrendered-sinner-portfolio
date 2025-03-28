@@ -1,8 +1,8 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Clock, Plus, Check, AlertTriangle, ShoppingCart, Loader2, ClipboardList, CheckCircle, Activity, X, CreditCard } from 'lucide-react';
+import { Download, FileText, Clock, Plus, Check, AlertTriangle, ShoppingCart, Loader2, ClipboardList, CheckCircle, Activity } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -11,17 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { withErrorHandling } from '@/utils/databaseErrorHandler';
 import TrainingPlanQuiz from '@/components/plans/TrainingPlanQuiz';
 import { WorkoutPlan } from '@/types';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface CustomPlanResult {
   id: string;
@@ -32,116 +21,21 @@ interface CustomPlanResult {
   created_at: string;
 }
 
-interface SubscriptionPackage {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  duration_days: number;
-  features: string[];
-  billing_interval: string;
-  stripe_price_id: string | null;
-}
-
 const TrainingPlans = () => {
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
   const [customPlans, setCustomPlans] = useState<CustomPlanResult[]>([]);
-  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPackage[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [showQuiz, setShowQuiz] = useState(false);
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
   const { profile, isAuthenticated, isLoading, isInitialized } = useAuth();
   const { toast } = useToast();
-  const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPackage | null>(null);
-  const [selectedQuizResult, setSelectedQuizResult] = useState<string | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [userSubscriptions, setUserSubscriptions] = useState<any[]>([]);
-  const [activeUserSubscriptions, setActiveUserSubscriptions] = useState<Record<string, boolean>>({});
-
-  // Stripe elements setup
-  const stripe = useStripe();
-  const elements = useElements();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-
-  const fetchSubscriptionPlans = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('subscription_packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-      
-      if (error) throw error;
-      
-      // Convert features string to array if needed
-      const formattedPlans = data.map(plan => ({
-        ...plan,
-        features: typeof plan.features === 'string' 
-          ? JSON.parse(plan.features) 
-          : plan.features
-      }));
-      
-      setSubscriptionPlans(formattedPlans);
-    } catch (error) {
-      console.error("Error fetching subscription plans:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load subscription plans",
-        variant: "destructive"
-      });
-    }
-  }, [toast]);
-
-  const fetchUserSubscriptions = async () => {
-    if (!profile?.id) return;
-    
-    try {
-      // Check active subscriptions with Stripe
-      const { data, error } = await supabase.functions.invoke('stripe-helper', {
-        body: {
-          action: 'checkSubscriptionStatus',
-          params: {
-            user_id: profile.id
-          }
-        }
-      });
-      
-      if (error) throw error;
-      
-      console.log("User subscription status:", data);
-      
-      // Update local state with subscription info
-      if (data) {
-        setUserSubscriptions(data.subscriptions || []);
-        
-        // Create a map of subscription_id -> active status
-        const activeMap: Record<string, boolean> = {};
-        if (data.activeSubscriptions) {
-          data.activeSubscriptions.forEach((sub: any) => {
-            if (sub.subscription_id) {
-              activeMap[sub.subscription_id] = true;
-            }
-          });
-        }
-        setActiveUserSubscriptions(activeMap);
-      }
-    } catch (error) {
-      console.error("Error fetching user subscriptions:", error);
-    }
-  };
 
   useEffect(() => {
     if (isAuthenticated && profile) {
       fetchWorkoutPlans();
       fetchCustomPlanResults();
-      fetchSubscriptionPlans();
-      fetchUserSubscriptions();
     }
-  }, [isAuthenticated, profile, fetchSubscriptionPlans]);
+  }, [isAuthenticated, profile]);
 
   const fetchWorkoutPlans = async () => {
     if (!profile?.id) return;
@@ -151,6 +45,7 @@ const TrainingPlans = () => {
       
       const { data, error } = await withErrorHandling(
         async () => {
+          // Add await here to properly handle the Promise
           return await supabase
             .from('workout_plans')
             .select('*')
@@ -187,6 +82,7 @@ const TrainingPlans = () => {
     try {
       const { data, error } = await withErrorHandling(
         async () => {
+          // Add await here to properly handle the Promise
           return await supabase
             .from('custom_plan_results')
             .select('*')
@@ -217,7 +113,7 @@ const TrainingPlans = () => {
     fetchCustomPlanResults();
   };
   
-  const initializeCheckout = (plan: SubscriptionPackage, quizResultId: string | null = null) => {
+  const purchasePlan = async (planId: string, planName: string, planPrice: number) => {
     if (!profile?.id) {
       toast({
         title: "Authentication Required",
@@ -227,129 +123,81 @@ const TrainingPlans = () => {
       return;
     }
     
-    // Set email from profile if available
-    if (profile.email) {
-      setEmail(profile.email);
-    }
-    if (profile.full_name) {
-      setName(profile.full_name);
-    }
-    
-    setSelectedPlan(plan);
-    setSelectedQuizResult(quizResultId);
-    setShowCheckoutDialog(true);
-  };
-  
-  const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!stripe || !elements || !selectedPlan || !profile?.id) {
-      return;
-    }
-    
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      setPaymentError("Card element not found");
-      return;
-    }
-    
-    if (!name || !email) {
-      setPaymentError("Name and email are required");
-      return;
-    }
-    
-    setCheckoutLoading(true);
-    setPaymentError(null);
+    setPurchasingPlan(planId);
     
     try {
-      // Create payment method
-      const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-        billing_details: {
-          name,
-          email
-        }
-      });
+      // Add the payment record first
+      const { data: paymentData, error: paymentError } = await withErrorHandling(
+        async () => {
+          // Add await here to properly handle the Promise
+          return await supabase
+            .from('payments')
+            .insert([{
+              user_id: profile.id,
+              amount: planPrice * 100, // Store in cents
+              status: 'completed',
+              payment_method: 'credit_card',
+              metadata: { plan_id: planId, plan_name: planName }
+            }])
+            .select('id')
+            .single();
+        },
+        'Failed to record payment'
+      );
       
-      if (stripeError) {
-        throw new Error(stripeError.message);
+      if (paymentError) throw paymentError;
+      
+      if (!paymentData?.id) {
+        throw new Error("Payment record creation failed");
       }
       
-      if (!paymentMethod) {
-        throw new Error("Failed to create payment method");
-      }
+      // Now add plan to workout_plans with the payment_id
+      const { error: workoutError } = await withErrorHandling(
+        async () => {
+          // Add await here to properly handle the Promise
+          return await supabase
+            .rpc('add_custom_plan_to_workout_plans', {
+              p_user_id: profile.id,
+              p_custom_plan_result_id: planId
+            });
+        },
+        'Failed to add plan to your account'
+      );
       
-      // Call our edge function to create subscription
-      const { data, error } = await supabase.functions.invoke('stripe-helper', {
-        body: {
-          action: 'createSubscription',
-          params: {
-            email,
-            name, 
-            payment_method_id: paymentMethod.id,
-            price_id: selectedPlan.stripe_price_id || 'price_not_set', // This should be set in the Stripe dashboard
-            subscription_id: selectedPlan.id,
-            user_id: profile.id,
-            quiz_result_id: selectedQuizResult
-          }
-        }
-      });
+      if (workoutError) throw workoutError;
       
-      if (error) {
-        throw new Error(error.message);
-      }
+      // Update the newly created workout plan with payment_id
+      const { error: updateError } = await withErrorHandling(
+        async () => {
+          // Add await here to properly handle the Promise
+          return await supabase
+            .from('workout_plans')
+            .update({ payment_id: paymentData.id })
+            .eq('custom_plan_result_id', planId)
+            .eq('user_id', profile.id);
+        },
+        'Failed to update payment information'
+      );
       
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      if (data.status === 'active') {
-        // Subscription is active immediately
-        toast({
-          title: "Subscription Active",
-          description: `Your ${selectedPlan.name} subscription is now active.`,
-        });
-        
-        // Update local state
-        fetchUserSubscriptions();
-        fetchWorkoutPlans();
-        
-        // Close dialog
-        setShowCheckoutDialog(false);
-      } else if (data.clientSecret) {
-        // Needs additional confirmation
-        const { error: confirmError } = await stripe.confirmCardPayment(data.clientSecret);
-        
-        if (confirmError) {
-          throw new Error(confirmError.message);
-        }
-        
-        toast({
-          title: "Subscription Created",
-          description: `Your ${selectedPlan.name} subscription has been set up successfully.`,
-        });
-        
-        // Update local state
-        fetchUserSubscriptions();
-        fetchWorkoutPlans();
-        
-        // Close dialog
-        setShowCheckoutDialog(false);
-      } else {
-        throw new Error("Unknown response from server");
-      }
-    } catch (error: any) {
-      console.error("Subscription error:", error);
-      setPaymentError(error.message || "Failed to set up subscription");
+      if (updateError) throw updateError;
       
       toast({
-        title: "Subscription Failed",
-        description: error.message || "There was an error setting up your subscription.",
+        title: "Plan Purchased",
+        description: `${planName} has been added to your plans.`,
+      });
+      
+      // Refresh plans
+      fetchWorkoutPlans();
+      fetchCustomPlanResults();
+    } catch (error: any) {
+      console.error("Error purchasing plan:", error);
+      toast({
+        title: "Purchase Failed",
+        description: error.message || "Failed to purchase plan",
         variant: "destructive"
       });
     } finally {
-      setCheckoutLoading(false);
+      setPurchasingPlan(null);
     }
   };
   
@@ -407,19 +255,6 @@ const TrainingPlans = () => {
     }
   };
   
-  const formatBillingInterval = (interval: string) => {
-    switch (interval) {
-      case 'month': return 'Monthly';
-      case 'quarter': return 'Quarterly';
-      case 'year': return 'Yearly';
-      default: return interval;
-    }
-  };
-  
-  const isPlanActive = (planId: string) => {
-    return !!activeUserSubscriptions[planId];
-  };
-  
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
@@ -432,7 +267,6 @@ const TrainingPlans = () => {
           onClick={() => setShowQuiz(true)}
           className="mt-4 md:mt-0 bg-[#ea384c] hover:bg-red-700"
         >
-          <Plus className="h-4 w-4 mr-2" />
           Get Custom Plan
         </Button>
       </div>
@@ -449,75 +283,6 @@ const TrainingPlans = () => {
         </div>
       ) : (
         <>
-          {/* Subscription Plans Section */}
-          {subscriptionPlans.length > 0 && (
-            <div className="mb-10">
-              <div className="flex items-center mb-6">
-                <CreditCard className="h-5 w-5 text-[#ea384c] mr-2" />
-                <h2 className="text-xl font-semibold">Training Subscriptions</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {subscriptionPlans.map((plan) => (
-                  <Card key={plan.id} className={`bg-zinc-900 border-zinc-800 ${isPlanActive(plan.id) ? 'ring-2 ring-green-500/40' : ''}`}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge className="capitalize text-xs bg-[#ea384c]/20 text-[#ea384c] border-[#ea384c]/40">
-                          {formatBillingInterval(plan.billing_interval)}
-                        </Badge>
-                        
-                        {isPlanActive(plan.id) && (
-                          <Badge variant="outline" className="bg-green-900/30 text-green-400 border-green-600">
-                            Active
-                          </Badge>
-                        )}
-                      </div>
-                      <CardTitle>{plan.name}</CardTitle>
-                      <CardDescription className="text-gray-400">
-                        {plan.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="mb-4">
-                        <div className="text-xl font-bold text-[#ea384c]">
-                          ${plan.price.toFixed(2)}
-                          <span className="text-sm text-gray-400 ml-2">
-                            /{plan.billing_interval}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        {plan.features?.map((feature, index) => (
-                          <div key={index} className="flex items-start">
-                            <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                            <span className="text-xs text-gray-300">{feature}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                    <CardFooter className="border-t border-zinc-800 pt-4">
-                      {isPlanActive(plan.id) ? (
-                        <Button variant="outline" className="w-full border-green-600/30 text-green-400" disabled>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Active Subscription
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="default"
-                          className="w-full bg-[#ea384c] hover:bg-red-700"
-                          onClick={() => initializeCheckout(plan)}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Subscribe Now
-                        </Button>
-                      )}
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-          
           {/* Purchased Plans Section */}
           {plans.length > 0 && (
             <div className="mb-10">
@@ -626,25 +391,28 @@ const TrainingPlans = () => {
                       </div>
                     </CardContent>
                     <CardFooter className="border-t border-zinc-800 pt-4">
-                      {/* Find matching subscription plan */}
-                      {subscriptionPlans.length > 0 && (
-                        <Button 
-                          variant="default"
-                          className="w-full bg-[#ea384c] hover:bg-red-700"
-                          onClick={() => {
-                            // Find matching plan based on price/name
-                            const matchingPlan = subscriptionPlans.find(p => 
-                              p.name.includes(plan.selected_plan_name) || 
-                              plan.selected_plan_name.includes(p.name)
-                            ) || subscriptionPlans[0];
-                            
-                            initializeCheckout(matchingPlan, plan.id);
-                          }}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Subscribe to Plan
-                        </Button>
-                      )}
+                      <Button 
+                        variant="default"
+                        className="w-full bg-[#ea384c] hover:bg-red-700"
+                        onClick={() => purchasePlan(
+                          plan.id, 
+                          plan.selected_plan_name, 
+                          plan.selected_plan_price
+                        )}
+                        disabled={purchasingPlan === plan.id}
+                      >
+                        {purchasingPlan === plan.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Purchase Plan
+                          </>
+                        )}
+                      </Button>
                     </CardFooter>
                   </Card>
                 ))}
@@ -652,7 +420,7 @@ const TrainingPlans = () => {
             </div>
           )}
           
-          {plans.length === 0 && customPlans.length === 0 && subscriptionPlans.length === 0 && (
+          {plans.length === 0 && customPlans.length === 0 && (
             <div className="text-center py-12 bg-zinc-900 rounded-xl border border-zinc-800 p-8">
               <ClipboardList className="h-16 w-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">No Training Plans Yet</h3>
@@ -670,90 +438,6 @@ const TrainingPlans = () => {
           )}
         </>
       )}
-      
-      {/* Checkout Dialog */}
-      <Dialog open={showCheckoutDialog} onOpenChange={setShowCheckoutDialog}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Subscribe to {selectedPlan?.name}</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              You'll be charged ${selectedPlan?.price.toFixed(2)} per {selectedPlan?.billing_interval}.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubscribe} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-zinc-800 border-zinc-700"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-zinc-800 border-zinc-700"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="card-element">Card Details</Label>
-              <div className="p-3 border rounded-md bg-zinc-800 border-zinc-700">
-                <CardElement id="card-element" />
-              </div>
-            </div>
-            
-            {paymentError && (
-              <div className="p-3 bg-red-950/50 border border-red-800 rounded-md">
-                <div className="flex items-start">
-                  <AlertTriangle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-200">{paymentError}</p>
-                </div>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowCheckoutDialog(false)}
-                disabled={checkoutLoading}
-                className="border-zinc-700 text-white"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-              
-              <Button
-                type="submit"
-                disabled={!stripe || checkoutLoading}
-                className="bg-[#ea384c] hover:bg-red-700"
-              >
-                {checkoutLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Subscribe (${selectedPlan?.price.toFixed(2)} / {selectedPlan?.billing_interval})
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

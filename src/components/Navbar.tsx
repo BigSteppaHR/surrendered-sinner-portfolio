@@ -34,7 +34,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, active, children }) => {
 };
 
 const Navbar = () => {
-  const { user, profile, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -54,7 +54,7 @@ const Navbar = () => {
               <Link to="/dashboard">
                 <Button variant="secondary">Dashboard</Button>
               </Link>
-              <Button onClick={logout} variant="outline">Sign Out</Button>
+              <Button onClick={signOut} variant="outline">Sign Out</Button>
             </>
           ) : (
             <>
@@ -97,7 +97,7 @@ const Navbar = () => {
               {isAuthenticated ? (
                 <>
                   <Link to="/dashboard" className="block py-2 text-gray-300 hover:text-white transition-colors">Dashboard</Link>
-                  <Button onClick={logout} variant="outline">Sign Out</Button>
+                  <Button onClick={signOut} variant="outline">Sign Out</Button>
                 </>
               ) : (
                 <>
