@@ -34,6 +34,7 @@ export type AuthContextType = {
   refreshProfile: () => Promise<Profile | null>;
   resetPassword: (email: string) => Promise<{ error: any | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: any | null }>;
+  signOut: () => Promise<void>; // Keep existing signOut function
 };
 
 export const useAuth = () => {
