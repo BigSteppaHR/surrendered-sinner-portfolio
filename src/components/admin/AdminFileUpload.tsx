@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileUp, Loader2 } from "lucide-react";
+import { Upload, FileUp, Loader2, Users, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -23,16 +23,30 @@ interface WorkoutPlan {
   user_id: string;
 }
 
+interface SubscriptionPackage {
+  id: string;
+  name: string;
+}
+
+interface User {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
 const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSuccess }) => {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [fileCategory, setFileCategory] = useState('general');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
-  const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionPackage[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,22 +70,40 @@ const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSu
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name')
+          .select('id, full_name, email')
           .eq('is_active', true);
           
         if (error) throw error;
         
         if (data) {
-          setUsers(data as { id: string; full_name: string }[]);
+          setUsers(data as User[]);
         }
       } catch (error) {
         console.error('Error fetching users:', error);
       }
     };
     
+    const fetchSubscriptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('subscription_packages')
+          .select('id, name')
+          .eq('is_active', true);
+          
+        if (error) throw error;
+        
+        if (data) {
+          setSubscriptions(data as SubscriptionPackage[]);
+        }
+      } catch (error) {
+        console.error('Error fetching subscriptions:', error);
+      }
+    };
+    
     if (isOpen) {
       fetchPlans();
       fetchUsers();
+      fetchSubscriptions();
     }
   }, [isOpen]);
 
@@ -135,16 +167,35 @@ const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSu
         .insert({
           user_id: selectedUser,
           plan_id: selectedPlan || null,
+          subscription_id: selectedSubscription || null,
           file_name: fileName || file.name,
           file_type: file.type,
           file_size: file.size,
           description: description,
           file_path: filePath,
+          file_category: fileCategory,
           download_url: urlData.publicUrl,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
         
       if (dbError) throw dbError;
+      
+      // Create notification for user
+      const { error: notificationError } = await supabase
+        .from('user_notifications')
+        .insert({
+          user_id: selectedUser,
+          title: 'New Training File Available',
+          message: `A new file "${fileName || file.name}" has been uploaded to your account.`,
+          notification_type: 'info',
+          is_read: false,
+          priority: 'normal',
+          action_url: '/dashboard/files'
+        });
+        
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError);
+      }
       
       // Complete the progress
       clearInterval(progressInterval);
@@ -176,6 +227,8 @@ const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSu
     setDescription('');
     setSelectedPlan(null);
     setSelectedUser(null);
+    setSelectedSubscription(null);
+    setFileCategory('general');
     setUploadProgress(0);
   };
 
@@ -184,7 +237,7 @@ const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSu
       <DialogContent className="bg-[#0f0f0f] border-[#333] text-white sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Upload className="h-5 w-5 text-sinner-red mr-2" />
+            <Upload className="h-5 w-5 text-[#ea384c] mr-2" />
             Upload Training File
           </DialogTitle>
         </DialogHeader>
@@ -204,7 +257,7 @@ const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSu
                   <SelectLabel>Users</SelectLabel>
                   {users.map(user => (
                     <SelectItem key={user.id} value={user.id}>
-                      {user.full_name || 'Unnamed User'}
+                      {user.full_name || user.email || 'Unnamed User'}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -231,6 +284,54 @@ const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSu
                       {plan.title}
                     </SelectItem>
                   ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="subscription">Subscription Package (Optional)</Label>
+            <Select
+              value={selectedSubscription || ''}
+              onValueChange={setSelectedSubscription}
+              disabled={isUploading}
+            >
+              <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white">
+                <SelectValue placeholder="Select subscription package" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1a1a1a] border-[#333] text-white">
+                <SelectGroup>
+                  <SelectLabel>Subscriptions</SelectLabel>
+                  <SelectItem value="">All Subscriptions</SelectItem>
+                  {subscriptions.map(sub => (
+                    <SelectItem key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="fileCategory">File Category</Label>
+            <Select
+              value={fileCategory}
+              onValueChange={setFileCategory}
+              disabled={isUploading}
+            >
+              <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white">
+                <SelectValue placeholder="Select file category" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1a1a1a] border-[#333] text-white">
+                <SelectGroup>
+                  <SelectLabel>Categories</SelectLabel>
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="workout">Workout</SelectItem>
+                  <SelectItem value="nutrition">Nutrition</SelectItem>
+                  <SelectItem value="progress">Progress Tracking</SelectItem>
+                  <SelectItem value="supplement">Supplements</SelectItem>
+                  <SelectItem value="assessment">Assessment</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -294,7 +395,7 @@ const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSu
                 <span>Uploading...</span>
                 <span>{uploadProgress}%</span>
               </div>
-              <Progress value={uploadProgress} className="h-2 bg-[#333]" indicatorClassName="bg-sinner-red" />
+              <Progress value={uploadProgress} className="h-2 bg-[#333]" indicatorClassName="bg-[#ea384c]" />
             </div>
           )}
           
@@ -311,7 +412,7 @@ const AdminFileUpload: React.FC<AdminFileUploadProps> = ({ isOpen, onClose, onSu
             <Button
               type="button"
               onClick={handleUpload}
-              className="bg-sinner-red hover:bg-red-700 text-white"
+              className="bg-[#ea384c] hover:bg-red-700 text-white"
               disabled={!file || !selectedUser || isUploading}
             >
               {isUploading ? (

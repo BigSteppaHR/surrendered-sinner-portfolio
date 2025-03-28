@@ -1,311 +1,583 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@12.18.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@12.13.0";
 
-// Define enhanced CORS headers with Stripe signature support
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Max-Age': '86400', // 24 hours cache for preflight requests
-};
+// Use Supabase service role key to bypass RLS policies
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: corsHeaders,
-      status: 204,
-    });
+serve(async (req) => {
+  // This is your Stripe CLI webhook secret for testing
+  const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+  
+  // Handle missing secret
+  if (!stripeWebhookSecret) {
+    console.error('Missing STRIPE_WEBHOOK_SECRET env var');
+    return new Response(
+      JSON.stringify({ error: 'Webhook secret not configured' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
+  const signature = req.headers.get('stripe-signature');
+  
+  // Handle missing signature
+  if (!signature) {
+    console.error('Missing stripe-signature header');
+    return new Response(
+      JSON.stringify({ error: 'Missing stripe signature' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Get request body
+  const body = await req.text();
+  let event;
+
   try {
-    // Get the stripe signature from the headers
-    const signature = req.headers.get('stripe-signature');
-    
-    if (!signature) {
-      console.error('Error: Missing Stripe signature');
-      return new Response(
-        JSON.stringify({ error: 'Missing Stripe signature' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Get the webhook secret and API key from environment variables
-    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://tcxwvsyfqjcgglyqlahl.supabase.co';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!webhookSecret || !stripeKey) {
-      console.error('Error: Missing required environment variables');
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Get the raw request body
-    const rawBody = await req.text();
-    
-    // Initialize Stripe with explicit API version
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: '2023-10-16', // Using a stable version
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+      apiVersion: '2023-10-16',
+      httpClient: Stripe.createFetchHttpClient(),
     });
     
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      }
-    });
+    // Verify webhook signature
+    event = stripe.webhooks.constructEvent(body, signature, stripeWebhookSecret);
+  } catch (err) {
+    console.error(`Webhook signature verification failed: ${err.message}`);
+    return new Response(
+      JSON.stringify({ error: `Webhook signature verification failed: ${err.message}` }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
-    // Verify and construct the event
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-    } catch (err) {
-      console.error(`⚠️ Webhook signature verification failed:`, err.message);
-      return new Response(
-        JSON.stringify({ error: `Webhook signature verification failed` }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    console.log(`✅ Event received: ${event.type}`);
-    
-    // Process different event types
+  // Handle the event
+  console.log(`Processing webhook event: ${event.type}`);
+  
+  try {
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        console.log(`💰 Payment successful for session: ${session.id}`);
-        
-        // Process completed checkout session
-        const customerId = session.customer;
-        const userId = session.metadata?.user_id;
-        
-        try {
-          // If we have a user ID in the metadata, update records in our database
-          if (userId) {
-            // First, check if we already have this customer in our records
-            const { data: existingCustomer } = await supabase
-              .from('stripe_customers')
-              .select('*')
-              .eq('user_id', userId)
-              .maybeSingle();
-              
-            // If not, store the customer ID for future reference
-            if (!existingCustomer) {
-              await supabase.from('stripe_customers').insert({
-                user_id: userId,
-                stripe_customer_id: customerId
-              });
-            }
-            
-            // Update payment history with successful payment
-            await supabase.from('payment_history').insert({
-              user_id: userId,
-              amount: session.amount_total,
-              currency: session.currency,
-              status: 'completed',
-              payment_method: 'stripe',
-              stripe_payment_id: session.id,
-              description: session.metadata?.description || 'Stripe Checkout',
-              metadata: {
-                checkout_session_id: session.id,
-                customer_id: customerId,
-                payment_intent: session.payment_intent
-              }
-            });
-            
-            // If it's a subscription (recurring payment)
-            if (session.mode === 'subscription' && session.subscription) {
-              // Store the subscription in our database
-              await supabase.from('subscriptions').insert({
-                user_id: userId,
-                stripe_subscription_id: session.subscription,
-                status: 'active',
-                plan_id: session.metadata?.plan_id || 'Unknown',
-                metadata: {
-                  checkout_session_id: session.id,
-                  customer_id: customerId
-                }
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Error processing checkout session:', error);
-        }
+      // Payment events
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object);
         break;
-      }
-      
-      case 'customer.subscription.created': {
-        const subscription = event.data.object;
-        console.log(`🔄 Subscription created: ${subscription.id}`);
-        
-        try {
-          // This event is more for logging - we already created the subscription record in checkout.session.completed
-          console.log('New subscription:', subscription.id);
-          console.log('Status:', subscription.status);
-          console.log('Customer:', subscription.customer);
-          
-          // We could update additional details here if needed
-        } catch (error) {
-          console.error('Error processing subscription creation:', error);
-        }
+      case 'payment_intent.payment_failed':
+        await handlePaymentIntentFailed(event.data.object);
         break;
-      }
-      
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        console.log(`🔄 Subscription updated: ${subscription.id}`);
         
-        try {
-          // Find the user associated with this subscription
-          const { data: customerData } = await supabase
-            .from('stripe_customers')
-            .select('user_id')
-            .eq('stripe_customer_id', subscription.customer)
-            .maybeSingle();
-            
-          if (customerData) {
-            // Update the subscription status in our database
-            await supabase
-              .from('subscriptions')
-              .update({ 
-                status: subscription.status,
-                current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-                current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
-              })
-              .eq('stripe_subscription_id', subscription.id);
-            
-            // Additional processing based on status changes
-            if (subscription.status === 'active') {
-              console.log('Subscription is now active');
-              
-              // You might want to update user roles or permissions here
-            } else if (subscription.status === 'past_due') {
-              console.log('Subscription is past due');
-              
-              // You might want to send the user a notification
-            } else if (subscription.status === 'canceled') {
-              console.log('Subscription was canceled');
-              
-              // Remove any premium access
-            }
-          }
-        } catch (error) {
-          console.error('Error processing subscription update:', error);
-        }
+      // Subscription events
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object);
         break;
-      }
-      
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        console.log(`💵 Invoice payment succeeded: ${invoice.id}`);
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object);
+        break;
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object);
+        break;
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(event.data.object);
+        break;
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object);
+        break;
         
-        try {
-          // Find the user associated with this customer
-          const { data: customerData } = await supabase
-            .from('stripe_customers')
-            .select('user_id')
-            .eq('stripe_customer_id', invoice.customer)
-            .maybeSingle();
-            
-          if (customerData) {
-            // Record the successful payment
-            await supabase.from('payment_history').insert({
-              user_id: customerData.user_id,
-              amount: invoice.amount_paid,
-              currency: invoice.currency,
-              status: 'completed',
-              payment_method: 'stripe',
-              stripe_payment_id: invoice.id,
-              description: invoice.description || 'Subscription Payment',
-              metadata: {
-                invoice_id: invoice.id,
-                customer_id: invoice.customer,
-                subscription_id: invoice.subscription
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Error processing invoice payment:', error);
-        }
-        break;
-      }
-      
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-        console.log(`❌ Invoice payment failed: ${invoice.id}`);
-        
-        try {
-          // Find the user associated with this customer
-          const { data: customerData } = await supabase
-            .from('stripe_customers')
-            .select('user_id')
-            .eq('stripe_customer_id', invoice.customer)
-            .maybeSingle();
-            
-          if (customerData) {
-            // Record the failed payment
-            await supabase.from('payment_history').insert({
-              user_id: customerData.user_id,
-              amount: invoice.amount_due,
-              currency: invoice.currency,
-              status: 'failed',
-              payment_method: 'stripe',
-              stripe_payment_id: invoice.id,
-              description: 'Failed payment: ' + (invoice.description || 'Subscription Payment'),
-              metadata: {
-                invoice_id: invoice.id,
-                customer_id: invoice.customer,
-                subscription_id: invoice.subscription,
-                attempt_count: invoice.attempt_count
-              }
-            });
-            
-            // You might want to notify the user or admin about the failed payment
-          }
-        } catch (error) {
-          console.error('Error processing failed invoice payment:', error);
-        }
-        break;
-      }
-      
-      // Add other event types as needed
-      
+      // Default case - log but don't handle
       default:
-        console.log(`🤔 Unhandled event type: ${event.type}`);
+        console.log(`Unhandled event type: ${event.type}`);
     }
 
-    // Return a successful response
     return new Response(
       JSON.stringify({ received: true }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    console.error(`💥 Webhook error: ${error.message}`);
+  } catch (err) {
+    console.error(`Error handling webhook event: ${err.message}`);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ error: `Error handling webhook: ${err.message}` }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 });
+
+// Helper to make API calls to our Supabase backend
+async function supabaseAdmin(
+  path: string, 
+  method: string = 'GET', 
+  body: any = null
+) {
+  const url = `${supabaseUrl}${path}`;
+  
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${supabaseServiceKey}`,
+      'apikey': supabaseAnonKey,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  };
+  
+  if (body && (method === 'POST' || method === 'PATCH' || method === 'PUT')) {
+    options.body = JSON.stringify(body);
+  }
+  
+  const response = await fetch(url, options);
+  
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase API error: ${response.status} ${text}`);
+  }
+  
+  if (response.status !== 204) { // 204 = No Content
+    return await response.json();
+  }
+  return null;
+}
+
+// Create admin notification
+async function createAdminNotification(
+  title: string,
+  message: string,
+  type: 'info' | 'success' | 'warning' | 'error',
+  source: string,
+  actionUrl: string = ''
+) {
+  try {
+    await supabaseAdmin(
+      '/rest/v1/admin_notifications',
+      'POST',
+      {
+        title,
+        message,
+        notification_type: type,
+        source,
+        action_url: actionUrl,
+        created_at: new Date().toISOString()
+      }
+    );
+  } catch (error) {
+    console.error('Error creating admin notification:', error);
+  }
+}
+
+async function handlePaymentIntentSucceeded(paymentIntent: any) {
+  console.log('PaymentIntent succeeded:', paymentIntent.id);
+  
+  // Check if this payment is linked to our payment records
+  if (paymentIntent.metadata?.payment_id) {
+    const paymentId = paymentIntent.metadata.payment_id;
+    
+    try {
+      // Update payment status in our database
+      await supabaseAdmin(
+        `/rest/v1/payments?id=eq.${paymentId}`,
+        'PATCH',
+        {
+          status: 'completed',
+          payment_intent_id: paymentIntent.id,
+          payment_method: paymentIntent.payment_method_types[0],
+          completed_at: new Date().toISOString(),
+          metadata: {
+            ...paymentIntent.metadata,
+            amount_cents: paymentIntent.amount,
+            payment_method_details: JSON.stringify(paymentIntent.payment_method_details)
+          }
+        }
+      );
+      
+      // Get payment to find user
+      const payments = await supabaseAdmin(
+        `/rest/v1/payments?id=eq.${paymentId}&select=*`
+      );
+      
+      if (payments && payments.length > 0) {
+        const payment = payments[0];
+        
+        // If we have a user_id, create notification
+        if (payment.user_id) {
+          await supabaseAdmin(
+            '/rest/v1/user_notifications',
+            'POST',
+            {
+              user_id: payment.user_id,
+              title: 'Payment Successful',
+              message: `Your payment of $${(paymentIntent.amount / 100).toFixed(2)} has been processed successfully.`,
+              notification_type: 'success',
+              is_read: false
+            }
+          );
+          
+          // Update user balance if necessary
+          if (payment.metadata?.add_to_balance) {
+            // Get current balance
+            const profiles = await supabaseAdmin(
+              `/rest/v1/profiles?id=eq.${payment.user_id}&select=balance`
+            );
+            
+            if (profiles && profiles.length > 0) {
+              const currentBalance = profiles[0].balance || 0;
+              const newBalance = currentBalance + (paymentIntent.amount / 100); // Convert cents to dollars
+              
+              await supabaseAdmin(
+                `/rest/v1/profiles?id=eq.${payment.user_id}`,
+                'PATCH',
+                { balance: newBalance }
+              );
+            }
+          }
+        }
+        
+        // Create admin notification
+        await createAdminNotification(
+          'Payment Successful',
+          `Payment of $${(paymentIntent.amount / 100).toFixed(2)} completed (ID: ${paymentId})`,
+          'success',
+          'stripe-webhook',
+          '/admin/payments'
+        );
+      }
+    } catch (error) {
+      console.error('Error handling payment success:', error);
+    }
+  }
+}
+
+async function handlePaymentIntentFailed(paymentIntent: any) {
+  console.log('PaymentIntent failed:', paymentIntent.id);
+  
+  if (paymentIntent.metadata?.payment_id) {
+    const paymentId = paymentIntent.metadata.payment_id;
+    
+    try {
+      // Update payment status in database
+      await supabaseAdmin(
+        `/rest/v1/payments?id=eq.${paymentId}`,
+        'PATCH',
+        {
+          status: 'failed',
+          payment_intent_id: paymentIntent.id,
+          metadata: {
+            ...paymentIntent.metadata,
+            error: paymentIntent.last_payment_error?.message || 'Payment failed'
+          }
+        }
+      );
+      
+      // Get payment to find user
+      const payments = await supabaseAdmin(
+        `/rest/v1/payments?id=eq.${paymentId}&select=*`
+      );
+      
+      if (payments && payments.length > 0) {
+        const payment = payments[0];
+        
+        // If we have a user_id, create notification
+        if (payment.user_id) {
+          await supabaseAdmin(
+            '/rest/v1/user_notifications',
+            'POST',
+            {
+              user_id: payment.user_id,
+              title: 'Payment Failed',
+              message: `Your payment of $${(paymentIntent.amount / 100).toFixed(2)} failed. Reason: ${paymentIntent.last_payment_error?.message || 'Unknown error'}`,
+              notification_type: 'error',
+              is_read: false
+            }
+          );
+        }
+        
+        // Create admin notification
+        await createAdminNotification(
+          'Payment Failed',
+          `Payment of $${(paymentIntent.amount / 100).toFixed(2)} failed (ID: ${paymentId})`,
+          'error',
+          'stripe-webhook',
+          '/admin/payments'
+        );
+      }
+    } catch (error) {
+      console.error('Error handling payment failure:', error);
+    }
+  }
+}
+
+async function handleSubscriptionCreated(subscription: any) {
+  console.log('Subscription created:', subscription.id);
+  
+  // Extract user ID from metadata
+  const userId = subscription.metadata?.user_id;
+  const subscriptionId = subscription.metadata?.subscription_id;
+  const quizResultId = subscription.metadata?.quiz_result_id;
+  
+  if (userId && subscriptionId) {
+    try {
+      // Create or update subscription record
+      await supabaseAdmin(
+        `/rest/v1/user_subscription_purchases`,
+        'POST',
+        {
+          user_id: userId,
+          subscription_id: subscriptionId,
+          quiz_result_id: quizResultId || null,
+          status: subscription.status,
+          stripe_subscription_id: subscription.id,
+          stripe_customer_id: subscription.customer,
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      );
+      
+      // Create user notification
+      if (userId) {
+        await supabaseAdmin(
+          '/rest/v1/user_notifications',
+          'POST',
+          {
+            user_id: userId,
+            title: 'Subscription Started',
+            message: 'Your subscription has been created successfully.',
+            notification_type: 'success',
+            is_read: false
+          }
+        );
+      }
+      
+      // Create admin notification
+      await createAdminNotification(
+        'New Subscription',
+        `User ${userId} has created a new subscription (ID: ${subscription.id})`,
+        'info',
+        'stripe-webhook',
+        '/admin/subscriptions'
+      );
+    } catch (error) {
+      console.error('Error handling subscription creation:', error);
+    }
+  }
+}
+
+async function handleSubscriptionUpdated(subscription: any) {
+  console.log('Subscription updated:', subscription.id);
+  
+  try {
+    // Find our subscription record
+    const subs = await supabaseAdmin(
+      `/rest/v1/user_subscription_purchases?stripe_subscription_id=eq.${subscription.id}&select=*`
+    );
+    
+    if (subs && subs.length > 0) {
+      const sub = subs[0];
+      
+      // Update our record with new status and dates
+      await supabaseAdmin(
+        `/rest/v1/user_subscription_purchases?id=eq.${sub.id}`,
+        'PATCH',
+        {
+          status: subscription.status,
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      );
+      
+      // If subscription status changed, notify user
+      if (sub.status !== subscription.status) {
+        if (subscription.status === 'active' && sub.status !== 'active') {
+          await supabaseAdmin(
+            '/rest/v1/user_notifications',
+            'POST',
+            {
+              user_id: sub.user_id,
+              title: 'Subscription Activated',
+              message: 'Your subscription is now active.',
+              notification_type: 'success',
+              is_read: false
+            }
+          );
+        } else if (subscription.status === 'canceled' || subscription.status === 'cancelled') {
+          await supabaseAdmin(
+            '/rest/v1/user_notifications',
+            'POST',
+            {
+              user_id: sub.user_id,
+              title: 'Subscription Cancelled',
+              message: 'Your subscription has been cancelled.',
+              notification_type: 'info',
+              is_read: false
+            }
+          );
+        } else if (subscription.status === 'past_due') {
+          await supabaseAdmin(
+            '/rest/v1/user_notifications',
+            'POST',
+            {
+              user_id: sub.user_id,
+              title: 'Payment Past Due',
+              message: 'Your subscription payment is past due. Please update your payment method.',
+              notification_type: 'warning',
+              is_read: false
+            }
+          );
+        }
+        
+        // Create admin notification for important status changes
+        if (['canceled', 'past_due', 'unpaid'].includes(subscription.status)) {
+          await createAdminNotification(
+            `Subscription ${subscription.status}`,
+            `Subscription for user ${sub.user_id} is now ${subscription.status} (ID: ${subscription.id})`,
+            'warning',
+            'stripe-webhook',
+            '/admin/subscriptions'
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error handling subscription update:', error);
+  }
+}
+
+async function handleSubscriptionDeleted(subscription: any) {
+  console.log('Subscription deleted:', subscription.id);
+  
+  try {
+    // Find our subscription record
+    const subs = await supabaseAdmin(
+      `/rest/v1/user_subscription_purchases?stripe_subscription_id=eq.${subscription.id}&select=*`
+    );
+    
+    if (subs && subs.length > 0) {
+      const sub = subs[0];
+      
+      // Update our record
+      await supabaseAdmin(
+        `/rest/v1/user_subscription_purchases?id=eq.${sub.id}`,
+        'PATCH',
+        {
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        }
+      );
+      
+      // Notify user
+      await supabaseAdmin(
+        '/rest/v1/user_notifications',
+        'POST',
+        {
+          user_id: sub.user_id,
+          title: 'Subscription Ended',
+          message: 'Your subscription has ended.',
+          notification_type: 'info',
+          is_read: false
+        }
+      );
+      
+      // Create admin notification
+      await createAdminNotification(
+        'Subscription Ended',
+        `Subscription for user ${sub.user_id} has ended (ID: ${subscription.id})`,
+        'info',
+        'stripe-webhook',
+        '/admin/subscriptions'
+      );
+    }
+  } catch (error) {
+    console.error('Error handling subscription deletion:', error);
+  }
+}
+
+async function handleInvoicePaymentSucceeded(invoice: any) {
+  console.log('Invoice payment succeeded:', invoice.id);
+  
+  if (invoice.subscription) {
+    try {
+      // Find subscription in our records
+      const subs = await supabaseAdmin(
+        `/rest/v1/user_subscription_purchases?stripe_subscription_id=eq.${invoice.subscription}&select=*`
+      );
+      
+      if (subs && subs.length > 0) {
+        const sub = subs[0];
+        
+        // Create payment record
+        await supabaseAdmin(
+          `/rest/v1/payments`,
+          'POST',
+          {
+            user_id: sub.user_id,
+            amount: invoice.amount_paid / 100, // Convert from cents
+            currency: invoice.currency,
+            status: 'completed',
+            payment_method: invoice.payment_method_types[0] || 'card',
+            payment_intent_id: invoice.payment_intent,
+            metadata: {
+              invoice_id: invoice.id,
+              subscription_id: invoice.subscription,
+              description: `Subscription payment for ${sub.subscription_id}`
+            },
+            completed_at: new Date().toISOString()
+          }
+        );
+        
+        // Notify user
+        await supabaseAdmin(
+          '/rest/v1/user_notifications',
+          'POST',
+          {
+            user_id: sub.user_id,
+            title: 'Payment Received',
+            message: `We've received your payment of $${(invoice.amount_paid / 100).toFixed(2)} for your subscription.`,
+            notification_type: 'success',
+            is_read: false
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Error handling invoice payment:', error);
+    }
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice: any) {
+  console.log('Invoice payment failed:', invoice.id);
+  
+  if (invoice.subscription) {
+    try {
+      // Find subscription in our records
+      const subs = await supabaseAdmin(
+        `/rest/v1/user_subscription_purchases?stripe_subscription_id=eq.${invoice.subscription}&select=*`
+      );
+      
+      if (subs && subs.length > 0) {
+        const sub = subs[0];
+        
+        // Notify user
+        await supabaseAdmin(
+          '/rest/v1/user_notifications',
+          'POST',
+          {
+            user_id: sub.user_id,
+            title: 'Payment Failed',
+            message: `Your subscription payment of $${(invoice.amount_due / 100).toFixed(2)} failed. Please update your payment method.`,
+            notification_type: 'error',
+            is_read: false,
+            priority: 'high'
+          }
+        );
+        
+        // Create admin notification
+        await createAdminNotification(
+          'Subscription Payment Failed',
+          `Payment for subscription ${invoice.subscription} failed (User: ${sub.user_id})`,
+          'error',
+          'stripe-webhook',
+          '/admin/subscriptions'
+        );
+      }
+    } catch (error) {
+      console.error('Error handling invoice payment failure:', error);
+    }
+  }
+}

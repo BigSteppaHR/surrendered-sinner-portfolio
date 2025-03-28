@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 let stripePromise: Promise<Stripe | null> | null = null;
 
 // Define the publishable key - using environment variable with fallback for development
-const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51NyDWJAfsLmHAfOzbscm6EMsc2zGIp3VCz7dXJwTNAgzyjU62h13qeUWI3j8zNpIImBrzLnRkKiLIi7AuxmfaXj600UBcmzWsn';
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
 
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
@@ -146,7 +146,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     <Elements 
       stripe={stripePromise}
       options={{
-        mode: 'payment',
+        mode: 'subscription', // Changed from 'payment' to 'subscription'
         appearance: {
           theme: 'night',
           variables: {
@@ -158,7 +158,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           }
         },
         currency: 'usd',
-        amount: 1000, // Default amount in cents (e.g., $10.00) for initial setup
+        amount: 5999, // Default amount in cents (e.g., $59.99) for initial setup
         paymentMethodTypes: ['card'],
         locale: 'en'
       }}
