@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [stripeAvailable, setStripeAvailable] = useState(true);
 
-  // Check if Stripe is properly initialized
   useEffect(() => {
     const checkStripeConnection = async () => {
       try {
@@ -72,7 +70,6 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
     setIsProcessing(true);
     
     try {
-      // Create a payment record in database first
       const { data: paymentRecord, error: dbError } = await supabase
         .from('payments')
         .insert({
@@ -83,11 +80,14 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
           metadata: { description: `Adding ${amountValue.toFixed(2)} to account balance` }
         })
         .select()
+        .headers({
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        })
         .single();
         
       if (dbError) throw new Error(`Database error: ${dbError.message}`);
       
-      // Create payment intent through Stripe
       const { data, error } = await supabase.functions.invoke('stripe-helper', {
         body: { 
           action: 'createPaymentIntent',
@@ -104,13 +104,11 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
         throw new Error(`Payment initialization failed: ${error.message}`);
       }
       
-      // For now, simulate a payment process
       toast({
         title: "Processing payment",
         description: `Adding $${amountValue.toFixed(2)} to your account balance...`
       });
       
-      // Simulated delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       toast({
@@ -118,10 +116,6 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
         description: `Your payment for $${amountValue.toFixed(2)} has been initiated. You will be redirected to complete the payment.`
       });
       
-      // In a real implementation, this would redirect to a payment page
-      // window.location.href = `/payment-process?client_secret=${data.client_secret}&payment_id=${paymentRecord.id}&amount=${amountValue}`;
-      
-      // Reset form
       setAmount("50");
     } catch (error: any) {
       console.error("Error processing payment:", error);

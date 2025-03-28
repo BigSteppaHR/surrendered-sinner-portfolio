@@ -45,12 +45,16 @@ const TrainingPlans = () => {
       
       const { data, error } = await withErrorHandling(
         async () => {
-          // Add await here to properly handle the Promise
+          // Add proper headers to prevent 406 errors
           return await supabase
             .from('workout_plans')
             .select('*')
             .eq('user_id', profile.id)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .headers({
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            });
         },
         'Failed to load workout plans'
       );
@@ -82,12 +86,16 @@ const TrainingPlans = () => {
     try {
       const { data, error } = await withErrorHandling(
         async () => {
-          // Add await here to properly handle the Promise
+          // Add proper headers to prevent 406 errors
           return await supabase
             .from('custom_plan_results')
             .select('*')
             .eq('user_id', profile.id)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .headers({
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            });
         },
         'Failed to load custom plan results'
       );
