@@ -162,8 +162,8 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        // This enables Apple Pay, Google Pay, and other digital wallets
-        paymentMethodConfiguration: ['card', 'apple_pay', 'google_pay'],
+        // Fix: paymentMethodConfiguration should be a string, not an array
+        paymentMethodConfiguration: 'card',
         locale: 'en'
       }}
     >
