@@ -1,330 +1,237 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { User, LayoutDashboard, Calendar, ChartBar, CreditCard, LifeBuoy, Settings, Menu, X, LogOut, FileDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { 
+  Home, 
+  User, 
+  Calendar, 
+  LineChart, 
+  Download, 
+  CreditCard, 
+  HelpCircle, 
+  Settings, 
+  Menu, 
+  X, 
+  LogOut, 
+  FileText,
+  ShoppingBag
+} from 'lucide-react';
+import Logo from '@/components/Logo';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
-// Define types for subscription and balance data
-interface UserBalance {
-  balance: number;
-  currency: string;
+interface NavItemProps {
+  icon: React.ReactElement;
+  children: React.ReactNode;
+  to: string;
+  active: boolean;
 }
 
-interface UserSubscription {
-  status: string;
-  plan_id: string;
-  current_period_end: string | null;
-}
+const NavItem = ({ icon, children, to, active }: NavItemProps) => {
+  return (
+    <li>
+      <Link
+        to={to}
+        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all ${
+          active 
+            ? 'text-white bg-transparent border border-[#ea384c] shadow-[0_0_10px_rgba(234,56,76,0.3)]' 
+            : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+        }`}
+      >
+        {icon && React.cloneElement(icon, { 
+          size: 18, 
+          className: active ? 'text-[#ea384c]' : '' 
+        })}
+        <span>{children}</span>
+      </Link>
+    </li>
+  );
+};
 
 const DashboardNav = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [balance, setBalance] = useState<UserBalance | null>(null);
-  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dailyQuote, setDailyQuote] = useState<{quote: string, author: string} | null>(null);
   const location = useLocation();
-  const { logout, profile, user } = useAuth();
-
+  const { user, signOut } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { toast } = useToast();
+  
+  // Close mobile menu when location changes
   useEffect(() => {
-    if (user) {
-      fetchUserData();
-      fetchDailyQuote();
-      
-      // Set up realtime subscription for payment balance updates
-      const balanceChannel = supabase
-        .channel('payment-balance-changes')
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'payment_balance', filter: `user_id=eq.${user.id}` }, 
-          () => fetchUserData()
-        )
-        .subscribe();
-        
-      // Set up realtime subscription for subscription updates
-      const subChannel = supabase
-        .channel('subscription-changes')
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'subscriptions', filter: `user_id=eq.${user.id}` }, 
-          () => fetchUserData()
-        )
-        .subscribe();
-      
-      return () => {
-        supabase.removeChannel(balanceChannel);
-        supabase.removeChannel(subChannel);
-      };
-    }
-  }, [user]);
-
-  const fetchUserData = async () => {
-    if (!user?.id) return;
-    
-    setIsLoading(true);
-    
+    setIsMobileMenuOpen(false);
+  }, [location]);
+  
+  const handleSignOut = async () => {
     try {
-      // Fetch user balance
-      const { data: balanceData, error: balanceError } = await supabase
-        .from('payment_balance')
-        .select('balance, currency')
-        .eq('user_id', user.id)
-        .single();
-        
-      if (balanceError && balanceError.code !== 'PGRST116') {
-        // PGRST116 is "no rows returned" - not an error in this case
-        console.error('Error fetching balance:', balanceError);
-      }
-      
-      // Fetch active subscription if any
-      const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('subscriptions')
-        .select('status, plan_id, current_period_end')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single();
-        
-      if (subscriptionError && subscriptionError.code !== 'PGRST116') {
-        console.error('Error fetching subscription:', subscriptionError);
-      }
-      
-      if (balanceData) {
-        setBalance(balanceData);
-      }
-      
-      if (subscriptionData) {
-        setSubscription(subscriptionData);
-      }
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account.",
+      });
     } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
-      setIsLoading(false);
+      console.error("Error signing out:", error);
+      toast({
+        title: "Error signing out",
+        description: "There was a problem signing out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
-
-  const fetchDailyQuote = async () => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_quote_of_the_day');
-        
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        setDailyQuote(data[0]);
-      }
-    } catch (error) {
-      console.error('Error fetching daily quote:', error);
-    }
-  };
-
+  
   const isActive = (path: string) => {
     return location.pathname === path;
   };
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const formatCurrency = (amount: number, currency: string = 'USD'): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'N/A';
-    
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const NavItem = ({ path, icon, label }: { path: string; icon: React.ReactNode; label: string }) => (
-    <Link to={path} className={cn(
-      "flex items-center text-sm py-3 px-4 rounded-md transition-colors",
-      isActive(path) 
-        ? "bg-[#ea384c] text-white" 
-        : "text-gray-400 hover:text-white hover:bg-zinc-800"
-    )}>
-      {icon}
-      <span className="ml-3">{label}</span>
-    </Link>
-  );
-
+  
   return (
     <>
-      {/* Mobile Menu Button */}
-      <div className="fixed top-4 left-4 z-30 md:hidden">
+      {/* Mobile menu button */}
+      <div className="fixed top-4 left-4 z-50 md:hidden">
         <Button
           variant="outline"
           size="icon"
-          onClick={toggleMobileMenu}
-          className="border-[#333] bg-black/50 backdrop-blur-md"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="bg-zinc-900 border-zinc-700"
         >
-          {isMobileMenuOpen ? 
-            <X className="h-5 w-5 text-white" /> : 
-            <Menu className="h-5 w-5 text-white" />
-          }
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </Button>
       </div>
-
-      {/* Mobile Menu Overlay */}
+      
+      {/* Mobile menu overlay */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/80 z-20 md:hidden" 
-          onClick={toggleMobileMenu}
+          className="fixed inset-0 bg-black/80 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
+      
       {/* Sidebar */}
-      <div className={cn(
-        "fixed top-0 left-0 bottom-0 z-20 w-64 bg-[#0a0a0a] border-r border-[#222] overflow-y-auto transition-transform duration-300 transform",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-      )}>
-        <div className="px-4 py-5 flex items-center border-b border-[#222]">
-          <img 
-            src="/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png" 
-            alt="Logo" 
-            className="h-8 w-8 mr-2"
-          />
-          <h2 className="text-xl font-bold text-white">Dashboard</h2>
-        </div>
-
-        {/* Daily Quote Section */}
-        {dailyQuote && (
-          <div className="p-4 border-b border-[#222] bg-[#111]">
-            <p className="text-sm italic text-gray-300">"{dailyQuote.quote}"</p>
-            <p className="text-xs text-right text-gray-400 mt-1">— {dailyQuote.author || 'Unknown'}</p>
+      <aside 
+        className={`fixed top-0 left-0 h-full w-64 bg-zinc-900 border-r border-zinc-800 z-50 transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-4 flex items-center justify-center">
+            <Logo size="small" />
           </div>
-        )}
-
-        <div className="p-4">
-          <div className="mb-6">
-            <small className="text-xs text-gray-500 uppercase font-bold tracking-wider">Navigation</small>
-            <nav className="mt-2 space-y-1">
+          
+          <Separator className="bg-zinc-800" />
+          
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto py-4 px-3">
+            <ul className="space-y-1">
               <NavItem 
-                path="/dashboard" 
-                icon={<LayoutDashboard className="h-4 w-4" />} 
-                label="Overview" 
-              />
-              <NavItem 
-                path="/dashboard/account" 
-                icon={<User className="h-4 w-4" />} 
-                label="Account" 
-              />
-              <NavItem 
-                path="/dashboard/plans" 
-                icon={<LayoutDashboard className="h-4 w-4" />} 
-                label="Training Plans" 
-              />
-              <NavItem 
-                path="/dashboard/schedule" 
-                icon={<Calendar className="h-4 w-4" />} 
-                label="Schedule" 
-              />
-              <NavItem 
-                path="/dashboard/progress" 
-                icon={<ChartBar className="h-4 w-4" />} 
-                label="Progress" 
-              />
-              <NavItem 
-                path="/dashboard/downloads" 
-                icon={<FileDown className="h-4 w-4" />} 
-                label="Downloads" 
-              />
-              <NavItem 
-                path="/dashboard/payment" 
-                icon={<CreditCard className="h-4 w-4" />} 
-                label="Payment" 
-              />
-              <NavItem 
-                path="/dashboard/support" 
-                icon={<LifeBuoy className="h-4 w-4" />} 
-                label="Support" 
-              />
-              <NavItem 
-                path="/dashboard/settings" 
-                icon={<Settings className="h-4 w-4" />} 
-                label="Settings" 
-              />
-            </nav>
-          </div>
-
-          <div className="mt-auto">
-            <div className="border-t border-[#222] pt-4">
-              {/* Account Balance & Subscription Status */}
-              {isLoading ? (
-                <div className="space-y-2 p-4">
-                  <Skeleton className="h-4 w-24 bg-gray-800" />
-                  <Skeleton className="h-3 w-32 bg-gray-800" />
-                  <Separator className="my-2 bg-gray-800" />
-                  <Skeleton className="h-4 w-28 bg-gray-800" />
-                  <Skeleton className="h-3 w-36 bg-gray-800" />
-                </div>
-              ) : (
-                <div className="p-4 bg-[#111] rounded-md mb-4 text-sm">
-                  {/* Balance Section */}
-                  <div className="flex items-center mb-1">
-                    <CreditCard className="h-3.5 w-3.5 text-[#ea384c] mr-1.5" />
-                    <span className="font-medium text-sm">Account Balance</span>
-                  </div>
-                  <div className="ml-5 text-xs text-gray-400 mb-2">
-                    {balance ? formatCurrency(balance.balance, balance.currency) : "$0.00"}
-                  </div>
-                  
-                  <Separator className="my-2 bg-[#222]" />
-                  
-                  {/* Subscription Section */}
-                  <div className="flex items-center mb-1">
-                    <Calendar className="h-3.5 w-3.5 text-[#ea384c] mr-1.5" />
-                    <span className="font-medium text-sm">Subscription</span>
-                  </div>
-                  <div className="ml-5 text-xs">
-                    {subscription ? (
-                      <>
-                        <div className="flex items-center">
-                          <span className="text-white">
-                            {subscription.plan_id.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}
-                          </span>
-                          <span className="ml-1.5 px-1 py-0.5 text-[10px] bg-[#ea384c] text-white rounded-full">
-                            {subscription.status}
-                          </span>
-                        </div>
-                        {subscription.current_period_end && (
-                          <div className="text-[10px] text-gray-400 flex items-center mt-0.5">
-                            <Calendar className="h-2.5 w-2.5 mr-1" />
-                            Renews: {formatDate(subscription.current_period_end)}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-gray-400">No active subscription</span>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              <div className="mb-4 px-4">
-                <div className="text-sm font-medium text-white">{profile?.full_name}</div>
-                <div className="text-xs text-gray-400 truncate">{profile?.email}</div>
-              </div>
-              <button 
-                onClick={logout}
-                className="w-full flex items-center text-sm py-3 px-4 rounded-md transition-colors text-gray-400 hover:text-white hover:bg-zinc-800"
+                icon={<Home />} 
+                to="/dashboard" 
+                active={isActive('/dashboard')}
               >
-                <LogOut className="h-4 w-4" />
-                <span className="ml-3">Logout</span>
-              </button>
+                Dashboard
+              </NavItem>
+              
+              <NavItem 
+                icon={<User />} 
+                to="/dashboard/account" 
+                active={isActive('/dashboard/account')}
+              >
+                My Account
+              </NavItem>
+              
+              <NavItem 
+                icon={<FileText />} 
+                to="/dashboard/plans" 
+                active={isActive('/dashboard/plans')}
+              >
+                Training Plans
+              </NavItem>
+              
+              <NavItem 
+                icon={<Calendar />} 
+                to="/dashboard/schedule" 
+                active={isActive('/dashboard/schedule')}
+              >
+                Schedule
+              </NavItem>
+              
+              <NavItem 
+                icon={<LineChart />} 
+                to="/dashboard/progress" 
+                active={isActive('/dashboard/progress')}
+              >
+                Progress
+              </NavItem>
+              
+              <NavItem 
+                icon={<Download />} 
+                to="/dashboard/downloads" 
+                active={isActive('/dashboard/downloads')}
+              >
+                Downloads
+              </NavItem>
+              
+              <NavItem 
+                icon={<CreditCard />} 
+                to="/dashboard/payment" 
+                active={isActive('/dashboard/payment')}
+              >
+                Payment
+              </NavItem>
+              
+              <NavItem 
+                icon={<ShoppingBag />} 
+                to="https://alphanutritionlabs.com" 
+                active={false}
+              >
+                Shop
+              </NavItem>
+              
+              <NavItem 
+                icon={<HelpCircle />} 
+                to="/dashboard/support" 
+                active={isActive('/dashboard/support')}
+              >
+                Support
+              </NavItem>
+              
+              <NavItem 
+                icon={<Settings />} 
+                to="/dashboard/settings" 
+                active={isActive('/dashboard/settings')}
+              >
+                Settings
+              </NavItem>
+            </ul>
+          </nav>
+          
+          <Separator className="bg-zinc-800" />
+          
+          {/* User info and logout */}
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-white">
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div className="ml-2">
+                  <div className="text-sm font-medium text-white truncate max-w-[150px]">
+                    {user?.email}
+                  </div>
+                  <div className="text-xs text-zinc-400">Member</div>
+                </div>
+              </div>
             </div>
+            
+            <Button 
+              variant="outline" 
+              className="w-full border-zinc-700 hover:bg-zinc-800 hover:text-white"
+              onClick={handleSignOut}
+            >
+              <LogOut size={16} className="mr-2" />
+              Sign Out
+            </Button>
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 };

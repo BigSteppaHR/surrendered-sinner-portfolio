@@ -21,7 +21,7 @@ interface StripeProviderProps {
   children: React.ReactNode;
 }
 
-const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
+export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const { toast } = useToast();
   const [isStripeLoaded, setIsStripeLoaded] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
@@ -95,8 +95,15 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           console.warn("Using test Stripe publishable key. Payments will only work in test mode.");
         }
         
-        // Initialize Stripe with the key
-        stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+        // Initialize Stripe with the key and additional configuration for Apple Pay
+        stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY, {
+          apiVersion: '2023-10-16',
+          // You can enable Apple Pay by uncommenting this and configuring the domain in Stripe Dashboard
+          /*
+          betas: ['applepay_beta_1'],
+          merchantIdentifier: 'merchant.com.alpha.fitness',
+          */
+        });
         
         // Test connection to Stripe via our edge function
         if (!connectionTested) {
@@ -141,7 +148,25 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   // We render the children even if Stripe isn't loaded, so the rest of the app can work
   // Components that need Stripe will handle the absence gracefully
   return (
-    <Elements stripe={stripePromise}>
+    <Elements 
+      stripe={stripePromise}
+      options={{
+        // Configure options for appearance and supported payment methods
+        appearance: {
+          theme: 'night',
+          variables: {
+            colorPrimary: '#ea384c',
+            colorBackground: '#18181b',
+            colorText: '#ffffff',
+            colorDanger: '#ef4444',
+            fontFamily: 'Inter, system-ui, sans-serif',
+          }
+        },
+        // This enables Apple Pay, Google Pay, and other digital wallets
+        paymentMethodConfiguration: ['card', 'apple_pay', 'google_pay'],
+        locale: 'en'
+      }}
+    >
       {children}
     </Elements>
   );

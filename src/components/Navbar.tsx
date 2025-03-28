@@ -1,162 +1,140 @@
-
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import Logo from './Logo';
+import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Menu, X, LogIn, UserCircle } from 'lucide-react';
-import Logo from '@/components/Logo';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { Menu } from "lucide-react";
+
+interface NavLinkProps {
+  to: string;
+  active: boolean;
+  children: React.ReactNode;
+}
+
+const NavLink: React.FC<NavLinkProps> = ({ to, active, children }) => {
+  return (
+    <Link
+      to={to}
+      className={`text-gray-300 hover:text-white transition-colors relative group ${active ? 'text-white' : ''}`}
+    >
+      {children}
+      {active && (
+        <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#ea384c] transform origin-left scale-x-100 transition-transform"></span>
+      )}
+    </Link>
+  );
+};
 
 const Navbar = () => {
+  const { isAuthenticated, user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  // Close menu when route changes
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [location.pathname]);
-
-  // Add scroll effect
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
   return (
-    <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-black/80 backdrop-blur-md shadow-md' : 'bg-transparent'
-      }`}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex-shrink-0">
-            <Link to="/" className="flex items-center">
-              <Logo size="small" />
-            </Link>
-          </div>
-          
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-1">
-            <NavLink to="/" label="Home" />
-            <NavLink to="/plans" label="Plans" />
-            <NavLink to="/plans-catalog" label="Plan Catalog" />
-            <NavLink to="/schedule" label="Schedule" />
-          </nav>
-          
-          {/* Authentication */}
-          <div className="hidden md:flex items-center space-x-4">
-            {isAuthenticated ? (
-              <Button 
-                variant="default" 
-                className="bg-sinner-red hover:bg-red-700"
-                onClick={() => navigate('/dashboard')}
-              >
-                <UserCircle className="h-4 w-4 mr-2" />
-                Dashboard
-              </Button>
-            ) : (
-              <Button 
-                variant="default" 
-                className="bg-sinner-red hover:bg-red-700"
-                onClick={() => navigate('/login')}
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Sign In
-              </Button>
-            )}
-          </div>
-          
-          {/* Mobile Navigation Button */}
-          <div className="md:hidden">
-            <button 
-              onClick={toggleMenu}
-              className="text-white p-2"
-              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-            >
-              {isMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
+    <nav className="bg-black py-4 border-b border-[#333]">
+      <div className="container mx-auto px-4 flex items-center justify-between">
+        <Logo />
+
+        <NavLinks />
+
+        <div className="hidden md:flex items-center space-x-4">
+          {isAuthenticated ? (
+            <>
+              <Link to="/dashboard">
+                <Button variant="secondary">Dashboard</Button>
+              </Link>
+              <Button onClick={signOut} variant="outline">Sign Out</Button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="secondary">Log In</Button>
+              </Link>
+              <Link to="/signup">
+                <Button>Sign Up</Button>
+              </Link>
+            </>
+          )}
         </div>
-      </div>
-      
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-black/95 backdrop-blur-md">
-          <div className="container mx-auto px-4 py-4">
-            <nav className="flex flex-col space-y-4">
-              <MobileNavLink to="/" label="Home" />
-              <MobileNavLink to="/plans" label="Plans" />
-              <MobileNavLink to="/plans-catalog" label="Plan Catalog" />
-              <MobileNavLink to="/schedule" label="Schedule" />
+
+        {/* Mobile Menu Button */}
+        <Sheet>
+          <SheetTrigger asChild className="md:hidden">
+            <Button variant="ghost" className="p-2">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="bg-black border-l border-[#333] w-64">
+            <SheetHeader className="text-left">
+              <SheetTitle>Menu</SheetTitle>
+              <SheetDescription>
+                Navigate the site
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex flex-col space-y-4 mt-4">
+              <Link to="/" className="block py-2 text-gray-300 hover:text-white transition-colors">Home</Link>
+              <Link to="/about" className="block py-2 text-gray-300 hover:text-white transition-colors">About</Link>
+              <Link to="/events" className="block py-2 text-gray-300 hover:text-white transition-colors">Events</Link>
+              <a 
+                href="https://alphanutritionlabs.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block py-2 text-gray-300 hover:text-white transition-colors"
+              >
+                Shop
+              </a>
               {isAuthenticated ? (
-                <MobileNavLink to="/dashboard" label="Dashboard" />
+                <>
+                  <Link to="/dashboard" className="block py-2 text-gray-300 hover:text-white transition-colors">Dashboard</Link>
+                  <Button onClick={signOut} variant="outline">Sign Out</Button>
+                </>
               ) : (
-                <MobileNavLink to="/login" label="Sign In" />
+                <>
+                  <Link to="/login" className="block py-2 text-gray-300 hover:text-white transition-colors">Log In</Link>
+                  <Link to="/signup" className="block py-2 text-gray-300 hover:text-white transition-colors">Sign Up</Link>
+                </>
               )}
-            </nav>
-          </div>
-        </div>
-      )}
-    </header>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </nav>
   );
 };
 
-// Desktop Nav Link Component
-const NavLink = ({ to, label }: { to: string; label: string }) => {
-  const location = useLocation();
-  const isActive = location.pathname === to || 
-    (to !== '/' && location.pathname.startsWith(to));
+// Inside the Navbar component, update the navigation links section
+const NavLinks = () => {
+  const pathname = useLocation().pathname;
   
   return (
-    <Link
-      to={to}
-      className={`px-3 py-2 rounded-md text-sm font-medium transition ${
-        isActive
-          ? 'text-white bg-sinner-red/20'
-          : 'text-gray-300 hover:text-white hover:bg-sinner-red/10'
-      }`}
-    >
-      {label}
-    </Link>
-  );
-};
-
-// Mobile Nav Link Component
-const MobileNavLink = ({ to, label }: { to: string; label: string }) => {
-  const location = useLocation();
-  const isActive = location.pathname === to || 
-    (to !== '/' && location.pathname.startsWith(to));
-  
-  return (
-    <Link
-      to={to}
-      className={`block px-3 py-2 rounded-md text-base font-medium ${
-        isActive
-          ? 'text-white bg-sinner-red/20'
-          : 'text-gray-300 hover:text-white hover:bg-sinner-red/10'
-      }`}
-    >
-      {label}
-    </Link>
+    <div className="hidden md:flex space-x-6">
+      <NavLink to="/" active={pathname === '/'}>Home</NavLink>
+      <NavLink to="/about" active={pathname === '/about'}>About</NavLink>
+      <NavLink to="/events" active={pathname === '/events'}>Events</NavLink>
+      <a 
+        href="https://alphanutritionlabs.com" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-gray-300 hover:text-white transition-colors relative group"
+      >
+        Shop
+        <span className="absolute -top-1 -right-1 bg-[#ea384c] text-white text-[10px] rounded-full px-1 flex items-center justify-center">
+          ↗
+        </span>
+        <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#ea384c] transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+      </a>
+    </div>
   );
 };
 
