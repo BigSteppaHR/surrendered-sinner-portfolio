@@ -8,8 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 // Initialize with a null value, we'll assign the promise directly
 let stripePromise: Promise<Stripe | null> | null = null;
 
-// Define the publishable key - using environment variable with fallback
-const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
+// Define the publishable key - we'll fetch it from the edge function
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
 
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
@@ -27,6 +27,32 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [connectionTested, setConnectionTested] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [publishableKey, setPublishableKey] = useState<string | null>(null);
+
+  // Fetch publishable key from our edge function
+  const fetchPublishableKey = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-helper', {
+        body: { 
+          action: 'test-connection'
+        }
+      });
+      
+      if (error || !data) {
+        console.error("Error fetching Stripe publishable key:", error);
+        return null;
+      }
+      
+      if (data.publishableKey) {
+        return data.publishableKey;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error("Failed to fetch Stripe publishable key:", err);
+      return null;
+    }
+  };
 
   // Test connection to Stripe via our edge function with enhanced error handling
   const testStripeConnection = useCallback(async () => {
@@ -90,13 +116,21 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           return;
         }
         
+        // Get publishable key from edge function if available
+        const fetchedKey = await fetchPublishableKey();
+        const keyToUse = fetchedKey || STRIPE_PUBLISHABLE_KEY;
+        
+        if (fetchedKey) {
+          setPublishableKey(fetchedKey);
+        }
+        
         // Use the defined key
-        if (!STRIPE_PUBLISHABLE_KEY || !STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
-          console.warn("Using test Stripe publishable key. Payments will only work in test mode.");
+        if (!keyToUse || !keyToUse.startsWith('pk_')) {
+          console.warn("Using fallback Stripe publishable key. Payments will only work in test mode.");
         }
         
         // Initialize Stripe with the key
-        stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY, {
+        stripePromise = loadStripe(keyToUse, {
           apiVersion: '2023-10-16',
         });
         
