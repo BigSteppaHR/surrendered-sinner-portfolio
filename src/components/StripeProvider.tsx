@@ -8,9 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 // Initialize with a null value, we'll assign the promise directly
 let stripePromise: Promise<Stripe | null> | null = null;
 
-// Define the publishable key - we'll fetch it from the edge function
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
-
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
 const logDebug = (message: string, ...args: any[]) => {
@@ -118,19 +115,15 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         
         // Get publishable key from edge function if available
         const fetchedKey = await fetchPublishableKey();
-        const keyToUse = fetchedKey || STRIPE_PUBLISHABLE_KEY;
         
-        if (fetchedKey) {
-          setPublishableKey(fetchedKey);
+        if (!fetchedKey) {
+          throw new Error("Could not retrieve Stripe publishable key from the server");
         }
         
-        // Use the defined key
-        if (!keyToUse || !keyToUse.startsWith('pk_')) {
-          console.warn("Using fallback Stripe publishable key. Payments will only work in test mode.");
-        }
+        setPublishableKey(fetchedKey);
         
         // Initialize Stripe with the key
-        stripePromise = loadStripe(keyToUse, {
+        stripePromise = loadStripe(fetchedKey, {
           apiVersion: '2023-10-16',
         });
         

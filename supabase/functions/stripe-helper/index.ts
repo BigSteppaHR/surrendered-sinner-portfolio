@@ -43,11 +43,13 @@ serve(async (req) => {
     
     switch (action) {
       case 'test-connection':
-        // Just return success to test the function connection
+        // Return the publishable key along with success message
+        const publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY');
         result = { 
           success: true, 
           message: 'Connection to Stripe helper function successful',
-          stripeKeyAvailable: !!STRIPE_SECRET_KEY
+          stripeKeyAvailable: !!STRIPE_SECRET_KEY,
+          publishableKey: publishableKey || null
         };
         break;
         
