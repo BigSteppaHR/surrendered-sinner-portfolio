@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Dumbbell, Award, Sparkles, Star } from 'lucide-react';
 import SEO from '@/components/SEO';
+import { Link } from 'react-router-dom';
 
 const AboutPage = () => {
   return (
