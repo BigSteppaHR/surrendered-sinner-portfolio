@@ -21,17 +21,24 @@ const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '', showAlpha 
       <div className="flex flex-col">
         <div className="flex items-center">
           <span className={`font-bold text-[#ea384c] ${size === 'small' ? 'text-xl' : size === 'medium' ? 'text-2xl' : 'text-3xl'}`}>
-            ALPHA
+            SURRENDERED
           </span>
           <span className={`font-light text-white ml-1 ${size === 'small' ? 'text-xl' : size === 'medium' ? 'text-2xl' : 'text-3xl'}`}>
-            FITNESS
+            SINNER FITNESS
           </span>
         </div>
         
         {showAlpha && (
           <div className="flex items-center mt-0.5">
             <span className="text-xs text-gray-400">Powered by</span>
-            <span className="ml-1 text-xs font-medium text-[#ea384c]">Alpha Nutrition Labs</span>
+            <a 
+              href="https://alphanutritionlabs.com" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="ml-1 text-xs font-medium text-[#ea384c] hover:underline"
+            >
+              Alpha Nutrition Labs
+            </a>
           </div>
         )}
       </div>

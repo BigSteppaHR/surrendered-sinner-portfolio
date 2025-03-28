@@ -16,6 +16,8 @@ import { Dumbbell, Target, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import TrainingPackages from '@/components/TrainingPackages';
+import Certifications from '@/components/Certifications';
+import EventsSection from '@/components/EventsSection';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -82,6 +84,12 @@ const Index = () => {
         <Separator className="bg-sinner-red/20 h-0.5" />
       </div>
       
+      <Certifications />
+      
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
       <Services />
       
       {/* Middle Quiz CTA */}
@@ -119,6 +127,13 @@ const Index = () => {
       
       {/* Add our Training Packages component */}
       <TrainingPackages />
+      
+      <div className="section-divider">
+        <Separator className="bg-sinner-red/20 h-0.5" />
+      </div>
+      
+      {/* Featured Events Section */}
+      <EventsSection featured={true} />
       
       <div className="section-divider">
         <Separator className="bg-sinner-red/20 h-0.5" />

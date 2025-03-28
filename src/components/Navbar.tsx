@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Logo from './Logo';
@@ -92,7 +93,7 @@ const Navbar = () => {
                 rel="noopener noreferrer"
                 className="block py-2 text-gray-300 hover:text-white transition-colors"
               >
-                Shop
+                Alpha Nutrition Labs
               </a>
               {isAuthenticated ? (
                 <>
@@ -128,7 +129,7 @@ const NavLinks = () => {
         rel="noopener noreferrer"
         className="text-gray-300 hover:text-white transition-colors relative group"
       >
-        Shop
+        Alpha Nutrition Labs
         <span className="absolute -top-1 -right-1 bg-[#ea384c] text-white text-[10px] rounded-full px-1 flex items-center justify-center">
           ↗
         </span>

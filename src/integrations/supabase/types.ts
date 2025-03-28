@@ -66,6 +66,51 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_read: boolean
+          message: string
+          notification_type: string
+          priority: string | null
+          read_at: string | null
+          read_by: string | null
+          source: string | null
+          title: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          notification_type?: string
+          priority?: string | null
+          read_at?: string | null
+          read_by?: string | null
+          source?: string | null
+          title: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          notification_type?: string
+          priority?: string | null
+          read_at?: string | null
+          read_by?: string | null
+          source?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       admin_statistics: {
         Row: {
           created_at: string
@@ -166,6 +211,57 @@ export type Database = {
           id?: string
           is_default?: boolean
           name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      calendar_events: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          description: string | null
+          end_time: string
+          event_type: string
+          external_calendar_id: string | null
+          id: string
+          location: string | null
+          meeting_link: string | null
+          start_time: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_time: string
+          event_type?: string
+          external_calendar_id?: string | null
+          id?: string
+          location?: string | null
+          meeting_link?: string | null
+          start_time: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string
+          event_type?: string
+          external_calendar_id?: string | null
+          id?: string
+          location?: string | null
+          meeting_link?: string | null
+          start_time?: string
+          status?: string
+          title?: string
           updated_at?: string
           user_id?: string | null
         }
@@ -574,39 +670,48 @@ export type Database = {
       }
       subscription_packages: {
         Row: {
+          billing_interval: string | null
           created_at: string
           currency: string
           description: string | null
+          display_order: number | null
           duration_days: number
           features: Json | null
           id: string
           is_active: boolean
           name: string
           price: number
+          stripe_price_id: string | null
           updated_at: string
         }
         Insert: {
+          billing_interval?: string | null
           created_at?: string
           currency?: string
           description?: string | null
+          display_order?: number | null
           duration_days: number
           features?: Json | null
           id?: string
           is_active?: boolean
           name: string
           price: number
+          stripe_price_id?: string | null
           updated_at?: string
         }
         Update: {
+          billing_interval?: string | null
           created_at?: string
           currency?: string
           description?: string | null
+          display_order?: number | null
           duration_days?: number
           features?: Json | null
           id?: string
           is_active?: boolean
           name?: string
           price?: number
+          stripe_price_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -826,12 +931,14 @@ export type Database = {
         Row: {
           description: string | null
           download_url: string
+          file_category: string | null
           file_name: string
           file_path: string
           file_size: number
           file_type: string
           id: string
           plan_id: string | null
+          subscription_id: string | null
           uploaded_at: string
           uploaded_by: string | null
           user_id: string
@@ -839,12 +946,14 @@ export type Database = {
         Insert: {
           description?: string | null
           download_url: string
+          file_category?: string | null
           file_name: string
           file_path: string
           file_size: number
           file_type: string
           id?: string
           plan_id?: string | null
+          subscription_id?: string | null
           uploaded_at?: string
           uploaded_by?: string | null
           user_id: string
@@ -852,12 +961,14 @@ export type Database = {
         Update: {
           description?: string | null
           download_url?: string
+          file_category?: string | null
           file_name?: string
           file_path?: string
           file_size?: number
           file_type?: string
           id?: string
           plan_id?: string | null
+          subscription_id?: string | null
           uploaded_at?: string
           uploaded_by?: string | null
           user_id?: string
@@ -870,36 +981,52 @@ export type Database = {
             referencedRelation: "workout_plans"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_files_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_notifications: {
         Row: {
+          action_url: string | null
           created_at: string
           expires_at: string | null
           id: string
           is_read: boolean
           message: string
           notification_type: string
+          priority: string | null
+          read_at: string | null
           title: string
           user_id: string
         }
         Insert: {
+          action_url?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
           is_read?: boolean
           message: string
           notification_type?: string
+          priority?: string | null
+          read_at?: string | null
           title: string
           user_id: string
         }
         Update: {
+          action_url?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
           is_read?: boolean
           message?: string
           notification_type?: string
+          priority?: string | null
+          read_at?: string | null
           title?: string
           user_id?: string
         }
@@ -967,6 +1094,66 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_subscription_purchases: {
+        Row: {
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          purchase_date: string | null
+          quiz_result_id: string | null
+          status: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          purchase_date?: string | null
+          quiz_result_id?: string | null
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          purchase_date?: string | null
+          quiz_result_id?: string | null
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscription_purchases_quiz_result_id_fkey"
+            columns: ["quiz_result_id"]
+            isOneToOne: false
+            referencedRelation: "custom_plan_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscription_purchases_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_subscriptions: {
         Row: {

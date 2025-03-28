@@ -24,6 +24,7 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentError from "@/pages/PaymentError";
 import PaymentProcess from "@/pages/PaymentProcess";
 import Events from "@/pages/Events";
+import EventDetail from '@/pages/EventDetail';
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -47,6 +48,7 @@ function App() {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/events/:eventId" element={<EventDetail />} />
                 <Route path="/login" element={<AuthPage mode="login" />} />
                 <Route path="/signup" element={<AuthPage mode="signup" />} />
                 <Route path="/forgot-password" element={<AuthPage mode="forgot-password" />} />
