@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from './useAuth';
+import { Profile } from '@/hooks/useAuth';
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);

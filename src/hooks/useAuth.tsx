@@ -1,14 +1,22 @@
+
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { useNavigate } from 'react-router-dom';
 
-interface UserProfile {
+export interface Profile {
   id: string;
   email: string;
   full_name?: string;
   avatar_url?: string;
+  email_confirmed?: boolean;
+  is_admin?: boolean;
+  debug_mode?: boolean;
+  login_count?: number;
+  last_login_at?: string;
+  last_active_at?: string;
+  username?: string;
   billing_address?: {
     city?: string;
     country?: string;
@@ -23,35 +31,40 @@ interface UserProfile {
   };
   updated_at?: string;
   created_at?: string;
-  // Add other profile fields here
 }
 
 interface AuthContextType {
   user: User | null;
-  profile: UserProfile | null;
+  profile: Profile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitialized: boolean;
+  isAdmin?: boolean;
+  loginCount?: number;
+  lastActive?: Date | null;
   login: (email: string, password: string) => Promise<AuthResponse>;
   signup: (email: string, password: string, data?: any) => Promise<AuthResponse>;
-  logout: () => Promise<void>; // Ensure this is named 'logout' not 'signOut'
+  logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ data: any; error: Error | null }>;
-  updateUserProfile: (data: Partial<UserProfile>) => Promise<any>;
+  updateUserProfile: (data: Partial<Profile>) => Promise<any>;
+  updatePassword: (password: string) => Promise<any>;
   setNewPassword: (password: string) => Promise<any>;
   deleteAccount: () => Promise<any>;
+  refreshProfile: () => Promise<Profile | null>;
 }
 
 interface AuthResponse {
   user: User | null;
   session: Session | null;
   error: Error | null;
+  data?: any;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -113,6 +126,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           email,
           full_name,
           avatar_url,
+          email_confirmed,
+          is_admin,
+          debug_mode,
+          login_count,
+          last_login_at,
+          last_active_at,
+          username,
           billing_address,
           payment_method,
           updated_at,
@@ -129,7 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           variant: "destructive",
         });
       } else {
-        setProfile(data as UserProfile);
+        setProfile(data as Profile);
       }
     } catch (error: any) {
       console.error("Unexpected error fetching profile:", error);
@@ -140,6 +160,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
     }
   }, [toast]);
+
+  const refreshProfile = async (): Promise<Profile | null> => {
+    if (!user) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          avatar_url,
+          email_confirmed,
+          is_admin,
+          debug_mode,
+          login_count,
+          last_login_at,
+          last_active_at,
+          username,
+          billing_address,
+          payment_method,
+          updated_at,
+          created_at
+        `)
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error("Error refreshing profile:", error);
+        return null;
+      }
+      
+      setProfile(data as Profile);
+      return data as Profile;
+    } catch (error) {
+      console.error("Error in refreshProfile:", error);
+      return null;
+    }
+  };
 
   const login = async (email: string, password: string): Promise<AuthResponse> => {
     try {
@@ -152,7 +211,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: error.message,
           variant: 'destructive',
         });
-        return { user: null, session: null, error };
+        return { user: null, session: null, error, data: null };
       }
 
       setUser(data.user);
@@ -162,14 +221,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: 'Login Successful',
         description: 'You have successfully logged in.',
       });
-      return { user: data.user, session: data.session, error: null };
+      return { user: data.user, session: data.session, error: null, data };
     } catch (error: any) {
       toast({
         title: 'Login Error',
         description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
-      return { user: null, session: null, error: new Error(error.message || 'An unexpected error occurred') };
+      return { user: null, session: null, error: new Error(error.message || 'An unexpected error occurred'), data: null };
     } finally {
       setIsLoading(false);
     }
@@ -194,7 +253,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: authError.message,
           variant: 'destructive',
         });
-        return { user: null, session: null, error: authError };
+        return { user: null, session: null, error: authError, data: null };
       }
 
       setUser(authData.user);
@@ -206,14 +265,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: 'Signup Successful',
         description: 'Please check your email to verify your account.',
       });
-      return { user: authData.user, session: authData.session, error: null };
+      return { user: authData.user, session: authData.session, error: null, data: authData };
     } catch (error: any) {
       toast({
         title: 'Signup Error',
         description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
-      return { user: null, session: null, error: new Error(error.message || 'An unexpected error occurred') };
+      return { user: null, session: null, error: new Error(error.message || 'An unexpected error occurred'), data: null };
     } finally {
       setIsLoading(false);
     }
@@ -284,14 +343,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const setNewPassword = async (password: string): Promise<any> => {
+  const updatePassword = async (password: string): Promise<any> => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase.auth.updateUser({ password });
 
       if (error) {
         toast({
-          title: 'Set New Password Failed',
+          title: 'Update Password Failed',
           description: error.message,
           variant: 'destructive',
         });
@@ -305,7 +364,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return { data };
     } catch (error: any) {
       toast({
-        title: 'Set New Password Error',
+        title: 'Update Password Error',
         description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
@@ -315,7 +374,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const updateUserProfile = async (data: Partial<UserProfile>): Promise<any> => {
+  const setNewPassword = updatePassword; // Alias for updatePassword
+
+  const updateUserProfile = async (data: Partial<Profile>): Promise<any> => {
     if (!user?.id) {
       toast({
         title: 'Update Profile Failed',
@@ -343,7 +404,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error: profileError };
       }
 
-      setProfile(profileData as UserProfile);
+      setProfile(profileData as Profile);
       toast({
         title: 'Profile Updated',
         description: 'Your profile has been successfully updated.',
@@ -373,21 +434,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       setIsLoading(true);
-      // First, delete the user from auth.users
-      const { error: deleteAuthError } = await supabase.auth.deleteUser({
-        userId: user.id
-      });
-
-      if (deleteAuthError) {
-        toast({
-          title: 'Delete Account Failed',
-          description: deleteAuthError.message,
-          variant: 'destructive',
-        });
-        return { error: deleteAuthError };
-      }
-
-      // If auth deletion is successful, also delete the profile
+      
+      // First, delete the profile
       const { error: deleteProfileError } = await supabase
         .from('profiles')
         .delete()
@@ -400,6 +448,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           variant: 'destructive',
         });
         return { error: deleteProfileError };
+      }
+
+      // Then, delete the auth user
+      const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(user.id);
+
+      if (deleteAuthError) {
+        toast({
+          title: 'Delete Account Failed',
+          description: deleteAuthError.message,
+          variant: 'destructive',
+        });
+        return { error: deleteAuthError };
       }
 
       // Clear local state
@@ -425,19 +485,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Derived properties
+  const isAuthenticated = !!user;
+  const isAdmin = profile?.is_admin || false;
+  const loginCount = profile?.login_count || 0;
+  const lastActive = profile?.last_active_at ? new Date(profile.last_active_at) : null;
+
   const value: AuthContextType = {
     user,
     profile,
-    isAuthenticated: !!user,
+    isAuthenticated,
     isLoading,
     isInitialized,
+    isAdmin,
+    loginCount,
+    lastActive,
     login,
     signup,
     logout,
     resetPassword,
     updateUserProfile,
     setNewPassword,
+    updatePassword,
     deleteAccount,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
