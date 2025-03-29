@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from './useAuth';
+import { Profile } from '@/hooks/useAuth';
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -201,16 +200,11 @@ export const useAuthState = () => {
     if (!user) return null;
 
     try {
-      // Add proper headers to prevent 406 errors
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
-        .headers({
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        });
+        .single();
 
       if (error) {
         console.error('Error refreshing profile:', error);

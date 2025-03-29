@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Logo from './Logo';
@@ -35,7 +34,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, active, children }) => {
 };
 
 const Navbar = () => {
-  const { isAuthenticated, user, signOut } = useAuth();
+  const { user, profile, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -55,7 +54,7 @@ const Navbar = () => {
               <Link to="/dashboard">
                 <Button variant="secondary">Dashboard</Button>
               </Link>
-              <Button onClick={signOut} variant="outline">Sign Out</Button>
+              <Button onClick={logout} variant="outline">Sign Out</Button>
             </>
           ) : (
             <>
@@ -87,11 +86,18 @@ const Navbar = () => {
               <Link to="/" className="block py-2 text-gray-300 hover:text-white transition-colors">Home</Link>
               <Link to="/about" className="block py-2 text-gray-300 hover:text-white transition-colors">About</Link>
               <Link to="/events" className="block py-2 text-gray-300 hover:text-white transition-colors">Events</Link>
-              <Link to="/supplements" className="block py-2 text-gray-300 hover:text-white transition-colors">Supplements</Link>
+              <a 
+                href="https://alphanutritionlabs.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block py-2 text-gray-300 hover:text-white transition-colors"
+              >
+                Shop
+              </a>
               {isAuthenticated ? (
                 <>
                   <Link to="/dashboard" className="block py-2 text-gray-300 hover:text-white transition-colors">Dashboard</Link>
-                  <Button onClick={signOut} variant="outline">Sign Out</Button>
+                  <Button onClick={logout} variant="outline">Sign Out</Button>
                 </>
               ) : (
                 <>
@@ -116,13 +122,18 @@ const NavLinks = () => {
       <NavLink to="/" active={pathname === '/'}>Home</NavLink>
       <NavLink to="/about" active={pathname === '/about'}>About</NavLink>
       <NavLink to="/events" active={pathname === '/events'}>Events</NavLink>
-      <Link 
-        to="/supplements"
+      <a 
+        href="https://alphanutritionlabs.com" 
+        target="_blank" 
+        rel="noopener noreferrer"
         className="text-gray-300 hover:text-white transition-colors relative group"
       >
-        Supplements
+        Shop
+        <span className="absolute -top-1 -right-1 bg-[#ea384c] text-white text-[10px] rounded-full px-1 flex items-center justify-center">
+          ↗
+        </span>
         <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#ea384c] transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform"></span>
-      </Link>
+      </a>
     </div>
   );
 };

@@ -7,10 +7,9 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, Shield } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from '@/components/Logo';
 
-// Load Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH');
 
 const PaymentProcess = () => {
@@ -19,30 +18,49 @@ const PaymentProcess = () => {
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [amount, setAmount] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const secret = searchParams.get('client_secret');
-    const payment = searchParams.get('payment_id');
-    const amountParam = searchParams.get('amount');
+    const fetchPaymentDetails = async () => {
+      try {
+        setLoading(true);
+        
+        const secret = searchParams.get('client_secret');
+        const payment = searchParams.get('payment_id');
+        const amountParam = searchParams.get('amount');
+        
+        if (!secret || !payment) {
+          throw new Error("Missing required payment parameters");
+        }
+        
+        setClientSecret(secret);
+        setPaymentId(payment);
+        setAmount(amountParam);
+      } catch (err: any) {
+        console.error("Error fetching payment details:", err);
+        setError(err.message || "Failed to load payment information");
+        
+        toast({
+          variant: "destructive",
+          title: "Invalid payment request",
+          description: err.message || "The payment could not be processed due to missing information."
+        });
+        
+        // Wait a moment before redirecting to show the error
+        setTimeout(() => {
+          navigate('/payment-portal');
+        }, 3000);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    if (!secret || !payment) {
-      toast({
-        variant: "destructive",
-        title: "Invalid payment request",
-        description: "The payment could not be processed due to missing information."
-      });
-      navigate('/payment-portal');
-      return;
-    }
-    
-    setClientSecret(secret);
-    setPaymentId(payment);
-    setAmount(amountParam);
-    setLoading(false);
-  }, [searchParams, navigate]);
+    fetchPaymentDetails();
+  }, [searchParams, navigate, toast]);
 
+  // Define appearance here to ensure it's correctly typed and passed to Elements
   const appearance = {
     theme: 'night' as const,
     variables: {
@@ -90,7 +108,13 @@ const PaymentProcess = () => {
           <CardContent>
             {loading ? (
               <div className="flex justify-center py-8">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#ea384c] border-r-transparent"></div>
+                <Loader2 className="h-8 w-8 animate-spin text-[#ea384c]" />
+              </div>
+            ) : error ? (
+              <div className="p-4 border border-red-800 bg-red-900/20 rounded-md text-center">
+                <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                <p className="text-red-400">{error}</p>
+                <p className="text-sm text-gray-400 mt-2">Redirecting back to payment portal...</p>
               </div>
             ) : clientSecret ? (
               <>
@@ -185,6 +209,9 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
         navigate('/payment-portal?status=error');
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Payment succeeded, update database
+        const amountValue = parseFloat(amount);
+        const amountInCents = Math.round(amountValue * 100);
+        
         await supabase.functions.invoke('stripe-helper', {
           body: {
             action: 'updatePaymentStatus',
@@ -192,49 +219,12 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
               payment_id: paymentId,
               status: 'completed',
               payment_intent_id: paymentIntent.id,
-              payment_method: 'card'
+              payment_method: 'card',
+              amount: amountInCents,
+              description: `Added $${amount} to account`
             }
           }
         });
-        
-        // Insert record into payment_history
-        await supabase.from('payment_history').insert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          amount: parseFloat(amount),
-          currency: 'USD',
-          status: 'completed',
-          payment_method: 'card',
-          stripe_payment_id: paymentIntent.id,
-          description: `Added $${amount} to account`,
-          metadata: { payment_id: paymentId }
-        });
-        
-        // Update user's balance
-        const { data: balanceData } = await supabase
-          .from('payment_balance')
-          .select('balance, currency')
-          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-          .maybeSingle();
-          
-        if (balanceData) {
-          // Update existing balance
-          await supabase
-            .from('payment_balance')
-            .update({ 
-              balance: balanceData.balance + parseFloat(amount),
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
-        } else {
-          // Create new balance record
-          await supabase
-            .from('payment_balance')
-            .insert({
-              user_id: (await supabase.auth.getUser()).data.user?.id,
-              balance: parseFloat(amount),
-              currency: 'USD'
-            });
-        }
         
         toast({
           title: "Payment successful",
@@ -278,7 +268,7 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
       >
         {isLoading ? (
           <>
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             Processing...
           </>
         ) : (

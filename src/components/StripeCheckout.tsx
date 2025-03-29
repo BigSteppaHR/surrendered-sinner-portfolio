@@ -245,8 +245,10 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       }
 
       if (paymentIntent.status === 'succeeded') {
-        // Update payment status in our database
+        // Update payment status in our database with amount info
         try {
+          const amountInCents = Math.round(amount * 100);
+          
           const { error: updateError } = await supabase.functions.invoke('stripe-helper', {
             body: { 
               action: 'updatePaymentStatus',
@@ -254,7 +256,9 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                 payment_id: paymentId,
                 status: paymentIntent.status,
                 payment_intent_id: paymentIntent.id,
-                payment_method: 'card'
+                payment_method: 'card',
+                amount: amountInCents,
+                description: description
               }
             }
           });

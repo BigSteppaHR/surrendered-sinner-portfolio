@@ -2,7 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/components/AuthProvider';
+import { AuthProvider } from '@/hooks/useAuth'; // Import from hooks instead of components
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StripeProvider } from '@/components/StripeProvider';
 
@@ -24,10 +24,11 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentError from "@/pages/PaymentError";
 import PaymentProcess from "@/pages/PaymentProcess";
 import Events from "@/pages/Events";
-import EventDetail from '@/pages/EventDetail';
+import Schedule from "@/pages/Schedule";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminEvents from "@/pages/admin/AdminEvents";
 
 // Protected route wrapper
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -40,15 +41,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
-        <AuthProvider>
-          <StripeProvider>
-            <BrowserRouter>
+        <BrowserRouter>
+          <AuthProvider>
+            <StripeProvider>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/events" element={<Events />} />
-                <Route path="/events/:eventId" element={<EventDetail />} />
+                <Route path="/schedule" element={<Schedule />} />
                 <Route path="/login" element={<AuthPage mode="login" />} />
                 <Route path="/signup" element={<AuthPage mode="signup" />} />
                 <Route path="/forgot-password" element={<AuthPage mode="forgot-password" />} />
@@ -73,14 +74,15 @@ function App() {
                 
                 {/* Admin Routes */}
                 <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                <Route path="/admin/events" element={<AdminRoute><AdminEvents /></AdminRoute>} />
                 
                 {/* Catch-all redirect */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-            </BrowserRouter>
-            <Toaster />
-          </StripeProvider>
-        </AuthProvider>
+              <Toaster />
+            </StripeProvider>
+          </AuthProvider>
+        </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>
   );
