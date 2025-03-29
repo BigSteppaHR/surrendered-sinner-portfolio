@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
@@ -82,6 +83,7 @@ export const useAuthState = () => {
         password,
       });
       
+      // Update login count and last active timestamp
       if (data.user) {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -137,6 +139,7 @@ export const useAuthState = () => {
       });
       
       if (data.user) {
+        // Initialize profile with defaults
         const now = new Date().toISOString();
         setProfile({
           id: data.user.id,
@@ -198,11 +201,16 @@ export const useAuthState = () => {
     if (!user) return null;
 
     try {
+      // Add proper headers to prevent 406 errors
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .single()
+        .headers({
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        });
 
       if (error) {
         console.error('Error refreshing profile:', error);

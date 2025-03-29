@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,10 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
           metadata: { description: `Adding ${amountValue.toFixed(2)} to account balance` }
         })
         .select()
+        .headers({
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        })
         .single();
         
       if (dbError) throw new Error(`Database error: ${dbError.message}`);

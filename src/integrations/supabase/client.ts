@@ -11,13 +11,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     storage: localStorage
-  },
-  global: {
-    // Add default headers to all requests to fix 406 errors
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
   }
 });
 
