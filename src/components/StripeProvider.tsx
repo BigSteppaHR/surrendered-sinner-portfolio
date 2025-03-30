@@ -232,12 +232,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        loader: 'auto', // Use 'auto' to be more flexible
-        fonts: [
-          {
-            cssSrc: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-          }
-        ]
+        loader: 'auto' // Use 'auto' to be more flexible
       }}
     >
       {children}

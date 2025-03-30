@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,11 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from '@/components/Logo';
-import { useEffect as useEffectOriginal } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-
-// Use the StripeProvider's stripePromise
-import StripeProvider from '@/components/StripeProvider';
 
 const PaymentProcess = () => {
   const [searchParams] = useSearchParams();
@@ -132,10 +127,7 @@ const PaymentProcess = () => {
           stripe={stripePromise}
           options={{ 
             clientSecret, 
-            appearance,
-            amount: Math.round(amount * 100), // Converting to cents for Stripe
-            currency: 'usd',
-            loader: 'auto'
+            appearance
           }}
         >
           <CheckoutForm 
