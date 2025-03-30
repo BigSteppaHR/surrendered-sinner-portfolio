@@ -12,9 +12,6 @@ import AdminTickets from "@/components/admin/AdminTickets";
 import AdminNotifications from "@/components/admin/AdminNotifications";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
-import AdminFilesManagement from "@/components/admin/AdminFilesManagement";
-import AdminUsers from "@/pages/admin/AdminUsers";
-import CreateInvoice from "@/pages/admin/CreateInvoice";
 import { Loader2 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 
@@ -75,9 +72,6 @@ const AdminDashboard = () => {
         <Route path="/notifications" element={<AdminNotifications />} />
         <Route path="/settings" element={<AdminSettings />} />
         <Route path="/quotes" element={<AdminQuotes />} />
-        <Route path="/files" element={<AdminFilesManagement />} />
-        <Route path="/users" element={<AdminUsers />} />
-        <Route path="/create-invoice" element={<CreateInvoice />} />
       </Routes>
     </AdminLayout>
   );

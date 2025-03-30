@@ -1,10 +1,9 @@
 
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState, useRef, ReactNode } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import DashboardNav from "@/components/dashboard/DashboardNav";
 
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
@@ -15,11 +14,7 @@ const logDebug = (message: string, ...args: any[]) => {
 // We no longer need to include auth-related paths here as they're now directly at root level
 const publicPages: string[] = [];
 
-interface DashboardLayoutProps {
-  children?: ReactNode;
-}
-
-const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+const DashboardLayout = () => {
   const { isAuthenticated, isLoading, profile, isInitialized, isAdmin } = useAuth();
   const location = useLocation();
   const [isPageLoaded, setIsPageLoaded] = useState(false);
@@ -82,7 +77,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   }
   
   // If authenticated admin, redirect to admin dashboard using Navigate component
-  if (isAuthenticated && isAdmin) {
+  if (isAuthenticated && profile?.is_admin) {
     logDebug("User is admin, redirecting to admin dashboard");
     return <Navigate to="/admin" replace />;
   }
@@ -95,15 +90,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   
   // For authenticated dashboard pages, show the dashboard layout with navigation
   return (
-    <div className="min-h-screen bg-[#000000] text-white flex">
+    <div className="min-h-screen bg-[#000000] text-white">
       {isDebugMode && (
         <div className="bg-[#ea384c]/20 border border-[#ea384c]/40 p-2 text-xs text-white">
           <strong>DEBUG MODE</strong>: User ID: {profile?.id}, Admin: {isAdmin ? 'Yes' : 'No'}
         </div>
       )}
-      <DashboardNav />
-      <div className="flex-1 overflow-auto p-4 md:p-6 ml-0 md:ml-64">
-        {children || <Outlet />}
+      {/* We removed the DashboardNav component from here since it's already included in child pages */}
+      <div className="flex-1 overflow-auto">
+        <Outlet />
       </div>
     </div>
   );

@@ -1,62 +1,126 @@
 
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CheckCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import Logo from '@/components/Logo';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import SEO from '@/components/SEO';
+import { CheckCircle, ChevronLeft, Home, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const PaymentSuccess = () => {
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
+  const [searchParams] = useSearchParams();
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const sessionId = searchParams.get('session_id');
+  const plan = searchParams.get('plan');
+  
   useEffect(() => {
-    // Could fetch updated user data here if needed
-  }, []);
-
+    // In a real app, you would verify the payment with Stripe
+    // using the session_id and update your database accordingly
+    if (sessionId) {
+      // This is just for demo/placeholder - in reality you would verify with Stripe
+      setPaymentDetails({
+        success: true,
+        amount: '$99.99',
+        plan: plan || 'Subscription',
+        date: new Date().toLocaleDateString()
+      });
+      
+      // In a real implementation, you would use the Stripe API to get session details
+      // For now, we'll just simulate a successful payment
+      const updatePaymentStatus = async () => {
+        if (isAuthenticated) {
+          try {
+            // Update the payment status in the database
+            const { error } = await supabase.from('payment_history').update({
+              status: 'completed'
+            }).eq('status', 'pending').is('stripe_payment_id', null);
+            
+            if (error) console.error('Error updating payment status:', error);
+          } catch (err) {
+            console.error('Error updating payment record:', err);
+          }
+        }
+      };
+      
+      updatePaymentStatus();
+    }
+  }, [sessionId, plan, isAuthenticated]);
+  
   return (
-    <div className="min-h-screen flex flex-col bg-black text-white">
-      <header className="border-b border-[#333] py-4">
-        <div className="container mx-auto px-4 flex items-center">
-          <Logo size="small" />
-          <span className="ml-4 text-xl font-semibold">Payment Successful</span>
-        </div>
-      </header>
+    <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+      <SEO 
+        title="Payment Successful | Surrendered Sinner Fitness"
+        description="Your payment was processed successfully. Thank you for your purchase."
+        canonical="https://surrenderedsinnerfitness.com/payment-success"
+      />
       
-      <main className="flex-1 container mx-auto px-4 py-12 max-w-xl">
-        <div className="bg-zinc-900 border border-[#333] rounded-lg p-8 text-center">
-          <div className="flex justify-center mb-6">
-            <div className="h-20 w-20 bg-green-900/30 rounded-full flex items-center justify-center">
-              <CheckCircle className="h-12 w-12 text-green-500" />
+      <Card className="max-w-md w-full bg-zinc-900 border-zinc-800">
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto bg-green-900/30 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle className="h-8 w-8 text-green-500" />
+          </div>
+          <CardTitle className="text-2xl">Payment Successful!</CardTitle>
+          <CardDescription>
+            Thank you for your purchase
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          {paymentDetails && (
+            <div className="space-y-2 border-t border-b border-zinc-800 py-4 my-4">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Amount:</span>
+                <span>{paymentDetails.amount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Plan:</span>
+                <span>{paymentDetails.plan}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Date:</span>
+                <span>{paymentDetails.date}</span>
+              </div>
             </div>
-          </div>
+          )}
           
-          <h1 className="text-2xl font-bold mb-4">Payment Successful!</h1>
-          <p className="text-gray-400 mb-6">
-            Your payment has been processed successfully. Your account has been updated with the new funds.
+          <p className="text-center text-sm text-gray-400">
+            We've sent a confirmation email with your receipt and further instructions.
           </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        </CardContent>
+        
+        <CardFooter className="flex flex-col space-y-2">
+          {isAuthenticated ? (
+            <>
+              <Button 
+                className="w-full bg-sinner-red hover:bg-red-700"
+                onClick={() => navigate('/dashboard')}
+              >
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                Go to Dashboard
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => navigate('/plans-catalog')}
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Back to Plans
+              </Button>
+            </>
+          ) : (
             <Button 
-              className="bg-[#ea384c] hover:bg-red-700"
-              onClick={() => navigate('/dashboard')}
+              className="w-full bg-sinner-red hover:bg-red-700"
+              onClick={() => navigate('/')}
             >
-              Return to Dashboard
+              <Home className="h-4 w-4 mr-2" />
+              Back to Home
             </Button>
-            <Button 
-              variant="outline" 
-              className="border-[#333]"
-              onClick={() => navigate('/payment-portal')}
-            >
-              View Payment History
-            </Button>
-          </div>
-        </div>
-      </main>
-      
-      <footer className="border-t border-[#333] py-4 text-center text-gray-500 text-sm">
-        <div className="container mx-auto px-4">
-          <p>© {new Date().getFullYear()} Surrendered Sinner Fitness. All rights reserved.</p>
-        </div>
-      </footer>
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 };

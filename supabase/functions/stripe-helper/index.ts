@@ -1,202 +1,250 @@
 
-// Follow this setup guide to integrate the Deno runtime and use Edge Functions:
-// https://docs.supabase.com/docs/guides/getting-started/tutorials/with-react#deploy-a-supabase-edge-function
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import Stripe from 'https://esm.sh/stripe@12.1.1?target=deno';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0';
+import Stripe from "https://esm.sh/stripe@12.4.0?target=deno";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOW_ORIGIN') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Max-Age': '86400', // 24 hours cache for preflight requests
 };
 
-serve(async (req) => {
-  // Handle CORS
+async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders,
+      status: 204,
+    });
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    
+    console.log("Stripe key availability check:", {
+      keyExists: !!stripeSecretKey,
+      keyLength: stripeSecretKey ? stripeSecretKey.length : 0,
+      keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 5) + '...' : 'none'
+    });
+    
+    let action = "test-connection";
+    let params = {};
+    
+    try {
+      const body = await req.json();
+      action = body.action || "test-connection";
+      params = body.params || {};
+    } catch (parseError) {
+      console.log("Could not parse request body, using defaults:", parseError);
+    }
+    
+    if (action === 'test-connection') {
+      console.log("Testing Supabase function connection...");
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Connection successful",
+          timestamp: new Date().toISOString(),
+          stripeKeyAvailable: !!stripeSecretKey
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+          status: 200,
+        }
+      );
+    }
+    
+    if (!stripeSecretKey) {
+      console.error("Missing Stripe secret key in environment variables");
+      throw new Error("Missing Stripe secret key");
+    }
+    
+    console.log("Stripe secret key found, initializing Stripe...");
+    
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16',
     });
-
-    // Parse request body
-    const { action, params } = await req.json();
-
-    console.log("Processing " + action + " with params:", params);
-
-    // Handle different actions
+    
+    console.log(`Stripe helper: Executing action ${action}`);
+    
+    let result;
+    
     switch (action) {
-      case 'get-publishable-key':
-        const publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY');
-        
-        if (!publishableKey) {
-          return new Response(
-            JSON.stringify({ error: 'Stripe publishable key not configured' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+      case 'get-dashboard-data':
+        result = { status: 'connected' };
+        break;
+      
+      case 'create-payment-intent':
+        if (!params.amount) {
+          throw new Error("Amount is required for creating a payment intent");
         }
         
-        return new Response(
-          JSON.stringify({ publishableKey }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-
-      case 'test-connection':
-        // Test if we have Stripe set up correctly without making any requests to Stripe
-        const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-        const stripeKeyAvailable = !!stripeKey;
+        console.log(`Creating payment intent for amount: ${params.amount}`);
         
-        return new Response(
-          JSON.stringify({
-            success: true,
-            stripeKeyAvailable,
-            message: 'Connection to Stripe helper function successful'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-
-      case 'createPaymentIntent':
-        if (!params?.amount || !params?.currency) {
-          return new Response(
-            JSON.stringify({ error: 'Missing required parameters: amount and currency' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-
-        // Ensure amount is a number 
-        const amount = Number(params.amount);
-        if (isNaN(amount) || amount <= 0) {
-          return new Response(
-            JSON.stringify({ error: 'Invalid amount parameter: must be a positive number' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-
-        // Create a PaymentIntent with the order amount and currency
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amount,
-          currency: params.currency,
-          automatic_payment_methods: {
-            enabled: true,
-          },
-          metadata: {
-            payment_id: params.payment_id || '',
-            description: params.description || '',
-          }
+        result = await stripe.paymentIntents.create({
+          amount: params.amount,
+          currency: params.currency || 'usd',
+          payment_method_types: ['card'],
+          metadata: params.metadata || {},
         });
-
-        return new Response(
-          JSON.stringify({ 
-            client_secret: paymentIntent.client_secret,
-            payment_intent_id: paymentIntent.id 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-
+        
+        console.log(`Payment intent created with id: ${result.id}`);
+        break;
+      
+      case 'get-subscription-plans':
+        console.log("Fetching subscription plans from Stripe");
+        
+        result = await stripe.prices.list({
+          active: true,
+          type: 'recurring',
+          expand: ['data.product'],
+        });
+        
+        console.log(`Retrieved ${result.data.length} subscription plans`);
+        break;
+      
+      case 'createPaymentIntent':
+        if (!params.amount) {
+          throw new Error("Amount is required for creating a payment intent");
+        }
+        
+        console.log(`Creating payment intent for amount: ${params.amount}, description: ${params.description || 'N/A'}`);
+        
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: params.amount,
+          currency: params.currency || 'usd',
+          payment_method_types: ['card'],
+          metadata: {
+            payment_id: params.payment_id,
+            description: params.description || '',
+            ...params.metadata
+          },
+        });
+        
+        console.log(`Payment intent created with id: ${paymentIntent.id}`);
+        
+        result = {
+          client_secret: paymentIntent.client_secret,
+          payment_intent_id: paymentIntent.id
+        };
+        break;
+      
       case 'updatePaymentStatus':
-        if (!params?.payment_id || !params?.status) {
-          return new Response(
-            JSON.stringify({ error: 'Missing required parameters: payment_id and status' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+        if (!params.payment_id) {
+          throw new Error("Payment ID is required for updating payment status");
         }
         
-        // Initialize Supabase client
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        console.log(`Updating payment status for payment_id: ${params.payment_id}, status: ${params.status}`);
         
-        // Update payment record in database
-        const { data, error } = await supabase
-          .from('payments')
-          .update({
-            status: params.status,
-            payment_intent_id: params.payment_intent_id || null,
-            payment_method: params.payment_method || null,
-            amount: params.amount || null,
-            metadata: {
-              description: params.description || null
-            }
-          })
-          .eq('id', params.payment_id)
-          .select();
+        const { data: updatedPayment, error: updateError } = await supabase
+          .rpc('update_payment_status', {
+            payment_id: params.payment_id,
+            new_status: params.status,
+            payment_intent_id: params.payment_intent_id,
+            payment_method: params.payment_method
+          });
           
-        if (error) {
-          return new Response(
-            JSON.stringify({ error: 'Failed to update payment status: ' + error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
+        if (updateError) {
+          console.error("Error updating payment status:", updateError);
+          throw new Error(`Failed to update payment status: ${updateError.message}`);
         }
         
-        if (params.status === 'completed' && params.amount) {
-          // If payment was successful, update user balance
-          // Get the user_id from the payment record
-          const payment = data[0];
-          if (payment?.user_id) {
-            // Check if user already has a balance
-            const { data: existingBalance, error: balanceQueryError } = await supabase
-              .from('payment_balance')
-              .select()
-              .eq('user_id', payment.user_id)
-              .maybeSingle();
-              
-            if (balanceQueryError) {
-              console.error('Error checking user balance:', balanceQueryError);
-            }
+        result = {
+          success: true,
+          payment_id: params.payment_id,
+          status: params.status
+        };
+        break;
+        
+      case 'create-checkout-session':
+        console.log("Creating Stripe checkout session...");
+        
+        if (!params.priceId) {
+          throw new Error("Price ID is required for creating a checkout session");
+        }
+        
+        let checkoutOptions: any = {
+          line_items: [
+            {
+              price: params.priceId,
+              quantity: 1,
+            },
+          ],
+          mode: params.mode || 'subscription', // subscription or payment
+          success_url: params.successUrl || `${req.headers.get('origin')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: params.cancelUrl || `${req.headers.get('origin')}/payment-cancelled`,
+        };
+        
+        // If user_id is provided, save it in the metadata
+        if (params.userId) {
+          checkoutOptions.metadata = {
+            user_id: params.userId
+          };
+          
+          // Check if user already has a Stripe customer ID
+          const { data: existingCustomer } = await supabase
+            .from('stripe_customers')
+            .select('stripe_customer_id')
+            .eq('user_id', params.userId)
+            .maybeSingle();
             
-            if (existingBalance) {
-              // Update existing balance
-              await supabase
-                .from('payment_balance')
-                .update({
-                  balance: existingBalance.balance + (params.amount / 100), // Convert cents to dollars/currency units
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', existingBalance.id);
-            } else {
-              // Create new balance record
-              await supabase
-                .from('payment_balance')
-                .insert({
-                  user_id: payment.user_id,
-                  balance: params.amount / 100, // Convert cents to dollars/currency units
-                  currency: 'USD'
-                });
-            }
-            
-            // Add to payment history
-            await supabase
-              .from('payment_history')
-              .insert({
-                user_id: payment.user_id,
-                amount: params.amount / 100,
-                currency: 'USD',
-                status: 'succeeded',
-                payment_method: params.payment_method || 'card',
-                description: params.description || 'Account deposit'
-              });
+          if (existingCustomer?.stripe_customer_id) {
+            checkoutOptions.customer = existingCustomer.stripe_customer_id;
+          } else if (params.userEmail) {
+            // If no customer ID but email is provided, add email to create a new customer
+            checkoutOptions.customer_email = params.userEmail;
           }
+        } else if (params.userEmail) {
+          checkoutOptions.customer_email = params.userEmail;
         }
         
-        return new Response(
-          JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-
+        const session = await stripe.checkout.sessions.create(checkoutOptions);
+        
+        console.log(`Checkout session created with id: ${session.id}`);
+        
+        result = {
+          sessionId: session.id,
+          url: session.url
+        };
+        break;
+      
       default:
-        return new Response(
-          JSON.stringify({ error: `Unknown action: ${action}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
+        throw new Error(`Unknown action: ${action}`);
     }
-  } catch (err) {
-    console.error(`Error processing request:`, err);
     
     return new Response(
-      JSON.stringify({ error: err.message || 'An unexpected error occurred' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify(result),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+        status: 200,
+      }
+    );
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorType = error instanceof Error ? error.name : "unknown_error";
+    
+    console.error("Stripe helper error:", errorMessage);
+    
+    return new Response(
+      JSON.stringify({
+        error: errorMessage,
+        errorType: errorType,
+        timestamp: new Date().toISOString()
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+        status: 500,
+      }
     );
   }
-});
+}
+
+serve(handler);

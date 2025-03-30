@@ -33,27 +33,8 @@ export interface WorkoutPlan {
   description: string | null;
   pdf_url: string | null;
   plan_type: string;
-  custom_plan_result_id?: string | null;
-  payment_id?: string | null;
-  is_purchased?: boolean;
   created_at?: string;
   updated_at?: string;
-}
-
-// User file type
-export interface UserFile {
-  id: string;
-  file_name: string;
-  file_type: string;
-  file_size: number;
-  description: string;
-  download_url: string;
-  uploaded_at: string;
-  file_path: string;
-  plan_id?: string;
-  plan_name?: string;
-  workout_plans?: WorkoutPlan | null;
-  user_id?: string;
 }
 
 // Quote type

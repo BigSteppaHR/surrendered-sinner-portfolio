@@ -1,231 +1,395 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Home, 
-  User, 
-  Calendar, 
-  LineChart, 
-  Download, 
-  CreditCard, 
-  HelpCircle, 
-  Settings, 
-  Menu, 
-  X, 
-  LogOut, 
-  FileText,
-  ShoppingBag
-} from 'lucide-react';
-import Logo from '@/components/Logo';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
-interface NavItemProps {
-  icon: React.ReactElement;
-  children: React.ReactNode;
-  to: string;
-  active: boolean;
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  LayoutDashboard,
+  User,
+  Dumbbell,
+  Calendar,
+  Wallet,
+  BarChart3,
+  MessageCircle,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  ChevronRight,
+  CreditCard,
+  Package,
+  Clock,
+  Shield,
+  AlertCircle
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import Logo from '@/components/Logo';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+
+const sidebarLinks = [
+  {
+    path: '/dashboard',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    label: 'Dashboard',
+    exact: true,
+  },
+  {
+    path: '/dashboard/account',
+    icon: <User className="h-5 w-5" />,
+    label: 'Account',
+  },
+  {
+    path: '/dashboard/plans',
+    icon: <Dumbbell className="h-5 w-5" />,
+    label: 'Training Plans',
+  },
+  {
+    path: '/dashboard/schedule',
+    icon: <Calendar className="h-5 w-5" />,
+    label: 'Schedule',
+  },
+  {
+    path: '/dashboard/progress',
+    icon: <BarChart3 className="h-5 w-5" />,
+    label: 'Progress',
+  },
+  {
+    path: '/dashboard/payment',
+    icon: <Wallet className="h-5 w-5" />,
+    label: 'Payment',
+  },
+  {
+    path: '/dashboard/support',
+    icon: <MessageCircle className="h-5 w-5" />,
+    label: 'Support',
+  },
+  {
+    path: '/dashboard/settings',
+    icon: <Settings className="h-5 w-5" />,
+    label: 'Settings',
+  },
+];
+
+const utilityLinks = [
+  {
+    path: '/plans-catalog',
+    icon: <Package className="h-5 w-5" />,
+    label: 'Plan Catalog',
+  },
+  {
+    path: '/payment-portal',
+    icon: <CreditCard className="h-5 w-5" />,
+    label: 'Payment Portal',
+  },
+];
+
+interface UserSubscription {
+  id: string;
+  plan_name: string;
+  end_date: string;
+  status: string;
 }
 
-const NavItem = ({ icon, children, to, active }: NavItemProps) => {
-  return (
-    <li>
-      <Link
-        to={to}
-        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all ${
-          active 
-            ? 'text-white bg-transparent border border-[#ea384c] shadow-[0_0_10px_rgba(234,56,76,0.3)]' 
-            : 'text-gray-400 hover:text-white hover:bg-zinc-800'
-        }`}
-      >
-        {icon && React.cloneElement(icon, { 
-          size: 18, 
-          className: active ? 'text-[#ea384c]' : '' 
-        })}
-        <span>{children}</span>
-      </Link>
-    </li>
-  );
-};
+interface UserBalance {
+  amount: number;
+  currency: string;
+}
 
 const DashboardNav = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { logout, user } = useAuth();
   const location = useLocation();
-  const { user, profile, isLoading, logout } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
   const { toast } = useToast();
-  
+  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
+  const [balance, setBalance] = useState<UserBalance | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location]);
-  
-  const handleSignOut = async () => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserSubscriptionAndBalance();
+    }
+  }, [user]);
+
+  const fetchUserSubscriptionAndBalance = async () => {
+    setIsLoading(true);
     try {
-      await logout();
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account.",
-      });
+      const { data: subscriptionData, error: subError } = await supabase
+        .from('subscriptions')
+        .select('id, plan_id, current_period_end, status')
+        .eq('user_id', user?.id)
+        .eq('status', 'active')
+        .order('current_period_end', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (subError && subError.code !== 'PGRST116') {
+        console.error('Error fetching subscription:', subError);
+      }
+      
+      if (subscriptionData) {
+        setSubscription({
+          id: subscriptionData.id,
+          plan_name: getPlanName(subscriptionData.plan_id),
+          end_date: subscriptionData.current_period_end,
+          status: subscriptionData.status
+        });
+      }
+      
+      const { data: balanceData, error: balanceError } = await supabase
+        .from('payment_balance')
+        .select('balance, currency')
+        .eq('user_id', user?.id)
+        .limit(1)
+        .single();
+        
+      if (balanceError && balanceError.code !== 'PGRST116') {
+        console.error('Error fetching balance:', balanceError);
+      }
+      
+      if (balanceData) {
+        setBalance({
+          amount: balanceData.balance,
+          currency: balanceData.currency
+        });
+      }
+      
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error('Error fetching user data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getPlanName = (planId: string): string => {
+    const planNames: Record<string, string> = {
+      'basic': 'Basic Plan',
+      'pro': 'Pro Plan',
+      'elite': 'Elite Plan',
+      'price_1OxCvNGXXtKP1NLsUOjDC8bD': 'Monthly Subscription',
+      'price_1OxChEGXXtKP1NLssfb58nfD': 'Annual Subscription',
+    };
+    
+    return planNames[planId] || 'Premium Plan';
+  };
+
+  const handleLogout = async () => {
+    try {
+      const { success, redirectTo } = await logout();
+      if (success && redirectTo) {
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+        navigate(redirectTo);
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
       toast({
-        title: "Error signing out",
-        description: "There was a problem signing out. Please try again.",
         variant: "destructive",
+        title: "Logout failed",
+        description: "There was a problem logging you out. Please try again.",
       });
     }
   };
-  
-  const isActive = (path: string) => {
-    return location.pathname === path;
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
-  
+
+  const formatCurrency = (amount: number, currency: string = 'USD'): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  };
+
+  const getDaysRemaining = (endDate: string): number => {
+    const end = new Date(endDate);
+    const now = new Date();
+    const diffTime = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  };
+
   return (
     <>
-      <div className="fixed top-4 left-4 z-50 md:hidden">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="bg-zinc-900 border-zinc-700"
-        >
-          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </Button>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black border-b border-[#333]">
+        <div className="flex justify-between items-center h-16 px-4">
+          <Link to="/dashboard" className="flex items-center">
+            <Logo size="small" />
+          </Link>
+          <button
+            onClick={toggleMenu}
+            className="text-white p-2"
+            aria-label="Toggle navigation menu"
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </div>
-      
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/80 z-40 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
+
+      {isMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={toggleMenu}></div>
       )}
-      
-      <aside 
-        className={`fixed top-0 left-0 h-full w-64 bg-zinc-900 border-r border-zinc-800 z-50 transition-transform duration-300 ease-in-out ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 bg-black border-r border-[#333] transition-transform transform-gpu",
+          isMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
       >
         <div className="flex flex-col h-full">
-          <div className="p-4 flex items-center justify-center">
-            <Logo size="small" />
+          <div className="h-16 flex items-center px-6 border-b border-[#333] hidden md:flex">
+            <Link to="/dashboard" className="flex items-center">
+              <Logo size="small" />
+            </Link>
           </div>
-          
-          <Separator className="bg-zinc-800" />
-          
-          <nav className="flex-1 overflow-y-auto py-4 px-3">
-            <ul className="space-y-1">
-              <NavItem 
-                icon={<Home />} 
-                to="/dashboard" 
-                active={isActive('/dashboard')}
-              >
-                Dashboard
-              </NavItem>
-              
-              <NavItem 
-                icon={<User />} 
-                to="/dashboard/account" 
-                active={isActive('/dashboard/account')}
-              >
-                My Account
-              </NavItem>
-              
-              <NavItem 
-                icon={<FileText />} 
-                to="/dashboard/plans" 
-                active={isActive('/dashboard/plans')}
-              >
-                Training Plans
-              </NavItem>
-              
-              <NavItem 
-                icon={<Calendar />} 
-                to="/dashboard/schedule" 
-                active={isActive('/dashboard/schedule')}
-              >
-                Schedule
-              </NavItem>
-              
-              <NavItem 
-                icon={<LineChart />} 
-                to="/dashboard/progress" 
-                active={isActive('/dashboard/progress')}
-              >
-                Progress
-              </NavItem>
-              
-              <NavItem 
-                icon={<Download />} 
-                to="/dashboard/downloads" 
-                active={isActive('/dashboard/downloads')}
-              >
-                Downloads
-              </NavItem>
-              
-              <NavItem 
-                icon={<CreditCard />} 
-                to="/dashboard/payment" 
-                active={isActive('/dashboard/payment')}
-              >
-                Payment
-              </NavItem>
-              
-              <NavItem 
-                icon={<ShoppingBag />} 
-                to="https://alphanutritionlabs.com" 
-                active={false}
-              >
-                Shop
-              </NavItem>
-              
-              <NavItem 
-                icon={<HelpCircle />} 
-                to="/dashboard/support" 
-                active={isActive('/dashboard/support')}
-              >
-                Support
-              </NavItem>
-              
-              <NavItem 
-                icon={<Settings />} 
-                to="/dashboard/settings" 
-                active={isActive('/dashboard/settings')}
-              >
-                Settings
-              </NavItem>
-            </ul>
-          </nav>
-          
-          <Separator className="bg-zinc-800" />
-          
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-white">
-                  {user?.email?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <div className="ml-2">
-                  <div className="text-sm font-medium text-white truncate max-w-[150px]">
-                    {user?.email}
-                  </div>
-                  <div className="text-xs text-zinc-400">Member</div>
+
+          <div className="flex-1 overflow-y-auto py-6 px-4">
+            <nav className="space-y-6">
+              <div className="space-y-1">
+                {sidebarLinks.map((link) => (
+                  <NavLink
+                    key={link.path}
+                    to={link.path}
+                    icon={link.icon}
+                    label={link.label}
+                    exact={link.exact}
+                  />
+                ))}
+              </div>
+
+              <div className="pt-6 border-t border-[#333]">
+                <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Utilities
+                </p>
+                <div className="space-y-1">
+                  {utilityLinks.map((link) => (
+                    <NavLink
+                      key={link.path}
+                      to={link.path}
+                      icon={link.icon}
+                      label={link.label}
+                    />
+                  ))}
                 </div>
               </div>
-            </div>
+            </nav>
+          </div>
+
+          <div className="p-4 border-t border-[#333]">
+            {isLoading ? (
+              <div className="flex justify-center py-2">
+                <div className="w-5 h-5 border-2 border-[#ea384c] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <Card className="bg-[#0f0f0f] border-[#333] mb-4">
+                <CardContent className="p-3 space-y-3">
+                  {subscription ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Current Plan:</span>
+                        <Badge className="bg-[#ea384c]">{subscription.plan_name}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center text-gray-400">
+                          <Clock className="h-3 w-3 mr-1" />
+                          <span>Expires:</span>
+                        </div>
+                        <div className="font-medium text-white">
+                          {format(new Date(subscription.end_date), 'MMM d, yyyy')}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">Days remaining:</span>
+                        <span className={cn(
+                          "font-medium",
+                          getDaysRemaining(subscription.end_date) < 7 ? "text-yellow-500" : "text-white"
+                        )}>
+                          {getDaysRemaining(subscription.end_date)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center text-gray-400">
+                        <AlertCircle className="h-3 w-3 mr-1 text-yellow-500" />
+                        <span>No active subscription</span>
+                      </div>
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="h-auto p-0 text-[#ea384c]"
+                        onClick={() => navigate('/dashboard/payment')}
+                      >
+                        Upgrade
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <div className="h-px bg-[#333] my-2"></div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Balance:</span>
+                    <span className="font-semibold">
+                      {balance ? formatCurrency(balance.amount, balance.currency) : '$0.00'}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
-            <Button 
-              variant="ghost" 
-              className="flex items-center text-gray-400 hover:text-white w-full justify-start"
-              onClick={() => logout()}
+            <Button
+              variant="outline"
+              className="w-full justify-start text-[#ea384c] hover:text-white border-[#333] hover:bg-[#ea384c]/20"
+              onClick={handleLogout}
             >
-              <LogOut className="h-4 w-4 mr-2" />
-              <span>Log Out</span>
+              <LogOut className="h-5 w-5 mr-2" />
+              Log Out
             </Button>
           </div>
         </div>
       </aside>
     </>
+  );
+};
+
+interface NavLinkProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  exact?: boolean;
+}
+
+const NavLink = ({ to, icon, label, exact }: NavLinkProps) => {
+  const location = useLocation();
+  const isActive = exact
+    ? location.pathname === to
+    : location.pathname.startsWith(to);
+
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+        isActive
+          ? "bg-[#ea384c] text-white"
+          : "text-gray-300 hover:text-white hover:bg-[#333]"
+      )}
+    >
+      <span className="mr-3">{icon}</span>
+      <span className="flex-1">{label}</span>
+      {isActive && <ChevronRight className="h-4 w-4" />}
+    </Link>
   );
 };
 
