@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 let stripePromise: Promise<Stripe | null> | null = null;
 
 // Define the publishable key - using environment variable with fallback for development
+// Make sure the key is valid and correctly formatted
 const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
 
 // Helper for conditional logging
@@ -90,13 +91,13 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           return;
         }
         
-        // Use the defined key
+        // Verify the key format before using
         if (!STRIPE_PUBLISHABLE_KEY || !STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
-          console.warn("Using test Stripe publishable key. Payments will only work in test mode.");
+          console.warn("Invalid Stripe publishable key format. Payments may not work correctly.");
         }
         
         // Initialize Stripe with the key
-        stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY, {
+        stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY.trim(), {
           apiVersion: '2023-10-16',
         });
         
@@ -160,7 +161,8 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         currency: 'usd',
         amount: 5999, // Default amount in cents (e.g., $59.99) for initial setup
         paymentMethodTypes: ['card'],
-        locale: 'en'
+        locale: 'en',
+        loader: 'auto', // Add loader option to handle loading states better
       }}
     >
       {children}

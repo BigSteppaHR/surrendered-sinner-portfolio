@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowLeft, CheckCircle, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from '@/components/Logo';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH');
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY.trim());
 
 const PaymentProcess = () => {
   const [searchParams] = useSearchParams();
@@ -126,7 +126,11 @@ const PaymentProcess = () => {
                   <div className="w-full h-[1px] bg-[#333]" />
                 </div>
                 
-                <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+                <Elements stripe={stripePromise} options={{ 
+                  clientSecret, 
+                  appearance,
+                  loader: 'auto'
+                }}>
                   <CheckoutForm 
                     clientSecret={clientSecret} 
                     paymentId={paymentId!} 
@@ -145,7 +149,7 @@ const PaymentProcess = () => {
       
       <footer className="border-t border-[#333] py-4 text-center text-gray-500 text-sm">
         <div className="container mx-auto px-4">
-          <p>© {new Date().getFullYear()} Fitness Training. All payments are secure and encrypted.</p>
+          <p>© {new Date().getFullYear()} Surrendered Sinner Fitness. All payments are secure and encrypted.</p>
         </div>
       </footer>
     </div>
