@@ -28,8 +28,12 @@ export const registerAssetErrorHandlers = () => {
       // Handle specific asset types
       if (event.target instanceof HTMLImageElement) {
         handleImageLoadError(event.target);
-      } else if (event.target instanceof HTMLLinkElement && event.target.rel === 'icon') {
-        handleFaviconLoadError(event.target);
+      } else if (event.target instanceof HTMLLinkElement) {
+        if (event.target.rel === 'icon' || event.target.rel === 'apple-touch-icon') {
+          handleFaviconLoadError(event.target);
+        } else if (event.target.rel === 'manifest') {
+          handleManifestLoadError(event.target);
+        }
       }
       
       return false;
@@ -62,6 +66,51 @@ const handleFaviconLoadError = (linkElement: HTMLLinkElement) => {
 };
 
 /**
+ * Handles manifest loading errors
+ */
+const handleManifestLoadError = (linkElement: HTMLLinkElement) => {
+  console.warn('Manifest file could not be loaded. Using fallback...');
+  
+  // Attempt to dynamically create the manifest if it fails to load
+  try {
+    const manifestJSON = {
+      "short_name": "SSF",
+      "name": "Surrendered Sinner Fitness",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "64x64 32x32 24x24 16x16",
+          "type": "image/x-icon"
+        },
+        {
+          "src": "/logo192.png",
+          "type": "image/png",
+          "sizes": "192x192"
+        },
+        {
+          "src": "/logo512.png",
+          "type": "image/png",
+          "sizes": "512x512"
+        }
+      ],
+      "start_url": "/",
+      "display": "standalone",
+      "theme_color": "#ea384c",
+      "background_color": "#000000"
+    };
+    
+    // Create a Blob to act as a virtual manifest file
+    const blob = new Blob([JSON.stringify(manifestJSON)], {type: 'application/manifest+json'});
+    const manifestUrl = URL.createObjectURL(blob);
+    
+    // Replace the failed manifest with our generated one
+    linkElement.href = manifestUrl;
+  } catch (err) {
+    console.error('Failed to create dynamic manifest:', err);
+  }
+};
+
+/**
  * Initialize all asset handling protections
  */
 export const initializeAssetProtection = () => {
@@ -72,5 +121,46 @@ export const initializeAssetProtection = () => {
     registerAssetErrorHandlers();
   }
   
+  // Make sure manifest files are accessible
+  ensureManifestFiles();
+  
   return true;
+};
+
+/**
+ * Ensures that necessary manifest files are accessible
+ */
+const ensureManifestFiles = () => {
+  // Check if we're in development mode (codecove.dev)
+  const isDevEnvironment = typeof window !== 'undefined' && 
+    (window.location.hostname === 'codecove.dev' || 
+     window.location.hostname.includes('codecove.dev') || 
+     window.location.hostname === 'localhost' ||
+     window.location.hostname.includes('localhost'));
+  
+  if (isDevEnvironment) {
+    console.log('Development environment detected, checking manifest files...');
+    
+    // Test if logo files are accessible
+    const testImage = (url: string) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url;
+      });
+    };
+    
+    // Check logo files
+    Promise.all([
+      testImage('/logo192.png'),
+      testImage('/logo512.png')
+    ]).then(results => {
+      if (results.some(result => !result)) {
+        console.warn('Some manifest image files are not accessible. Using fallback strategy.');
+      } else {
+        console.log('All manifest image files are accessible.');
+      }
+    });
+  }
 };
