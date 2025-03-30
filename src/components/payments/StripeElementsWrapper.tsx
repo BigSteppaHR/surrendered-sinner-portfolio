@@ -13,7 +13,7 @@ interface StripeElementsWrapperProps {
   clientSecret: string;
   children: React.ReactNode;
   appearance?: {
-    theme: 'stripe' | 'night' | 'flat' | 'none';
+    theme: 'stripe' | 'night' | 'flat';
     variables?: Record<string, string>;
     rules?: Record<string, Record<string, string>>;
   };
