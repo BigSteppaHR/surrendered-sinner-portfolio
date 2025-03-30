@@ -3,16 +3,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from '@/components/Logo';
-
-// We'll use the existing publishable key
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
-const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY.trim());
 
 const PaymentProcess = () => {
   const [searchParams] = useSearchParams();
@@ -40,10 +35,11 @@ const PaymentProcess = () => {
         // Parse amount as a number and ensure it's valid
         let amountValue: number | null = null;
         if (amountParam) {
-          amountValue = parseFloat(amountParam);
-          if (isNaN(amountValue) || amountValue <= 0) {
+          const parsedAmount = parseFloat(amountParam);
+          if (isNaN(parsedAmount) || parsedAmount <= 0) {
             throw new Error("Invalid amount parameter");
           }
+          amountValue = parsedAmount;
         } else {
           throw new Error("Missing amount parameter");
         }
@@ -83,6 +79,45 @@ const PaymentProcess = () => {
       spacingUnit: '4px',
       borderRadius: '8px',
     },
+  };
+
+  // Only render Elements if we have all required params
+  const renderStripeElements = () => {
+    if (!clientSecret || amount === null) {
+      return (
+        <div className="text-center py-6 text-red-400">
+          Error loading payment information. Please try again.
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-gray-400">Amount:</span>
+            <span className="text-xl font-bold">${amount.toFixed(2)}</span>
+          </div>
+          <div className="w-full h-[1px] bg-[#333]" />
+        </div>
+        
+        <Elements 
+          options={{ 
+            clientSecret, 
+            appearance,
+            amount: Math.round(amount * 100), // Converting to cents for Stripe
+            currency: 'usd',
+            loader: 'auto'
+          }}
+        >
+          <CheckoutForm 
+            clientSecret={clientSecret} 
+            paymentId={paymentId!} 
+            amount={amount} 
+          />
+        </Elements>
+      </>
+    );
   };
 
   return (
@@ -127,32 +162,8 @@ const PaymentProcess = () => {
                 <p className="text-red-400">{error}</p>
                 <p className="text-sm text-gray-400 mt-2">Redirecting back to payment portal...</p>
               </div>
-            ) : clientSecret && amount !== null ? (
-              <>
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400">Amount:</span>
-                    <span className="text-xl font-bold">${amount.toFixed(2)}</span>
-                  </div>
-                  <div className="w-full h-[1px] bg-[#333]" />
-                </div>
-                
-                <Elements stripe={stripePromise} options={{ 
-                  clientSecret, 
-                  appearance,
-                  loader: 'auto'
-                }}>
-                  <CheckoutForm 
-                    clientSecret={clientSecret} 
-                    paymentId={paymentId!} 
-                    amount={amount} 
-                  />
-                </Elements>
-              </>
             ) : (
-              <div className="text-center py-6 text-red-400">
-                Error loading payment information. Please try again.
-              </div>
+              renderStripeElements()
             )}
           </CardContent>
         </Card>

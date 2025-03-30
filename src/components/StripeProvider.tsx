@@ -222,7 +222,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     <Elements 
       stripe={stripePromise}
       options={{
-        mode: 'payment', // General default mode is payment
+        mode: 'payment',
         appearance: {
           theme: 'night',
           variables: {
