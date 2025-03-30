@@ -106,3 +106,44 @@ export interface TrainingPackage {
   created_at: string;
   updated_at: string;
 }
+
+// Subscription type
+export interface Subscription {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  status: string;
+  stripe_subscription_id: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  metadata: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Subscription addon type
+export interface SubscriptionAddon {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  is_active: boolean;
+  addon_type: string;
+  metadata: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// User addon purchase type
+export interface UserAddonPurchase {
+  id: string;
+  user_id: string;
+  addon_id: string;
+  subscription_id: string | null;
+  purchase_date: string;
+  status: string;
+  is_used: boolean;
+  used_date: string | null;
+  metadata: Record<string, any> | null;
+}
+

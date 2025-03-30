@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardNav from '@/components/dashboard/DashboardNav';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,165 +10,113 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import SEO from '@/components/SEO';
-import { CheckCircle, ChevronLeft, CreditCard, Dumbbell, Loader2, Star, Users } from 'lucide-react';
+import { CheckCircle, ChevronLeft, CreditCard, Dumbbell, Loader2, Star, Users, Heart, BookOpen, Target } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { subscriptionPlans, subscriptionAddons } from '@/components/payment/SubscriptionData';
 
 interface Plan {
   id: string;
   name: string;
   description: string;
   price: number;
+  priceValue?: number;
   currency: string;
   interval: string;
   features: string[];
   category: string;
   popular?: boolean;
+  addons?: {
+    id: string;
+    name: string;
+    price: number;
+    description: string;
+  }[];
+}
+
+interface Addon {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
 }
 
 const PlansCatalog = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('personal');
+  const [activeTab, setActiveTab] = useState('nutrition');
   const [isLoading, setIsLoading] = useState(false);
-  const [subscriptionPlans, setSubscriptionPlans] = useState<Plan[]>([]);
+  const [catalogPlans, setCatalogPlans] = useState<Plan[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
+  const [recommendedPlanId, setRecommendedPlanId] = useState<string | null>(null);
   
-  // Placeholder plan data - in a real app, this would come from Stripe via the edge function
   useEffect(() => {
-    const plans: Plan[] = [
-      {
-        id: 'price_monthly_personal',
-        name: 'Personal Training',
-        description: 'One-on-one coaching for optimal results',
-        price: 149.99,
-        currency: 'USD',
-        interval: 'month',
-        features: [
-          'Weekly 1-on-1 sessions',
-          'Personalized workout plan',
-          'Nutrition guidance',
-          'Progress tracking',
-          'Email support'
-        ],
-        category: 'personal',
-        popular: true
-      },
-      {
-        id: 'price_quarterly_personal',
-        name: 'Personal Quarterly',
-        description: 'Save with quarterly commitment',
-        price: 399.99,
-        currency: 'USD',
-        interval: 'quarter',
-        features: [
-          'All Personal Training features',
-          'Priority scheduling',
-          'Bi-weekly check-ins',
-          '15% savings vs monthly',
-          'Nutrition plan included'
-        ],
-        category: 'personal'
-      },
-      {
-        id: 'price_monthly_group',
-        name: 'Group Training',
-        description: 'Train with a community of like-minded individuals',
-        price: 79.99,
-        currency: 'USD',
-        interval: 'month',
-        features: [
-          'Unlimited group classes',
-          'Community support',
-          'Basic workout templates',
-          'Monthly fitness assessments',
-          'App access'
-        ],
-        category: 'group'
-      },
-      {
-        id: 'price_quarterly_group',
-        name: 'Group Quarterly',
-        description: 'Group training with quarterly savings',
-        price: 199.99,
-        currency: 'USD',
-        interval: 'quarter',
-        features: [
-          'All Group Training features',
-          'One personal session per month',
-          'Basic nutrition guide',
-          '15% savings vs monthly',
-          'Community challenges'
-        ],
-        category: 'group',
-        popular: true
-      },
-      {
-        id: 'price_monthly_competition',
-        name: 'Competition Prep',
-        description: 'Specialized coaching for competitions',
-        price: 299.99,
-        currency: 'USD',
-        interval: 'month',
-        features: [
-          'Contest-specific training',
-          'Posing practice',
-          'Customized nutrition plan',
-          'Weekly check-ins',
-          'Competition day coaching'
-        ],
-        category: 'competition'
-      },
-      {
-        id: 'price_monthly_online',
-        name: 'Online Coaching',
-        description: 'Remote coaching with professional guidance',
-        price: 99.99,
-        currency: 'USD',
-        interval: 'month',
-        features: [
-          'Custom workout program',
-          'Video form checks',
-          'Nutrition recommendations',
-          'Email/text support',
-          'Monthly program updates'
-        ],
-        category: 'online',
-        popular: true
+    // Check if there's a recommended plan from quiz
+    if (location.state && location.state.recommendedPlanId) {
+      setRecommendedPlanId(location.state.recommendedPlanId);
+      
+      // Set active tab based on recommended plan
+      const planType = location.state.recommendedPlanId.split('-')[0];
+      if (planType === 'nutrition') {
+        setActiveTab('nutrition');
+      } else if (planType === 'lifting' || planType === 'weight') {
+        setActiveTab('training');
+      } else if (planType === 'premium') {
+        setActiveTab('premium');
       }
-    ];
+    }
+  }, [location]);
+  
+  // Transform subscription data to match the Plan interface
+  useEffect(() => {
+    const transformedPlans: Plan[] = [];
     
-    setSubscriptionPlans(plans);
+    subscriptionPlans.forEach(plan => {
+      const planCategory = plan.id === 'nutrition' ? 'nutrition' : 
+                          plan.id === 'lifting' ? 'training' : 
+                          plan.id === 'premium' ? 'premium' : 'other';
+      
+      transformedPlans.push({
+        id: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: plan.priceValue || 0,
+        priceValue: plan.priceValue || 0,
+        currency: 'USD',
+        interval: 'month',
+        features: plan.features,
+        category: planCategory,
+        popular: plan.id === 'premium',
+        addons: plan.addons
+      });
+    });
     
-    // In a real implementation, you would fetch plans from Stripe
-    // This is here for future reference:
-    /*
-    const fetchPlans = async () => {
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase.functions.invoke('stripe-helper', {
-          body: { 
-            action: 'get-subscription-plans'
-          }
-        });
-        
-        if (error) throw error;
-        setSubscriptionPlans(data.plans || []);
-      } catch (error) {
-        console.error('Error fetching subscription plans:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load subscription plans. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchPlans();
-    */
+    setCatalogPlans(transformedPlans);
   }, []);
+  
+  const handleAddonToggle = (addonId: string) => {
+    setSelectedAddons(prev => ({
+      ...prev,
+      [addonId]: !prev[addonId]
+    }));
+  };
+  
+  const calculateTotalPrice = (plan: Plan) => {
+    let total = plan.priceValue || plan.price;
+    
+    // Add selected addons
+    if (plan.addons) {
+      plan.addons.forEach(addon => {
+        if (selectedAddons[addon.id]) {
+          total += addon.price;
+        }
+      });
+    }
+    
+    return total;
+  };
   
   const handleSubscribe = async (plan: Plan) => {
     if (!isAuthenticated) {
@@ -177,24 +125,30 @@ const PlansCatalog = () => {
         description: "Please log in to subscribe to a plan",
         variant: "default",
       });
-      navigate('/login');
+      navigate('/login', { state: { redirectAfterLogin: '/plans-catalog' } });
       return;
     }
     
     try {
       setIsLoading(true);
       
+      // Get selected addons for this plan
+      const planAddons = plan.addons || [];
+      const selectedPlanAddons = planAddons.filter(addon => selectedAddons[addon.id]);
+      
+      // Calculate total price including addons
+      const totalPrice = calculateTotalPrice(plan);
+      
       // Create a checkout session in Stripe
       const { data, error } = await supabase.functions.invoke('stripe-helper', {
         body: { 
-          action: 'create-checkout-session',
-          params: {
-            priceId: plan.id,
-            mode: 'subscription',
-            userId: user?.id,
-            userEmail: user?.email,
-            successUrl: `${window.location.origin}/payment-success?plan=${encodeURIComponent(plan.name)}`,
-            cancelUrl: `${window.location.origin}/plans-catalog`
+          action: 'create_checkout_session',
+          data: {
+            planId: plan.id,
+            planType: plan.category,
+            price: totalPrice,
+            planName: plan.name,
+            addons: selectedPlanAddons
           }
         }
       });
@@ -205,15 +159,16 @@ const PlansCatalog = () => {
         // Record the checkout attempt in the database
         await supabase.from('payment_history').insert({
           user_id: user?.id,
-          amount: plan.price * 100, // Convert to cents for Stripe
+          amount: totalPrice,
           currency: plan.currency,
-          description: `Subscription to ${plan.name}`,
+          description: `Subscription to ${plan.name}${selectedPlanAddons.length > 0 ? ' with addons' : ''}`,
           status: 'pending',
           payment_method: 'stripe',
           metadata: {
             plan_id: plan.id,
             plan_name: plan.name,
-            interval: plan.interval
+            interval: plan.interval,
+            addons: selectedPlanAddons.map(addon => addon.id)
           }
         });
         
@@ -231,6 +186,21 @@ const PlansCatalog = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const getPlanIcon = (category: string) => {
+    switch (category) {
+      case 'nutrition':
+        return <Heart className="h-5 w-5 text-sinner-red" />;
+      case 'training':
+        return <Dumbbell className="h-5 w-5 text-sinner-red" />;
+      case 'premium':
+        return <Star className="h-5 w-5 text-sinner-red" />;
+      case 'online':
+        return <BookOpen className="h-5 w-5 text-sinner-red" />;
+      default:
+        return <Target className="h-5 w-5 text-sinner-red" />;
     }
   };
   
@@ -263,39 +233,50 @@ const PlansCatalog = () => {
               </div>
               
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4 mb-8">
-                  <TabsTrigger value="personal" className="text-white data-[state=active]:bg-sinner-red">
+                <TabsList className="grid w-full grid-cols-3 mb-8">
+                  <TabsTrigger value="nutrition" className="text-white data-[state=active]:bg-sinner-red">
+                    <Heart className="h-4 w-4 mr-2" />
+                    Nutrition
+                  </TabsTrigger>
+                  <TabsTrigger value="training" className="text-white data-[state=active]:bg-sinner-red">
                     <Dumbbell className="h-4 w-4 mr-2" />
-                    Personal
+                    Training
                   </TabsTrigger>
-                  <TabsTrigger value="group" className="text-white data-[state=active]:bg-sinner-red">
-                    <Users className="h-4 w-4 mr-2" />
-                    Group
-                  </TabsTrigger>
-                  <TabsTrigger value="competition" className="text-white data-[state=active]:bg-sinner-red">
+                  <TabsTrigger value="premium" className="text-white data-[state=active]:bg-sinner-red">
                     <Star className="h-4 w-4 mr-2" />
-                    Competition
-                  </TabsTrigger>
-                  <TabsTrigger value="online" className="text-white data-[state=active]:bg-sinner-red">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Online
+                    Premium
                   </TabsTrigger>
                 </TabsList>
                 
-                {['personal', 'group', 'competition', 'online'].map((category) => (
+                {['nutrition', 'training', 'premium'].map((category) => (
                   <TabsContent key={category} value={category} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {subscriptionPlans
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {catalogPlans
                         .filter(plan => plan.category === category)
                         .map((plan) => (
-                          <Card key={plan.id} className="bg-zinc-900 border-zinc-800 overflow-hidden flex flex-col">
+                          <Card 
+                            key={plan.id} 
+                            className={`bg-zinc-900 border-zinc-800 overflow-hidden flex flex-col ${
+                              recommendedPlanId && plan.id.includes(recommendedPlanId.split('-')[0]) 
+                                ? 'ring-2 ring-sinner-red shadow-[0_0_20px_rgba(234,56,76,0.3)]' 
+                                : ''
+                            }`}
+                          >
                             {plan.popular && (
                               <div className="bg-sinner-red text-white text-xs font-semibold py-1 px-3 absolute right-0 top-4 rounded-l-md">
                                 MOST POPULAR
                               </div>
                             )}
+                            {recommendedPlanId && plan.id.includes(recommendedPlanId.split('-')[0]) && (
+                              <div className="bg-green-600 text-white text-xs font-semibold py-1 px-3 absolute left-0 top-4 rounded-r-md">
+                                RECOMMENDED FOR YOU
+                              </div>
+                            )}
                             <CardHeader className="pb-2">
-                              <CardTitle>{plan.name}</CardTitle>
+                              <div className="flex items-center mb-2">
+                                {getPlanIcon(plan.category)}
+                                <CardTitle className="ml-2">{plan.name}</CardTitle>
+                              </div>
                               <CardDescription className="text-gray-400">
                                 {plan.description}
                               </CardDescription>
@@ -305,30 +286,74 @@ const PlansCatalog = () => {
                                 <p className="text-3xl font-bold">${plan.price}</p>
                                 <p className="text-sm text-gray-400">per {plan.interval}</p>
                               </div>
-                              <ul className="space-y-2">
-                                {plan.features.map((feature, index) => (
-                                  <li key={index} className="flex text-sm">
-                                    <CheckCircle className="h-4 w-4 text-sinner-red mr-2 mt-0.5 flex-shrink-0" />
-                                    <span>{feature}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </CardContent>
-                            <CardFooter>
-                              <Button 
-                                className="w-full bg-sinner-red hover:bg-red-700"
-                                onClick={() => handleSubscribe(plan)}
-                                disabled={isLoading}
-                              >
-                                {isLoading ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Processing...
-                                  </>
-                                ) : (
-                                  <>Subscribe</>
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="text-sm font-medium text-white mb-2">Includes:</h4>
+                                  <ul className="space-y-2">
+                                    {plan.features.map((feature, index) => (
+                                      <li key={index} className="flex text-sm">
+                                        <CheckCircle className="h-4 w-4 text-sinner-red mr-2 mt-0.5 flex-shrink-0" />
+                                        <span>{feature}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                
+                                {plan.addons && plan.addons.length > 0 && (
+                                  <div className="pt-4 border-t border-zinc-800">
+                                    <h4 className="text-sm font-medium text-white mb-2">Available Add-ons:</h4>
+                                    <div className="space-y-2">
+                                      {plan.addons.map((addon) => (
+                                        <div key={addon.id} className="flex items-start justify-between">
+                                          <div className="flex items-start">
+                                            <input
+                                              type="checkbox"
+                                              id={`addon-${plan.id}-${addon.id}`}
+                                              checked={!!selectedAddons[addon.id]}
+                                              onChange={() => handleAddonToggle(addon.id)}
+                                              className="mt-1 mr-2"
+                                            />
+                                            <div>
+                                              <label 
+                                                htmlFor={`addon-${plan.id}-${addon.id}`}
+                                                className="text-sm font-medium cursor-pointer"
+                                              >
+                                                {addon.name}
+                                              </label>
+                                              <p className="text-xs text-gray-400">{addon.description}</p>
+                                            </div>
+                                          </div>
+                                          <span className="text-sm font-medium">+${addon.price}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
                                 )}
-                              </Button>
+                              </div>
+                            </CardContent>
+                            <CardFooter className="pt-4 border-t border-zinc-800">
+                              <div className="w-full">
+                                {Object.keys(selectedAddons).some(key => selectedAddons[key]) && (
+                                  <div className="flex justify-between mb-2">
+                                    <span className="text-sm">Total:</span>
+                                    <span className="font-bold">${calculateTotalPrice(plan)}/month</span>
+                                  </div>
+                                )}
+                                <Button 
+                                  className="w-full bg-sinner-red hover:bg-red-700"
+                                  onClick={() => handleSubscribe(plan)}
+                                  disabled={isLoading}
+                                >
+                                  {isLoading ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Processing...
+                                    </>
+                                  ) : (
+                                    <>Subscribe</>
+                                  )}
+                                </Button>
+                              </div>
                             </CardFooter>
                           </Card>
                         ))}
@@ -372,29 +397,25 @@ const PlansCatalog = () => {
             
             <div className="container mx-auto py-16 px-4">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-8">
-                  <TabsTrigger value="personal" className="text-white data-[state=active]:bg-sinner-red">
+                <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 mb-8">
+                  <TabsTrigger value="nutrition" className="text-white data-[state=active]:bg-sinner-red">
+                    <Heart className="h-4 w-4 mr-2" />
+                    Nutrition
+                  </TabsTrigger>
+                  <TabsTrigger value="training" className="text-white data-[state=active]:bg-sinner-red">
                     <Dumbbell className="h-4 w-4 mr-2" />
-                    Personal
+                    Training
                   </TabsTrigger>
-                  <TabsTrigger value="group" className="text-white data-[state=active]:bg-sinner-red">
-                    <Users className="h-4 w-4 mr-2" />
-                    Group
-                  </TabsTrigger>
-                  <TabsTrigger value="competition" className="text-white data-[state=active]:bg-sinner-red">
+                  <TabsTrigger value="premium" className="text-white data-[state=active]:bg-sinner-red">
                     <Star className="h-4 w-4 mr-2" />
-                    Competition
-                  </TabsTrigger>
-                  <TabsTrigger value="online" className="text-white data-[state=active]:bg-sinner-red">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Online
+                    Premium
                   </TabsTrigger>
                 </TabsList>
                 
-                {['personal', 'group', 'competition', 'online'].map((category) => (
+                {['nutrition', 'training', 'premium'].map((category) => (
                   <TabsContent key={category} value={category} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {subscriptionPlans
+                      {catalogPlans
                         .filter(plan => plan.category === category)
                         .map((plan) => (
                           <Card key={plan.id} className="bg-zinc-900 border-zinc-800 overflow-hidden flex flex-col">
@@ -404,7 +425,10 @@ const PlansCatalog = () => {
                               </div>
                             )}
                             <CardHeader className="pb-2">
-                              <CardTitle>{plan.name}</CardTitle>
+                              <div className="flex items-center mb-2">
+                                {getPlanIcon(plan.category)}
+                                <CardTitle className="ml-2">{plan.name}</CardTitle>
+                              </div>
                               <CardDescription className="text-gray-400">
                                 {plan.description}
                               </CardDescription>

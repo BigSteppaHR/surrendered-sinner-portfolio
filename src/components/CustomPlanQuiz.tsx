@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, ChevronLeft, ChevronRight, Dumbbell, Flame, Scale, Timer, Activity, Target, X, LogIn } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Dumbbell, Flame, Scale, Timer, Activity, Target, X, LogIn, ShoppingCart } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/safe-dialog";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -102,6 +103,17 @@ const CustomPlanQuiz = () => {
         { id: 'coach-4', label: 'Premium 1-on-1', value: 'premium' },
       ],
     },
+    {
+      id: 'nutrition',
+      question: 'Are you interested in nutrition guidance?',
+      description: 'Proper nutrition is essential for achieving your fitness goals',
+      options: [
+        { id: 'nutr-1', label: 'Basic Guidelines Only', value: 'basic' },
+        { id: 'nutr-2', label: 'Meal Planning', value: 'meal-planning' },
+        { id: 'nutr-3', label: 'Comprehensive Plan', value: 'comprehensive' },
+        { id: 'nutr-4', label: 'None', value: 'none' },
+      ],
+    },
   ];
   
   const handleSelectOption = (value: string) => {
@@ -138,177 +150,120 @@ const CustomPlanQuiz = () => {
   const analyzeResults = () => {
     let plans: RecommendedPlan[] = [];
     
-    // Simple recommendation logic based on goals and coaching needs
+    // Enhanced recommendation logic based on goals, experience, and preferences
     const goal = answers['goal'];
     const experience = answers['experience'];
     const coaching = answers['coaching'];
+    const nutrition = answers['nutrition'];
     
-    // Determine the base plan by combining goal and experience
+    // Nutrition plans
+    if (nutrition === 'meal-planning' || nutrition === 'comprehensive') {
+      plans.push({
+        id: 'nutrition-standard',
+        name: 'Personalized Nutrition Plan',
+        description: 'Custom nutrition guidance tailored to your specific goals',
+        price: 150,
+        features: [
+          'Personalized macro calculations',
+          'Food preference accommodations',
+          'Meal timing recommendations',
+          'Grocery shopping list',
+          'Sample meal ideas',
+          '1 revision included'
+        ],
+        recommended: nutrition === 'comprehensive',
+        color: 'bg-sinner-red'
+      });
+    }
+    
+    // Lifting programs
+    if (goal === 'muscle-gain' || goal === 'performance') {
+      const baseProgramPrice = 175;
+      
+      const programName = experience === 'advanced' || experience === 'elite' 
+        ? 'Advanced Lifting Program' 
+        : 'Progressive Lifting Program';
+        
+      plans.push({
+        id: experience === 'advanced' || experience === 'elite' ? 'lifting-advanced' : 'lifting-standard',
+        name: programName,
+        description: 'Structured resistance training program to build strength and muscle',
+        price: baseProgramPrice,
+        features: [
+          'Periodized training cycles',
+          'Progressive overload system',
+          'Form technique guidance',
+          'Weekly workout schedule',
+          'Exercise substitution options',
+          '1 program revision included'
+        ],
+        recommended: goal === 'muscle-gain',
+        color: 'bg-sinner-red'
+      });
+    }
+    
+    // Weight loss focused plan
     if (goal === 'weight-loss') {
-      if (coaching === 'self-guided') {
-        plans.push({
-          id: 'basic-fat-loss',
-          name: 'Basic Fat Loss Program',
-          description: 'Self-guided program focused on sustainable fat loss through nutrition and exercise',
-          price: 99,
-          features: [
-            'Customized workout plan',
-            'Nutrition guidelines',
-            'Weekly calorie targets',
-            'Progress tracking templates',
-            'Access to exercise library'
-          ]
-        });
-      }
-      
-      if (coaching === 'weekly' || coaching === 'regular') {
-        plans.push({
-          id: 'coached-transformation',
-          name: 'Coached Transformation',
-          description: 'Guided fat loss program with accountability and adjustments',
-          price: 199,
-          features: [
-            'Personalized workout plan',
-            'Weekly check-ins with coach',
-            'Customized nutrition plan',
-            'Body composition analysis',
-            'Progressive adjustments',
-            'Private messaging with coach'
-          ],
-          recommended: true,
-          color: 'bg-sinner-red'
-        });
-      }
-      
-      if (coaching === 'premium') {
-        plans.push({
-          id: 'premium-transformation',
-          name: 'Elite Transformation',
-          description: 'Our highest level of coaching and customization for optimal results',
-          price: 349,
-          features: [
-            'Fully customized training protocol',
-            '3x weekly check-ins with coach',
-            'Personalized meal plans',
-            'Regular body composition analysis',
-            '24/7 coach access',
-            'Recovery protocols',
-            'Supplement guidance'
-          ]
-        });
-      }
+      plans.push({
+        id: 'weight-loss-plan',
+        name: 'Weight Loss Program',
+        description: 'Structured plan focused on sustainable fat loss',
+        price: 175,
+        features: [
+          'Combined cardio and resistance training',
+          'Calorie deficit guidelines',
+          'Progress tracking tools',
+          'Metabolic conditioning workouts',
+          'Plateau-breaking strategies',
+          'Weekly adjustment protocols'
+        ],
+        recommended: true,
+        color: 'bg-sinner-red'
+      });
     }
     
-    if (goal === 'muscle-gain') {
-      if (coaching === 'self-guided') {
-        plans.push({
-          id: 'basic-muscle',
-          name: 'Muscle Building Foundations',
-          description: 'Self-guided hypertrophy program with focus on progressive overload',
-          price: 99,
-          features: [
-            'Periodized strength program',
-            'Caloric surplus guidelines',
-            'Progressive overload system',
-            'Form guides for key lifts',
-            'Supplement recommendations'
-          ]
-        });
-      }
-      
-      if (coaching === 'weekly' || coaching === 'regular') {
-        plans.push({
-          id: 'coached-hypertrophy',
-          name: 'Coached Hypertrophy Program',
-          description: 'Structured muscle building with regular feedback and adjustments',
-          price: 199,
-          features: [
-            'Personalized hypertrophy plan',
-            'Weekly technique assessment',
-            'Nutrition plan for muscle gain',
-            'Progress tracking',
-            'Plateau-breaking strategies',
-            'Email support'
-          ],
-          recommended: true,
-          color: 'bg-sinner-red'
-        });
-      }
-      
-      if (coaching === 'premium') {
-        plans.push({
-          id: 'premium-physique',
-          name: 'Elite Physique Development',
-          description: 'Comprehensive coaching for maximum muscle development',
-          price: 349,
-          features: [
-            'Advanced hypertrophy programming',
-            'Video analysis of lifts',
-            'Custom nutrition periodization',
-            'Body composition optimization',
-            'Recovery protocols',
-            'Daily check-ins',
-            'Unlimited coaching access'
-          ]
-        });
-      }
+    // General fitness plan
+    if (goal === 'fitness') {
+      plans.push({
+        id: 'general-fitness',
+        name: 'Functional Fitness Program',
+        description: 'Well-rounded plan to improve overall fitness and wellness',
+        price: 150,
+        features: [
+          'Balanced training approach',
+          'Cardiovascular conditioning',
+          'Strength development',
+          'Mobility and flexibility work',
+          'Recovery protocols',
+          'Progress assessments'
+        ],
+        recommended: true,
+        color: 'bg-sinner-red'
+      });
     }
     
-    if (goal === 'fitness' || goal === 'performance') {
-      if (coaching === 'self-guided') {
-        plans.push({
-          id: 'basic-performance',
-          name: 'Functional Fitness Plan',
-          description: 'Self-guided program to improve overall fitness and performance',
-          price: 99,
-          features: [
-            'Balanced workout program',
-            'Conditioning protocols',
-            'Mobility routines',
-            'Performance tracking',
-            'Nutrition basics'
-          ]
-        });
-      }
-      
-      if (coaching === 'weekly' || coaching === 'regular') {
-        plans.push({
-          id: 'coached-performance',
-          name: 'Performance Coaching',
-          description: 'Structured program with regular coaching to improve athletic capacity',
-          price: 199,
-          features: [
-            'Periodized training plan',
-            'Weekly performance assessments',
-            'Sport-specific drills',
-            'Nutrition timing strategies',
-            'Recovery optimization',
-            'Bi-weekly coach calls'
-          ],
-          recommended: true,
-          color: 'bg-sinner-red'
-        });
-      }
-      
-      if (coaching === 'premium') {
-        plans.push({
-          id: 'elite-performance',
-          name: 'Elite Performance System',
-          description: 'Comprehensive athletic development program with dedicated coaching',
-          price: 349,
-          features: [
-            'Custom performance programming',
-            'Movement screening',
-            'Sport-specific skill development',
-            'Periodized nutrition plan',
-            'Recovery and regeneration protocols',
-            'Video analysis',
-            'Unlimited coaching access'
-          ]
-        });
-      }
+    // Premium coaching option
+    if (coaching === 'premium') {
+      plans.push({
+        id: 'premium-coaching',
+        name: 'Elite 1:1 Coaching',
+        description: 'Maximum support with personalized coaching and accountability',
+        price: 299,
+        features: [
+          'Weekly video check-ins',
+          'Custom programming',
+          'Form analysis and feedback',
+          'Nutrition guidance',
+          'On-demand messaging',
+          'Progress assessment',
+          'Regular program updates'
+        ],
+        color: 'bg-sinner-red'
+      });
     }
-
+    
+    // Add-ons can be presented separately at checkout
+    
     // Ensure we always have at least one plan
     if (plans.length === 0) {
       plans.push({
@@ -327,31 +282,11 @@ const CustomPlanQuiz = () => {
         color: 'bg-sinner-red'
       });
     }
-
-    // Always offer an upsell option if not already included
-    if (!plans.some(plan => plan.id.includes('premium'))) {
-      plans.push({
-        id: 'premium-coaching',
-        name: 'Premium 1-on-1 Coaching',
-        description: 'The ultimate coaching experience for transformative results',
-        price: 399,
-        features: [
-          'Fully customized programming',
-          'Daily check-ins with coach',
-          'Unlimited messaging support',
-          'Video analysis of form',
-          'Detailed nutrition protocols',
-          'Weekly strategy calls',
-          'Supplement guidance',
-          'Mental performance coaching'
-        ]
-      });
-    }
     
     setRecommendedPlans(plans);
   };
   
-  const handleSelectPlan = async (plan: RecommendedPlan) => {
+  const handleSaveQuizResults = async (plan: RecommendedPlan) => {
     if (!isAuthenticated) {
       setRequiresAuth(true);
       return;
@@ -359,7 +294,7 @@ const CustomPlanQuiz = () => {
     
     setIsSubmitting(true);
     try {
-      // Store quiz results and selected plan in the database
+      // Store quiz results in the database, but don't create an actual plan yet
       const { data, error } = await supabase
         .from('custom_plan_results')
         .insert({
@@ -375,28 +310,19 @@ const CustomPlanQuiz = () => {
       
       if (error) throw error;
       
-      // Add plan to workout_plans using our function
-      const { data: workoutPlan, error: workoutError } = await supabase
-        .rpc('add_custom_plan_to_workout_plans', {
-          p_user_id: profile?.id,
-          p_custom_plan_result_id: data.id
-        });
-      
-      if (workoutError) throw workoutError;
-      
       toast({
-        title: "Plan Selected",
-        description: `${plan.name} has been added to your plans.`,
+        title: "Plan Saved",
+        description: `${plan.name} has been saved to your account. You can purchase it from your dashboard.`,
       });
       
-      // Redirect to dashboard
+      // Redirect to subscription plans page instead of automatically adding to workout plans
       setIsDialogOpen(false);
-      navigate('/dashboard/plans');
+      navigate('/plans-catalog', { state: { recommendedPlanId: plan.id } });
     } catch (error: any) {
-      console.error("Error saving plan:", error);
+      console.error("Error saving quiz results:", error);
       toast({
-        title: "Error saving plan",
-        description: error.message || "There was a problem saving your plan. Please try again.",
+        title: "Error saving results",
+        description: error.message || "There was a problem saving your quiz results. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -409,7 +335,7 @@ const CustomPlanQuiz = () => {
     // Store quiz state in sessionStorage
     sessionStorage.setItem('pendingQuizAnswers', JSON.stringify(answers));
     sessionStorage.setItem('pendingQuizStep', currentStep.toString());
-    navigate('/login', { state: { redirectAfterLogin: '/dashboard/plans' } });
+    navigate('/login', { state: { redirectAfterLogin: '/plans-catalog' } });
   };
   
   // Restore quiz state if returning from login
@@ -472,7 +398,7 @@ const CustomPlanQuiz = () => {
               <CardHeader>
                 <CardTitle className="text-center">Login Required</CardTitle>
                 <CardDescription className="text-center text-gray-400">
-                  Create an account to purchase and save your custom plan
+                  Create an account to save and purchase your custom plan
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-8 flex flex-col items-center justify-center min-h-[300px]">
@@ -584,7 +510,7 @@ const CustomPlanQuiz = () => {
                 </div>
                 <h3 className="text-xl font-bold mb-1">Your Recommended Plans</h3>
                 <p className="text-gray-400 text-sm">
-                  Based on your goals and preferences, we've selected these plans for you
+                  Based on your goals and preferences, we've selected these plans for you. Save them to view purchase options.
                 </p>
               </div>
               
@@ -620,10 +546,11 @@ const CustomPlanQuiz = () => {
                     </CardContent>
                     <CardFooter>
                       <Button 
-                        onClick={() => handleSelectPlan(plan)}
+                        onClick={() => handleSaveQuizResults(plan)}
                         className={`w-full ${plan.recommended ? 'bg-sinner-red hover:bg-red-700' : 'bg-zinc-800 hover:bg-zinc-700'}`}
                       >
-                        Select Plan
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        View Purchase Options
                       </Button>
                     </CardFooter>
                   </Card>

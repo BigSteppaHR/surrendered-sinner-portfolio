@@ -73,7 +73,7 @@ const TrainingPackages = () => {
       id: 'nutrition',
       name: 'Nutrition Coaching',
       description: 'Personalized nutrition plans and coaching',
-      price: 99,
+      price: 150,
       icon: <Heart className="h-6 w-6 text-sinner-red" />
     },
     {
@@ -94,9 +94,9 @@ const TrainingPackages = () => {
 
   const handlePurchase = (packageId: string) => {
     if (isAuthenticated) {
-      navigate(`/dashboard/payment?package=${packageId}`);
+      navigate(`/plans-catalog?package=${packageId}`);
     } else {
-      navigate('/signup', { state: { redirectAfterLogin: `/dashboard/payment?package=${packageId}` } });
+      navigate('/signup', { state: { redirectAfterLogin: `/plans-catalog?package=${packageId}` } });
     }
   };
 
@@ -139,14 +139,14 @@ const TrainingPackages = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-xl font-bold">{pkg.name}</CardTitle>
-                  <div className="text-2xl font-bold text-white">${pkg.price}</div>
+                  <div className="text-2xl font-bold text-white">Starting at ${pkg.price}</div>
                 </div>
                 <CardDescription className="text-gray-400">
                   {pkg.description}
                 </CardDescription>
               </CardHeader>
               
-              <CardContent>
+              <CardContent className="pb-3">
                 <ul className="space-y-2">
                   {pkg.features.map((feature, index) => (
                     <li key={index} className="flex items-start">
@@ -170,7 +170,7 @@ const TrainingPackages = () => {
                     <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-sinner-red via-red-600 to-sinner-red bg-[length:200%_100%] animate-shimmer opacity-70"></span>
                   )}
                   <span className="relative flex items-center justify-center">
-                    Get Started <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    View Plans <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </Button>
               </CardFooter>
@@ -205,8 +205,13 @@ const TrainingPackages = () => {
                   <p className="text-gray-400 text-sm mb-2">{addon.description}</p>
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sinner-red">${addon.price}</span>
-                    <Button variant="outline" size="sm" className="text-xs border-zinc-700">
-                      Add to Package
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-xs border-zinc-700"
+                      onClick={() => navigate('/plans-catalog')}
+                    >
+                      View Options
                     </Button>
                   </div>
                 </div>

@@ -47,7 +47,7 @@ serve(async (req) => {
     
     switch (action) {
       case 'create_checkout_session': {
-        const { planId, planType, price, planName } = data;
+        const { planId, planType, price, planName, addons } = data;
         
         if (!planId || !planType || !price || !planName) {
           throw new Error('Missing required parameters for checkout session');
@@ -78,31 +78,62 @@ serve(async (req) => {
             });
         }
         
+        // Prepare line items for the main subscription
+        const lineItems = [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: planName,
+                description: `${planType} subscription`,
+              },
+              unit_amount: Math.round(price * 100), // Convert to cents
+              recurring: {
+                interval: 'month',
+              }
+            },
+            quantity: 1,
+          }
+        ];
+        
+        // Add any selected addons as one-time purchases
+        if (addons && addons.length > 0) {
+          addons.forEach(addon => {
+            lineItems.push({
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: addon.name,
+                  description: addon.description,
+                },
+                unit_amount: Math.round(addon.price * 100), // Convert to cents
+              },
+              quantity: 1,
+            });
+          });
+        }
+        
         // Create Stripe session
         const session = await stripe.checkout.sessions.create({
           customer: customerId,
           payment_method_types: ['card'],
-          line_items: [
-            {
-              price_data: {
-                currency: 'usd',
-                product_data: {
-                  name: planName,
-                  description: `${planType} training plan`,
-                },
-                unit_amount: Math.round(price * 100), // Convert to cents
-              },
-              quantity: 1,
-            },
-          ],
-          mode: 'payment',
+          line_items: lineItems,
+          mode: 'subscription',
           success_url: `${req.headers.get('origin')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${req.headers.get('origin')}/payment-cancelled`,
           metadata: {
             user_id: user.id,
             plan_id: planId,
             plan_type: planType,
+            has_addons: addons && addons.length > 0 ? 'true' : 'false'
           },
+          subscription_data: {
+            metadata: {
+              user_id: user.id,
+              plan_id: planId,
+              plan_name: planName
+            }
+          }
         });
         
         // Store payment intent in database
@@ -114,11 +145,12 @@ serve(async (req) => {
             currency: 'USD',
             status: 'pending',
             stripe_payment_id: session.payment_intent as string,
-            description: `Payment for ${planName}`,
+            description: `Subscription to ${planName}${addons && addons.length > 0 ? ' with addons' : ''}`,
             metadata: {
               plan_id: planId,
               plan_type: planType,
               checkout_session_id: session.id,
+              addons: addons || []
             },
           });
         
@@ -182,10 +214,13 @@ serve(async (req) => {
                 user_id: user.id,
                 stripe_subscription_id: sub.id,
                 status: sub.status,
-                plan_id: sub.items.data[0].price.id,
+                plan_id: sub.metadata.plan_id || '',
                 current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
                 current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-                metadata: sub.metadata,
+                metadata: {
+                  ...sub.metadata,
+                  stripe_plan_id: sub.items.data[0]?.price.id
+                }
               });
           } else {
             await supabase
@@ -209,6 +244,24 @@ serve(async (req) => {
           .order('created_at', { ascending: false });
         
         return new Response(JSON.stringify({ subscriptions: userSubscriptions || [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+      
+      case 'get_available_addons': {
+        // Get addons configured in the system
+        const { data: addons, error: addonsError } = await supabase
+          .from('subscription_addons')
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true });
+        
+        if (addonsError) {
+          throw addonsError;
+        }
+        
+        return new Response(JSON.stringify({ addons: addons || [] }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         });

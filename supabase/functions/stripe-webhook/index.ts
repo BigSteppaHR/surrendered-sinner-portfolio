@@ -3,170 +3,113 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-  
-  const signature = req.headers.get('stripe-signature');
-  
-  if (!signature) {
-    return new Response(JSON.stringify({ error: 'Missing stripe-signature header' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    });
-  }
-  
-  // Initialize Supabase client
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  
-  // Initialize Stripe
   const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
     apiVersion: '2023-10-16',
   });
-  
+
   try {
-    const payload = await req.text();
+    const signature = req.headers.get('Stripe-Signature');
+    const body = await req.text();
     const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
     
-    // Verify stripe signature
+    if (!signature || !webhookSecret) {
+      return new Response(JSON.stringify({ error: 'Missing signature or webhook secret' }), { status: 400 });
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
     let event;
     try {
-      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
       console.error(`Webhook signature verification failed: ${err.message}`);
-      return new Response(JSON.stringify({ error: 'Webhook signature verification failed' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 400 });
     }
+
+    console.log(`Processing webhook event: ${event.type}`);
     
-    console.log(`Received stripe webhook event: ${event.type}`);
-    
-    // Process event based on type
     switch (event.type) {
+      // Handle successful subscription creation
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const userId = session.metadata?.user_id;
-        const planId = session.metadata?.plan_id;
+        console.log(`Checkout session completed: ${session.id}`);
         
-        if (!userId || !planId) {
-          console.log('Missing user_id or plan_id in metadata');
-          break;
-        }
-        
-        // Update payment history
-        await supabase
-          .from('payment_history')
-          .update({
-            status: 'completed',
-            payment_method: session.payment_method_types?.[0] || 'card',
-          })
-          .eq('metadata->checkout_session_id', session.id);
-        
-        // Add to user workout plans if it's a training plan
-        if (session.metadata?.plan_type === 'training') {
+        if (session.mode === 'subscription' && session.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          const userId = session.metadata?.user_id;
+          const planId = session.metadata?.plan_id;
+          const planType = session.metadata?.plan_type;
+          
+          if (!userId) {
+            throw new Error('No user_id in metadata');
+          }
+
+          // Update payment history with successful status
           await supabase
-            .from('workout_plans')
+            .from('payment_history')
+            .update({ 
+              status: 'completed',
+              payment_method: 'stripe'
+            })
+            .eq('metadata->checkout_session_id', session.id);
+
+          // Create or update subscription record
+          const { data: existingSub } = await supabase
+            .from('subscriptions')
+            .select('id')
+            .eq('stripe_subscription_id', subscription.id)
+            .single();
+          
+          if (!existingSub) {
+            await supabase
+              .from('subscriptions')
+              .insert({
+                user_id: userId,
+                stripe_subscription_id: subscription.id,
+                status: subscription.status,
+                plan_id: planId,
+                current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+                current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                metadata: {
+                  plan_type: planType,
+                  has_addons: session.metadata?.has_addons || 'false',
+                  checkout_session_id: session.id
+                }
+              });
+          }
+
+          // Create user notification about successful subscription
+          await supabase
+            .from('user_notifications')
             .insert({
               user_id: userId,
-              title: session.metadata?.plan_name || 'Custom Training Plan',
-              plan_type: 'purchased',
-              description: 'Purchased training plan',
+              title: 'Subscription Activated',
+              message: `Your ${planType} subscription has been successfully activated.`,
+              notification_type: 'success',
+              action_url: '/dashboard/plans'
             });
         }
-        
         break;
       }
       
-      case 'checkout.session.expired': {
-        const session = event.data.object;
-        
-        // Update payment history for expired sessions
-        await supabase
-          .from('payment_history')
-          .update({
-            status: 'expired',
-          })
-          .eq('metadata->checkout_session_id', session.id);
-        
-        break;
-      }
-      
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object;
-        
-        // Update payment in database
-        await supabase
-          .from('payment_history')
-          .update({
-            status: 'succeeded',
-            payment_method: paymentIntent.payment_method_types?.[0] || 'card',
-          })
-          .eq('stripe_payment_id', paymentIntent.id);
-        
-        break;
-      }
-      
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object;
-        
-        // Update payment status in database
-        await supabase
-          .from('payment_history')
-          .update({
-            status: 'failed',
-          })
-          .eq('stripe_payment_id', paymentIntent.id);
-        
-        break;
-      }
-      
-      case 'customer.subscription.created':
+      // Handle subscription updates
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
-        const stripeCustomerId = subscription.customer;
+        console.log(`Subscription updated: ${subscription.id}`);
         
-        // Get user_id from stripe_customers table
-        const { data: customer } = await supabase
-          .from('stripe_customers')
-          .select('user_id')
-          .eq('stripe_customer_id', stripeCustomerId)
-          .single();
-        
-        if (!customer) {
-          console.log(`Customer not found for stripe_customer_id: ${stripeCustomerId}`);
-          break;
-        }
-        
-        // Update or create subscription in database
-        const { data: existingSub } = await supabase
+        // Find the associated user
+        const { data: subData } = await supabase
           .from('subscriptions')
-          .select('id')
+          .select('user_id')
           .eq('stripe_subscription_id', subscription.id)
           .single();
         
-        if (!existingSub) {
-          await supabase
-            .from('subscriptions')
-            .insert({
-              user_id: customer.user_id,
-              stripe_subscription_id: subscription.id,
-              status: subscription.status,
-              plan_id: subscription.items.data[0].price.id,
-              current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-              metadata: subscription.metadata,
-            });
-        } else {
+        if (subData) {
+          // Update subscription status
           await supabase
             .from('subscriptions')
             .update({
@@ -176,36 +119,129 @@ serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq('stripe_subscription_id', subscription.id);
+          
+          // If subscription was canceled or renewed, send notification
+          if (subscription.cancel_at_period_end) {
+            await supabase
+              .from('user_notifications')
+              .insert({
+                user_id: subData.user_id,
+                title: 'Subscription Change',
+                message: 'Your subscription will end after the current billing period.',
+                notification_type: 'info',
+                action_url: '/dashboard/plans'
+              });
+          } else if (event.data.previous_attributes?.cancel_at_period_end === true) {
+            await supabase
+              .from('user_notifications')
+              .insert({
+                user_id: subData.user_id,
+                title: 'Subscription Renewed',
+                message: 'Your subscription has been successfully renewed!',
+                notification_type: 'success',
+                action_url: '/dashboard/plans'
+              });
+          }
         }
-        
         break;
       }
       
+      // Handle subscription cancelation
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
+        console.log(`Subscription deleted: ${subscription.id}`);
         
-        // Update subscription status in database
-        await supabase
+        // Find the associated user
+        const { data: subData } = await supabase
           .from('subscriptions')
-          .update({
-            status: 'canceled',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stripe_subscription_id', subscription.id);
+          .select('user_id')
+          .eq('stripe_subscription_id', subscription.id)
+          .single();
         
+        if (subData) {
+          // Update subscription status to canceled
+          await supabase
+            .from('subscriptions')
+            .update({
+              status: 'canceled',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('stripe_subscription_id', subscription.id);
+          
+          // Send notification to user
+          await supabase
+            .from('user_notifications')
+            .insert({
+              user_id: subData.user_id,
+              title: 'Subscription Ended',
+              message: 'Your subscription has ended. We hope you enjoyed our services!',
+              notification_type: 'info',
+              action_url: '/plans-catalog'
+            });
+        }
+        break;
+      }
+      
+      // Handle payment failures
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        console.log(`Invoice payment failed: ${invoice.id}`);
+        
+        if (invoice.customer && invoice.subscription) {
+          // Find the customer and associated user
+          const { data: customers } = await stripe.customers.list({
+            limit: 1,
+            expand: ['data.subscriptions'],
+            customer: invoice.customer as string
+          });
+          
+          if (customers && customers.length > 0) {
+            const customer = customers[0];
+            
+            // Find user ID from Stripe customer metadata
+            const { data: stripeCustomer } = await supabase
+              .from('stripe_customers')
+              .select('user_id')
+              .eq('stripe_customer_id', customer.id)
+              .single();
+            
+            if (stripeCustomer) {
+              // Create payment failure record
+              await supabase
+                .from('payment_history')
+                .insert({
+                  user_id: stripeCustomer.user_id,
+                  amount: invoice.amount_due / 100, // Convert from cents
+                  currency: invoice.currency,
+                  status: 'failed',
+                  payment_method: 'stripe',
+                  description: 'Failed subscription payment',
+                  metadata: {
+                    invoice_id: invoice.id,
+                    subscription_id: invoice.subscription
+                  }
+                });
+              
+              // Send notification to user
+              await supabase
+                .from('user_notifications')
+                .insert({
+                  user_id: stripeCustomer.user_id,
+                  title: 'Payment Failed',
+                  message: 'Your recent subscription payment failed. Please update your payment method.',
+                  notification_type: 'error',
+                  action_url: '/dashboard/payment'
+                });
+            }
+          }
+        }
         break;
       }
     }
-    
-    return new Response(JSON.stringify({ received: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
+
+    return new Response(JSON.stringify({ received: true }), { status: 200 });
   } catch (error) {
-    console.error('Error processing webhook:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    console.error('Error handling webhook:', error);
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 });
