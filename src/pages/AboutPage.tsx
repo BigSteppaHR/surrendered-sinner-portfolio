@@ -11,7 +11,7 @@ const AboutPage = () => {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <SEO 
-        title="About Brad | Alpha Nutrition & Fitness" 
+        title="About Brad | Surrendered Sinner Fitness" 
         description="Learn about Brad, certified personal trainer with ISSA certifications in bodybuilding, strength and conditioning, and functional training."
       />
       

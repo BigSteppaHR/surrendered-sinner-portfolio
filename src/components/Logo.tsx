@@ -21,10 +21,10 @@ const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '', showAlpha 
       <div className="flex flex-col">
         <div className="flex items-center">
           <span className={`font-bold text-[#ea384c] ${size === 'small' ? 'text-xl' : size === 'medium' ? 'text-2xl' : 'text-3xl'}`}>
-            ALPHA
+            SURRENDERED
           </span>
           <span className={`font-light text-white ml-1 ${size === 'small' ? 'text-xl' : size === 'medium' ? 'text-2xl' : 'text-3xl'}`}>
-            FITNESS
+            SINNER
           </span>
         </div>
         
