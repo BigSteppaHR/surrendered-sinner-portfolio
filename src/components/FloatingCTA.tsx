@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 
 const FloatingCTA: React.FC = () => {
@@ -55,12 +56,12 @@ const FloatingCTA: React.FC = () => {
           Take the first step today with a free consultation. Discover how we can help you achieve your fitness goals.
         </p>
         
-        <a 
-          href="#contact" 
+        <Link 
+          to="#contact" 
           className="w-full block text-center bg-sinner-red text-white font-semibold py-2 px-4 rounded-md hover:bg-sinner-red/90 transition-colors pulse-glow"
         >
           Book Free Consultation
-        </a>
+        </Link>
       </div>
     </div>
   );

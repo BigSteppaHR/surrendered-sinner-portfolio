@@ -1,5 +1,5 @@
 
-import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
@@ -20,8 +20,6 @@ import Schedule from '@/pages/Schedule';
 import Plans from '@/pages/Plans';
 import Payment from '@/pages/Payment';
 import PaymentPortal from '@/pages/PaymentPortal';
-import { AuthProvider } from '@/components/AuthProvider';
-import StripeProvider from '@/components/StripeProvider';
 import PlansCatalog from '@/pages/PlansCatalog';
 import PaymentSuccess from '@/pages/PaymentSuccess';
 import PaymentCancelled from '@/pages/PaymentCancelled';
