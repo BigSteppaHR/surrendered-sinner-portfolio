@@ -5,7 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import App from './App';
 import './index.css';
 import { AuthProvider } from './hooks/useAuth';
-import { DarkModeProvider } from './contexts/DarkModeContext';
+import { ThemeProvider } from './components/ThemeProvider';
 import { StripeProvider } from './components/StripeProvider';
 import { initializeAssetProtection } from './utils/assetLoadingHandler';
 
@@ -14,7 +14,7 @@ initializeAssetProtection();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <DarkModeProvider>
+    <ThemeProvider>
       <AuthProvider>
         <StripeProvider>
           <Router>
@@ -24,6 +24,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           </Router>
         </StripeProvider>
       </AuthProvider>
-    </DarkModeProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );
