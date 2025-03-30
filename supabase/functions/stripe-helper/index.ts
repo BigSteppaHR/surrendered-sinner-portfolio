@@ -73,6 +73,35 @@ serve(async (req) => {
           }
         );
 
+      case "createPaymentIntent":
+        if (!stripe) {
+          throw new Error("Stripe not initialized - missing API key");
+        }
+        
+        if (!params || !params.amount || !params.currency || !params.payment_id) {
+          throw new Error("Missing required parameters for creating payment intent");
+        }
+        
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: params.amount,
+          currency: params.currency,
+          metadata: {
+            payment_id: params.payment_id,
+            description: params.description || 'Payment',
+          },
+        });
+        
+        return new Response(
+          JSON.stringify({
+            client_secret: paymentIntent.client_secret,
+            payment_intent_id: paymentIntent.id,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+
       case "updatePaymentStatus":
         if (!stripe) {
           throw new Error("Stripe not initialized - missing API key");

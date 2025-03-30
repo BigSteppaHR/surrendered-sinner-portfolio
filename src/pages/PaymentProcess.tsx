@@ -8,6 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from '@/components/Logo';
+import { useEffect as useEffectOriginal } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+
+// Use the StripeProvider's stripePromise
+import StripeProvider from '@/components/StripeProvider';
 
 const PaymentProcess = () => {
   const [searchParams] = useSearchParams();
@@ -16,8 +21,30 @@ const PaymentProcess = () => {
   const [amount, setAmount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Get Stripe publishable key
+  useEffect(() => {
+    const getPublishableKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('stripe-helper', {
+          body: { action: 'get-publishable-key' }
+        });
+        
+        if (error) throw new Error(error.message);
+        if (!data || !data.publishableKey) throw new Error('No publishable key returned');
+        
+        setStripePromise(loadStripe(data.publishableKey));
+      } catch (err: any) {
+        console.error('Error fetching Stripe publishable key:', err);
+        setError('Failed to initialize payment system. Please try again later.');
+      }
+    };
+    
+    getPublishableKey();
+  }, []);
 
   useEffect(() => {
     const fetchPaymentDetails = async () => {
@@ -83,10 +110,10 @@ const PaymentProcess = () => {
 
   // Only render Elements if we have all required params
   const renderStripeElements = () => {
-    if (!clientSecret || amount === null) {
+    if (!clientSecret || amount === null || !stripePromise) {
       return (
         <div className="text-center py-6 text-red-400">
-          Error loading payment information. Please try again.
+          {!stripePromise ? "Loading payment system..." : "Error loading payment information. Please try again."}
         </div>
       );
     }
@@ -102,6 +129,7 @@ const PaymentProcess = () => {
         </div>
         
         <Elements 
+          stripe={stripePromise}
           options={{ 
             clientSecret, 
             appearance,
