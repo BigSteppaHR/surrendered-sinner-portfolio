@@ -9,7 +9,6 @@ import { supabase } from '@/integrations/supabase/client';
 let stripePromise: Promise<Stripe | null> | null = null;
 
 // Use a valid Stripe publishable key
-// IMPORTANT: Make sure this is your actual publishable key (starts with pk_)
 const STRIPE_PUBLISHABLE_KEY = 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
 
 // Helper for conditional logging
@@ -180,13 +179,13 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     );
   }
 
-  // We render the children even if Stripe isn't loaded, so the rest of the app can work
-  // Components that need Stripe will handle the absence gracefully
+  // IMPORTANT: We don't set an amount in the default options, as it should only be set
+  // when creating an actual payment intent or setup intent
   return (
     <Elements 
       stripe={stripePromise}
       options={{
-        mode: 'payment', // Can be 'payment' or 'subscription' based on your needs
+        mode: 'payment', // General default mode is payment
         appearance: {
           theme: 'night',
           variables: {
@@ -197,7 +196,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        loader: 'always', // Always show the loader to prevent flash of unstyled content
+        loader: 'auto', // Changed from 'always' to 'auto' to be more flexible
         fonts: [
           {
             cssSrc: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',

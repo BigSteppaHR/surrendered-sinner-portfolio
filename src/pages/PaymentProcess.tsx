@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowLeft, CheckCircle, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from '@/components/Logo';
 
+// We'll use the existing publishable key
 const STRIPE_PUBLISHABLE_KEY = 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
 const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY.trim());
 
@@ -16,7 +18,7 @@ const PaymentProcess = () => {
   const [searchParams] = useSearchParams();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
-  const [amount, setAmount] = useState<string | null>(null);
+  const [amount, setAmount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -35,9 +37,20 @@ const PaymentProcess = () => {
           throw new Error("Missing required payment parameters");
         }
         
+        // Parse amount as a number and ensure it's valid
+        let amountValue: number | null = null;
+        if (amountParam) {
+          amountValue = parseFloat(amountParam);
+          if (isNaN(amountValue) || amountValue <= 0) {
+            throw new Error("Invalid amount parameter");
+          }
+        } else {
+          throw new Error("Missing amount parameter");
+        }
+        
         setClientSecret(secret);
         setPaymentId(payment);
-        setAmount(amountParam);
+        setAmount(amountValue);
       } catch (err: any) {
         console.error("Error fetching payment details:", err);
         setError(err.message || "Failed to load payment information");
@@ -114,12 +127,12 @@ const PaymentProcess = () => {
                 <p className="text-red-400">{error}</p>
                 <p className="text-sm text-gray-400 mt-2">Redirecting back to payment portal...</p>
               </div>
-            ) : clientSecret ? (
+            ) : clientSecret && amount !== null ? (
               <>
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-400">Amount:</span>
-                    <span className="text-xl font-bold">${amount}</span>
+                    <span className="text-xl font-bold">${amount.toFixed(2)}</span>
                   </div>
                   <div className="w-full h-[1px] bg-[#333]" />
                 </div>
@@ -127,12 +140,12 @@ const PaymentProcess = () => {
                 <Elements stripe={stripePromise} options={{ 
                   clientSecret, 
                   appearance,
-                  loader: 'always'
+                  loader: 'auto'
                 }}>
                   <CheckoutForm 
                     clientSecret={clientSecret} 
                     paymentId={paymentId!} 
-                    amount={amount || '0'} 
+                    amount={amount} 
                   />
                 </Elements>
               </>
@@ -157,7 +170,7 @@ const PaymentProcess = () => {
 interface CheckoutFormProps {
   clientSecret: string;
   paymentId: string;
-  amount: string;
+  amount: number;
 }
 
 const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) => {
@@ -208,8 +221,7 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
         
         navigate('/payment-portal?status=error');
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        const amountValue = parseFloat(amount);
-        const amountInCents = Math.round(amountValue * 100);
+        const amountInCents = Math.round(amount * 100);
         
         await supabase.functions.invoke('stripe-helper', {
           body: {
@@ -220,14 +232,14 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
               payment_intent_id: paymentIntent.id,
               payment_method: 'card',
               amount: amountInCents,
-              description: `Added $${amount} to account`
+              description: `Added $${amount.toFixed(2)} to account`
             }
           }
         });
         
         toast({
           title: "Payment successful",
-          description: `$${amount} has been added to your account.`,
+          description: `$${amount.toFixed(2)} has been added to your account.`,
           variant: "default"
         });
         
@@ -273,7 +285,7 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
         ) : (
           <>
             <CheckCircle className="h-4 w-4 mr-2" /> 
-            Pay ${amount}
+            Pay ${amount.toFixed(2)}
           </>
         )}
       </Button>
