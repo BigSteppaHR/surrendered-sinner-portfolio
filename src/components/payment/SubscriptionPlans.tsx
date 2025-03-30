@@ -1,156 +1,312 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, Info } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { subscriptionPlans, subscriptionAddons } from "./SubscriptionData";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
-interface SubscriptionPlan {
-  id: string;
-  name: string;
-  price: string;
-  description: string;
-  features: string[];
-}
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+};
 
-interface SubscriptionPlansProps {
-  plans: SubscriptionPlan[];
-  onError?: (error: string) => void;
-}
+export default function SubscriptionPlans({ initialSelectedPlan = null, quizResultId = null }) {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [selectedPlan, setSelectedPlan] = useState(initialSelectedPlan);
+  const [selectedAddons, setSelectedAddons] = useState<any[]>([]);
+  const [showAddonDialog, setShowAddonDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ plans, onError }) => {
-  const { profile } = useAuth();
-  const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-
-  const handleSubscribe = async (planId: string) => {
-    if (!profile?.id) {
-      const errorMsg = "Authentication error: Please log in to subscribe";
-      toast({
-        title: "Authentication error",
-        description: "Please log in to subscribe",
-        variant: "destructive"
-      });
-      if (onError) onError(errorMsg);
-      return;
+  // Calculate total price based on plan and selected addons
+  const calculateTotal = () => {
+    let total = 0;
+    
+    // Add plan price if selected
+    if (selectedPlan) {
+      const plan = subscriptionPlans.find(p => p.id === selectedPlan);
+      if (plan) total += plan.priceValue;
     }
     
-    setIsProcessing(true);
-    setSelectedPlan(planId);
+    // Add selected addons
+    selectedAddons.forEach(addon => {
+      total += addon.price;
+    });
     
+    return total;
+  };
+
+  // Handle plan selection
+  const handleSelectPlan = (planId: string) => {
+    setSelectedPlan(planId);
+    setSelectedAddons([]);
+  };
+
+  // Handle checkout process
+  const handleCheckout = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to subscribe to a plan",
+        variant: "default",
+      });
+      navigate('/login', { state: { returnTo: '/plans-catalog' } });
+      return;
+    }
+
+    if (!selectedPlan) {
+      toast({
+        title: "No plan selected",
+        description: "Please select a plan first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const plan = subscriptionPlans.find(p => p.id === selectedPlan);
+    if (!plan) {
+      toast({
+        title: "Plan not found",
+        description: "The selected plan could not be found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
-      const plan = plans.find(p => p.id === planId);
-      if (!plan) throw new Error("Invalid plan selected");
-      
-      // In a real implementation, this would create a Stripe Subscription
-      // and redirect to a Stripe Checkout page
-      
-      toast({
-        title: "Processing subscription",
-        description: `Setting up your ${plan.name} subscription...`
-      });
-      
-      // Simulated delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Get current date for subscription period
-      const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setDate(periodEnd.getDate() + 30); // 30 days from now
-      
-      // Record the subscription in the database with improved error handling
-      const { error } = await supabase
-        .from('subscriptions')
-        .insert({
-          user_id: profile.id,
-          plan_id: planId,
-          status: 'active',
-          created_at: now.toISOString(),
-          current_period_start: now.toISOString(),
-          current_period_end: periodEnd.toISOString()
-        })
-        .select();
-        
-      if (error) {
-        console.error("Database error:", error);
-        // Handle 406 Not Acceptable error (common with Supabase when Accept header doesn't match)
-        if (error.code === '406') {
-          console.log("Received 406 error - likely due to Accept header mismatch");
-          // We can still show success to the user as this is usually just a client-side issue
-          // The data is still inserted correctly in most cases
-        } else {
-          // For other errors, we should inform the user
-          throw new Error(`Database error: ${error.message}`);
+      const { data: sessionData, error } = await supabase.functions.invoke('stripe-helper', {
+        body: {
+          action: 'create_checkout_session',
+          data: {
+            planId: plan.id,
+            planType: plan.name,
+            planName: plan.name,
+            price: plan.priceValue,
+            addons: selectedAddons,
+            quizResultId: quizResultId
+          }
         }
-      }
-      
-      toast({
-        title: "Subscription activated",
-        description: `Your ${plan.name} subscription has been successfully activated`
       });
-    } catch (error: any) {
-      console.error("Error processing subscription:", error);
-      const errorMsg = error.message || "There was a problem setting up your subscription";
+
+      if (error) throw error;
+      if (!sessionData?.url) throw new Error('No checkout URL received');
+
+      // Redirect to checkout
+      window.location.href = sessionData.url;
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
       toast({
-        title: "Subscription failed",
-        description: errorMsg,
-        variant: "destructive"
+        title: "Payment error",
+        description: "Could not initialize payment process. Please try again.",
+        variant: "destructive",
       });
-      if (onError) onError(errorMsg);
     } finally {
-      setIsProcessing(false);
-      setSelectedPlan(null);
+      setIsLoading(false);
     }
   };
 
+  // Open addon selection dialog
+  const openAddonDialog = () => {
+    if (!selectedPlan) {
+      toast({
+        title: "No plan selected",
+        description: "Please select a plan first",
+        variant: "default",
+      });
+      return;
+    }
+    setShowAddonDialog(true);
+  };
+
+  // Toggle addon selection
+  const toggleAddon = (addon) => {
+    setSelectedAddons(prev => {
+      const exists = prev.some(item => item.id === addon.id);
+      if (exists) {
+        return prev.filter(item => item.id !== addon.id);
+      } else {
+        return [...prev, addon];
+      }
+    });
+  };
+
+  // Filtering addons based on the selected plan
+  const getRelevantAddons = () => {
+    if (!selectedPlan) return [];
+    
+    const plan = subscriptionPlans.find(p => p.id === selectedPlan);
+    if (plan && plan.addons) {
+      // Return all addons but mark plan-specific ones as recommended
+      return subscriptionAddons.map(addon => ({
+        ...addon,
+        recommended: !!plan.addons.find(a => a.id === addon.id)
+      }));
+    }
+    
+    return subscriptionAddons;
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {plans.map((plan) => (
-        <Card key={plan.id} className={`bg-[#111111] border-[#333333] overflow-hidden ${selectedPlan === plan.id ? 'ring-2 ring-[#ea384c]' : ''}`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl">{plan.name}</CardTitle>
-            <CardDescription className="text-gray-400">
-              {plan.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="mb-4">
-              <span className="text-3xl font-bold">{plan.price}</span>
-            </div>
-            <ul className="space-y-2">
-              {plan.features.map((feature, index) => (
-                <li key={index} className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-2 shrink-0" />
-                  <span className="text-sm">{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-          <CardFooter className="pt-0">
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        {subscriptionPlans.map((plan) => (
+          <Card 
+            key={plan.id}
+            className={`border-2 hover:shadow-lg transition-shadow ${
+              selectedPlan === plan.id 
+                ? "border-red-600 bg-black" 
+                : "border-gray-700 bg-gray-900"
+            }`}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                {plan.name}
+                {plan.id === "premium" && (
+                  <Badge className="bg-red-600">Best Value</Badge>
+                )}
+              </CardTitle>
+              <CardDescription className="text-lg font-bold text-white">
+                {plan.price}
+              </CardDescription>
+              <CardDescription className="text-gray-300">
+                {plan.description}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-200">Features include:</h4>
+              <ul className="space-y-2">
+                {plan.features.map((feature, i) => (
+                  <li key={i} className="flex items-start">
+                    <Check className="mr-2 h-4 w-4 text-green-500 mt-1" />
+                    <span className="text-gray-300">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-3">
+              <Button 
+                className={`w-full ${
+                  selectedPlan === plan.id 
+                    ? "bg-red-600 hover:bg-red-700" 
+                    : "bg-gray-700 hover:bg-gray-600"
+                }`}
+                onClick={() => handleSelectPlan(plan.id)}
+              >
+                {selectedPlan === plan.id ? "Selected" : "Choose Plan"}
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+      
+      {selectedPlan && (
+        <div className="mt-8 text-center">
+          <div className="mb-4">
             <Button 
-              className="w-full bg-[#ea384c] hover:bg-[#d32d3f]"
-              onClick={() => handleSubscribe(plan.id)}
-              disabled={isProcessing}
+              variant="outline" 
+              onClick={openAddonDialog}
+              className="mr-4 border-red-500 text-red-500 hover:bg-red-900 hover:text-white"
             >
-              {isProcessing && selectedPlan === plan.id ? (
-                <span className="flex items-center">
-                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
-                  Processing...
-                </span>
+              <Info className="mr-2 h-4 w-4" /> Customize with Add-ons
+            </Button>
+            
+            <Button 
+              onClick={handleCheckout} 
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>Processing<span className="loading loading-dots ml-2"></span></>
               ) : (
-                <span className="flex items-center">
-                  Subscribe <ArrowRight className="ml-2 h-4 w-4" />
-                </span>
+                `Subscribe Now - ${formatPrice(calculateTotal())}/month`
               )}
             </Button>
-          </CardFooter>
-        </Card>
-      ))}
-    </div>
+          </div>
+          
+          {selectedAddons.length > 0 && (
+            <div className="text-sm text-gray-400">
+              {selectedPlan && (
+                <p className="mb-1">
+                  Base plan: {formatPrice(subscriptionPlans.find(p => p.id === selectedPlan)?.priceValue || 0)}/month
+                </p>
+              )}
+              {selectedAddons.map(addon => (
+                <p key={addon.id} className="mb-1">
+                  + {addon.name}: {formatPrice(addon.price)} (one-time)
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Add-on selection dialog */}
+      <Dialog open={showAddonDialog} onOpenChange={setShowAddonDialog}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Customize Your Plan</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Enhance your experience with these optional add-ons.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {getRelevantAddons().map((addon) => (
+              <div key={addon.id} className="flex items-start space-x-3 border-b border-gray-800 pb-3">
+                <Checkbox
+                  id={`addon-${addon.id}`}
+                  checked={selectedAddons.some(a => a.id === addon.id)}
+                  onCheckedChange={() => toggleAddon(addon)}
+                  className="mt-1"
+                />
+                <div className="flex flex-col">
+                  <div className="flex items-center">
+                    <Label htmlFor={`addon-${addon.id}`} className="font-medium">
+                      {addon.name} - {formatPrice(addon.price)}
+                    </Label>
+                    {addon.recommended && (
+                      <Badge className="ml-2 bg-red-600">Recommended</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-400">{addon.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => setSelectedAddons([])}
+              className="text-gray-400"
+            >
+              Clear All
+            </Button>
+            <Button 
+              type="submit" 
+              onClick={() => setShowAddonDialog(false)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Save Selections
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
-};
-
-export default SubscriptionPlans;
+}

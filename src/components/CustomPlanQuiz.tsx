@@ -1,584 +1,308 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ArrowRight, CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, ChevronLeft, ChevronRight, Dumbbell, Flame, Scale, Timer, Activity, Target, X, LogIn, ShoppingCart } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/safe-dialog";
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import SubscriptionPlans from "./payment/SubscriptionPlans";
 
-type QuizQuestion = {
-  id: string;
-  question: string;
-  description?: string;
-  options: {
-    id: string;
-    label: string;
-    value: string;
-    icon?: React.ReactNode;
-  }[];
-};
+const quizQuestions = [
+  {
+    id: "goal",
+    question: "What's your primary fitness goal?",
+    options: [
+      { id: "lose-weight", label: "Lose weight" },
+      { id: "build-muscle", label: "Build muscle" },
+      { id: "increase-strength", label: "Increase strength" },
+      { id: "general-fitness", label: "Improve overall fitness" }
+    ]
+  },
+  {
+    id: "experience",
+    question: "What's your experience level with fitness?",
+    options: [
+      { id: "beginner", label: "Beginner" },
+      { id: "intermediate", label: "Intermediate" },
+      { id: "advanced", label: "Advanced" }
+    ]
+  },
+  {
+    id: "time",
+    question: "How much time can you dedicate to training each week?",
+    options: [
+      { id: "minimal", label: "2-3 hours" },
+      { id: "moderate", label: "4-6 hours" },
+      { id: "significant", label: "7+ hours" }
+    ]
+  },
+  {
+    id: "preference",
+    question: "What type of training do you prefer?",
+    options: [
+      { id: "weights", label: "Weight training" },
+      { id: "cardio", label: "Cardio" },
+      { id: "mixed", label: "Mixed (weights and cardio)" },
+      { id: "bodyweight", label: "Bodyweight exercises" }
+    ]
+  },
+  {
+    id: "diet",
+    question: "How would you describe your current nutrition?",
+    options: [
+      { id: "poor", label: "Needs improvement" },
+      { id: "moderate", label: "Somewhat balanced" },
+      { id: "good", label: "Well-balanced" },
+      { id: "specific", label: "Following a specific diet" }
+    ]
+  }
+];
 
-type RecommendedPlan = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  features: string[];
-  recommended?: boolean;
-  color?: string;
-};
-
-const CustomPlanQuiz = () => {
-  const { toast } = useToast();
+export default function CustomPlanQuiz() {
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-  const { isAuthenticated, profile } = useAuth();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [showResults, setShowResults] = useState(false);
-  const [recommendedPlans, setRecommendedPlans] = useState<RecommendedPlan[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [currentAnswer, setCurrentAnswer] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [requiresAuth, setRequiresAuth] = useState(false);
+  const [quizComplete, setQuizComplete] = useState(false);
+  const [recommendedPlan, setRecommendedPlan] = useState(null);
+  const [quizResultId, setQuizResultId] = useState(null);
   
-  const questions: QuizQuestion[] = [
-    {
-      id: 'goal',
-      question: 'What is your primary fitness goal?',
-      description: 'This helps us understand what you want to achieve',
-      options: [
-        { id: 'goal-1', label: 'Lose Weight', value: 'weight-loss', icon: <Scale className="w-5 h-5 text-sinner-red" /> },
-        { id: 'goal-2', label: 'Build Muscle', value: 'muscle-gain', icon: <Dumbbell className="w-5 h-5 text-sinner-red" /> },
-        { id: 'goal-3', label: 'Improve Fitness', value: 'fitness', icon: <Activity className="w-5 h-5 text-sinner-red" /> },
-        { id: 'goal-4', label: 'Athletic Performance', value: 'performance', icon: <Flame className="w-5 h-5 text-sinner-red" /> },
-      ],
-    },
-    {
-      id: 'experience',
-      question: 'What is your current fitness level?',
-      description: 'Be honest - this helps us tailor your plan appropriately',
-      options: [
-        { id: 'exp-1', label: 'Beginner', value: 'beginner' },
-        { id: 'exp-2', label: 'Intermediate', value: 'intermediate' },
-        { id: 'exp-3', label: 'Advanced', value: 'advanced' },
-        { id: 'exp-4', label: 'Elite/Athlete', value: 'elite' },
-      ],
-    },
-    {
-      id: 'time',
-      question: 'How much time can you commit per week?',
-      description: "We will design a plan that fits your schedule",
-      options: [
-        { id: 'time-1', label: '2-3 hours', value: 'minimal', icon: <Timer className="w-5 h-5 text-sinner-red" /> },
-        { id: 'time-2', label: '4-5 hours', value: 'moderate', icon: <Timer className="w-5 h-5 text-sinner-red" /> },
-        { id: 'time-3', label: '6-8 hours', value: 'substantial', icon: <Timer className="w-5 h-5 text-sinner-red" /> },
-        { id: 'time-4', label: '9+ hours', value: 'maximum', icon: <Timer className="w-5 h-5 text-sinner-red" /> },
-      ],
-    },
-    {
-      id: 'equipment',
-      question: 'What equipment do you have access to?',
-      description: "We will work with what you have available",
-      options: [
-        { id: 'equip-1', label: 'Home (minimal)', value: 'minimal' },
-        { id: 'equip-2', label: 'Home Gym', value: 'home-gym' },
-        { id: 'equip-3', label: 'Full Gym Access', value: 'full-gym' },
-        { id: 'equip-4', label: 'Access to Specialty Equipment', value: 'specialty' },
-      ],
-    },
-    {
-      id: 'coaching',
-      question: 'What level of coaching do you want?',
-      description: 'More coaching means more personalization and accountability',
-      options: [
-        { id: 'coach-1', label: 'Self-guided Plan', value: 'self-guided' },
-        { id: 'coach-2', label: 'Check-ins Weekly', value: 'weekly' },
-        { id: 'coach-3', label: 'Regular Coaching', value: 'regular' },
-        { id: 'coach-4', label: 'Premium 1-on-1', value: 'premium' },
-      ],
-    },
-    {
-      id: 'nutrition',
-      question: 'Are you interested in nutrition guidance?',
-      description: 'Proper nutrition is essential for achieving your fitness goals',
-      options: [
-        { id: 'nutr-1', label: 'Basic Guidelines Only', value: 'basic' },
-        { id: 'nutr-2', label: 'Meal Planning', value: 'meal-planning' },
-        { id: 'nutr-3', label: 'Comprehensive Plan', value: 'comprehensive' },
-        { id: 'nutr-4', label: 'None', value: 'none' },
-      ],
-    },
-  ];
-  
-  const handleSelectOption = (value: string) => {
-    setAnswers({
-      ...answers,
-      [questions[currentStep].id]: value,
-    });
-  };
-  
-  const handleNext = () => {
-    if (currentStep < questions.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // Process answers and show results
-      analyzeResults();
-      setShowResults(true);
-    }
-  };
-  
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-  
-  const resetQuiz = () => {
-    setCurrentStep(0);
-    setAnswers({});
-    setShowResults(false);
-    setRecommendedPlans([]);
-    setRequiresAuth(false);
-  };
-  
-  const analyzeResults = () => {
-    let plans: RecommendedPlan[] = [];
-    
-    // Enhanced recommendation logic based on goals, experience, and preferences
-    const goal = answers['goal'];
-    const experience = answers['experience'];
-    const coaching = answers['coaching'];
-    const nutrition = answers['nutrition'];
-    
-    // Nutrition plans
-    if (nutrition === 'meal-planning' || nutrition === 'comprehensive') {
-      plans.push({
-        id: 'nutrition-standard',
-        name: 'Personalized Nutrition Plan',
-        description: 'Custom nutrition guidance tailored to your specific goals',
-        price: 150,
-        features: [
-          'Personalized macro calculations',
-          'Food preference accommodations',
-          'Meal timing recommendations',
-          'Grocery shopping list',
-          'Sample meal ideas',
-          '1 revision included'
-        ],
-        recommended: nutrition === 'comprehensive',
-        color: 'bg-sinner-red'
+  const handleNextQuestion = () => {
+    if (!currentAnswer) {
+      toast({
+        title: "Selection required",
+        description: "Please select an option to continue",
+        variant: "destructive",
       });
-    }
-    
-    // Lifting programs
-    if (goal === 'muscle-gain' || goal === 'performance') {
-      const baseProgramPrice = 175;
-      
-      const programName = experience === 'advanced' || experience === 'elite' 
-        ? 'Advanced Lifting Program' 
-        : 'Progressive Lifting Program';
-        
-      plans.push({
-        id: experience === 'advanced' || experience === 'elite' ? 'lifting-advanced' : 'lifting-standard',
-        name: programName,
-        description: 'Structured resistance training program to build strength and muscle',
-        price: baseProgramPrice,
-        features: [
-          'Periodized training cycles',
-          'Progressive overload system',
-          'Form technique guidance',
-          'Weekly workout schedule',
-          'Exercise substitution options',
-          '1 program revision included'
-        ],
-        recommended: goal === 'muscle-gain',
-        color: 'bg-sinner-red'
-      });
-    }
-    
-    // Weight loss focused plan
-    if (goal === 'weight-loss') {
-      plans.push({
-        id: 'weight-loss-plan',
-        name: 'Weight Loss Program',
-        description: 'Structured plan focused on sustainable fat loss',
-        price: 175,
-        features: [
-          'Combined cardio and resistance training',
-          'Calorie deficit guidelines',
-          'Progress tracking tools',
-          'Metabolic conditioning workouts',
-          'Plateau-breaking strategies',
-          'Weekly adjustment protocols'
-        ],
-        recommended: true,
-        color: 'bg-sinner-red'
-      });
-    }
-    
-    // General fitness plan
-    if (goal === 'fitness') {
-      plans.push({
-        id: 'general-fitness',
-        name: 'Functional Fitness Program',
-        description: 'Well-rounded plan to improve overall fitness and wellness',
-        price: 150,
-        features: [
-          'Balanced training approach',
-          'Cardiovascular conditioning',
-          'Strength development',
-          'Mobility and flexibility work',
-          'Recovery protocols',
-          'Progress assessments'
-        ],
-        recommended: true,
-        color: 'bg-sinner-red'
-      });
-    }
-    
-    // Premium coaching option
-    if (coaching === 'premium') {
-      plans.push({
-        id: 'premium-coaching',
-        name: 'Elite 1:1 Coaching',
-        description: 'Maximum support with personalized coaching and accountability',
-        price: 299,
-        features: [
-          'Weekly video check-ins',
-          'Custom programming',
-          'Form analysis and feedback',
-          'Nutrition guidance',
-          'On-demand messaging',
-          'Progress assessment',
-          'Regular program updates'
-        ],
-        color: 'bg-sinner-red'
-      });
-    }
-    
-    // Add-ons can be presented separately at checkout
-    
-    // Ensure we always have at least one plan
-    if (plans.length === 0) {
-      plans.push({
-        id: 'general-plan',
-        name: 'Custom Fitness Plan',
-        description: 'Personalized plan based on your specific needs and goals',
-        price: 149,
-        features: [
-          'Customized workout program',
-          'Nutrition guidelines',
-          'Weekly check-ins',
-          'Progress tracking',
-          'Email support'
-        ],
-        recommended: true,
-        color: 'bg-sinner-red'
-      });
-    }
-    
-    setRecommendedPlans(plans);
-  };
-  
-  const handleSaveQuizResults = async (plan: RecommendedPlan) => {
-    if (!isAuthenticated) {
-      setRequiresAuth(true);
       return;
     }
+
+    // Save current answer
+    const updatedAnswers = { ...answers, [quizQuestions[currentQuestion].id]: currentAnswer };
+    setAnswers(updatedAnswers);
     
+    if (currentQuestion < quizQuestions.length - 1) {
+      // Go to next question
+      setCurrentQuestion(currentQuestion + 1);
+      setCurrentAnswer("");
+    } else {
+      // Quiz completed - determine plan recommendation
+      handleQuizCompletion(updatedAnswers);
+    }
+  };
+  
+  const determineRecommendedPlan = (quizAnswers) => {
+    // Simple algorithm to determine recommended plan based on answers
+    
+    if (quizAnswers.goal === "lose-weight" || quizAnswers.diet === "poor" || quizAnswers.diet === "moderate") {
+      return "nutrition"; // Nutrition focused plan
+    }
+    
+    if (quizAnswers.goal === "build-muscle" || quizAnswers.goal === "increase-strength" || 
+        quizAnswers.preference === "weights") {
+      return "lifting"; // Lifting program
+    }
+    
+    if (quizAnswers.experience === "advanced" || quizAnswers.time === "significant") {
+      return "premium"; // Premium plan for serious athletes
+    }
+    
+    // Default to premium as a safe choice
+    return "premium";
+  };
+  
+  const handleQuizCompletion = async (finalAnswers) => {
     setIsSubmitting(true);
+    
     try {
-      // Store quiz results in the database, but don't create an actual plan yet
-      const { data, error } = await supabase
-        .from('custom_plan_results')
-        .insert({
-          user_id: profile?.id,
-          quiz_answers: answers,
-          selected_plan_id: plan.id,
-          selected_plan_name: plan.name,
-          selected_plan_price: plan.price,
-          plan_features: plan.features
-        })
-        .select()
-        .single();
+      // Determine recommended plan
+      const recommendedPlanId = determineRecommendedPlan(finalAnswers);
+      setRecommendedPlan(recommendedPlanId);
       
-      if (error) throw error;
+      if (isAuthenticated && user) {
+        // Save quiz results to database
+        const { data: resultData, error } = await supabase
+          .from('custom_plan_results')
+          .insert({
+            user_id: user.id,
+            quiz_answers: finalAnswers,
+            selected_plan_id: recommendedPlanId,
+            selected_plan_name: recommendedPlanId === "nutrition" 
+              ? "Nutrition Plan" 
+              : recommendedPlanId === "lifting" 
+                ? "Lifting Program" 
+                : "Complete Coaching",
+            selected_plan_price: recommendedPlanId === "nutrition" 
+              ? 150 
+              : recommendedPlanId === "lifting" 
+                ? 175 
+                : 299
+          })
+          .select('id')
+          .single();
+          
+        if (error) {
+          console.error("Error saving quiz results:", error);
+          toast({
+            title: "Error",
+            description: "There was an issue saving your quiz results",
+            variant: "destructive",
+          });
+        } else if (resultData) {
+          setQuizResultId(resultData.id);
+        }
+      }
       
+      // Show results dialog
+      setQuizComplete(true);
+      
+    } catch (error) {
+      console.error("Error in quiz completion:", error);
       toast({
-        title: "Plan Saved",
-        description: `${plan.name} has been saved to your account. You can purchase it from your dashboard.`,
-      });
-      
-      // Redirect to subscription plans page instead of automatically adding to workout plans
-      setIsDialogOpen(false);
-      navigate('/plans-catalog', { state: { recommendedPlanId: plan.id } });
-    } catch (error: any) {
-      console.error("Error saving quiz results:", error);
-      toast({
-        title: "Error saving results",
-        description: error.message || "There was a problem saving your quiz results. Please try again.",
-        variant: "destructive"
+        title: "Something went wrong",
+        description: "Unable to process your quiz results",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const redirectToLogin = () => {
-    setIsDialogOpen(false);
-    // Store quiz state in sessionStorage
-    sessionStorage.setItem('pendingQuizAnswers', JSON.stringify(answers));
-    sessionStorage.setItem('pendingQuizStep', currentStep.toString());
-    navigate('/login', { state: { redirectAfterLogin: '/plans-catalog' } });
-  };
-  
-  // Restore quiz state if returning from login
-  useEffect(() => {
-    const pendingAnswers = sessionStorage.getItem('pendingQuizAnswers');
-    const pendingStep = sessionStorage.getItem('pendingQuizStep');
-    
-    if (pendingAnswers) {
-      try {
-        setAnswers(JSON.parse(pendingAnswers));
-        if (pendingStep) {
-          const step = parseInt(pendingStep);
-          setCurrentStep(step);
-          // If this was the last step, show results
-          if (step >= questions.length - 1) {
-            setShowResults(true);
-            analyzeResults();
-          }
-        }
-        // Clear storage after restoring
-        sessionStorage.removeItem('pendingQuizAnswers');
-        sessionStorage.removeItem('pendingQuizStep');
-      } catch (e) {
-        console.error("Error restoring quiz state:", e);
-      }
-    }
-    
-    // Auto-open dialog if requested in URL
-    if (window.location.search.includes('showQuiz=true')) {
-      setIsDialogOpen(true);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [isAuthenticated]);
-  
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-sinner-red hover:bg-red-700">
-          <Target className="mr-2 h-4 w-4" />
-          Find Your Perfect Plan
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] p-0 bg-zinc-900 border-zinc-800 text-white max-h-[90vh] overflow-auto">
-        <div className="p-6 border-b border-zinc-800">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center">
-              <Dumbbell className="h-5 w-5 text-sinner-red mr-2" />
-              Custom Training Plan Quiz
-            </DialogTitle>
-            <DialogDescription className="text-center text-gray-400">
-              Answer a few questions to get personalized program recommendations
-            </DialogDescription>
-          </DialogHeader>
-        </div>
-        
-        <div className="p-6">
-          {requiresAuth ? (
-            <Card className="w-full max-w-2xl mx-auto bg-gray-900 border-gray-800 shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-center">Login Required</CardTitle>
-                <CardDescription className="text-center text-gray-400">
-                  Create an account to save and purchase your custom plan
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-8 flex flex-col items-center justify-center min-h-[300px]">
-                <p className="text-center text-gray-300 mb-6">
-                  Your custom plan will be available for purchase after you sign in
-                </p>
-                <div className="flex space-x-4">
-                  <Button 
-                    onClick={redirectToLogin}
-                    className="bg-sinner-red hover:bg-red-700"
-                  >
-                    Login or Sign Up
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setRequiresAuth(false)}
-                  >
-                    Go Back
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : isSubmitting ? (
-            <div className="text-center py-12">
-              <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
-              <p className="text-center text-gray-300 mt-4">
-                Saving your custom plan...
-              </p>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {!quizComplete ? (
+        <Card className="w-full bg-gray-900 border-gray-700 shadow-lg text-white">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-2xl text-white">Custom Training Plan Quiz</CardTitle>
+              <Badge className="bg-red-600">Question {currentQuestion + 1}/{quizQuestions.length}</Badge>
             </div>
-          ) : !showResults ? (
-            <>
-              <div className="mb-6">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-400">Question {currentStep + 1} of {questions.length}</span>
-                  <span className="font-medium">{Math.round(((currentStep + 1) / questions.length) * 100)}%</span>
+            <CardDescription className="text-gray-300">
+              Answer a few questions to get your personalized training recommendation
+            </CardDescription>
+            <div className="w-full bg-gray-700 h-2 rounded-full mt-2">
+              <div 
+                className="bg-red-600 h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${((currentQuestion + 1) / quizQuestions.length) * 100}%` }} 
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="py-4">
+              <h3 className="text-xl font-semibold mb-4 text-white">{quizQuestions[currentQuestion].question}</h3>
+              <RadioGroup value={currentAnswer} onValueChange={setCurrentAnswer}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {quizQuestions[currentQuestion].options.map((option) => (
+                    <div key={option.id} className="flex items-start space-x-2">
+                      <RadioGroupItem 
+                        value={option.id} 
+                        id={option.id} 
+                        className="mt-1 border-gray-500 text-red-600"
+                      />
+                      <Label 
+                        htmlFor={option.id} 
+                        className="text-md text-gray-300 cursor-pointer pb-2 block"
+                      >
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-                <Progress value={((currentStep + 1) / questions.length) * 100} className="h-2" />
-              </div>
-              
-              <div className="mb-6">
-                <h3 className="text-xl font-bold mb-1">{questions[currentStep].question}</h3>
-                {questions[currentStep].description && (
-                  <p className="text-gray-400 text-sm">{questions[currentStep].description}</p>
-                )}
-              </div>
-              
-              <RadioGroup 
-                value={answers[questions[currentStep].id] || ''} 
-                onValueChange={handleSelectOption}
-                className="space-y-3"
-              >
-                {questions[currentStep].options.map(option => (
-                  <div 
-                    key={option.id}
-                    className={`flex items-center space-x-2 border border-zinc-700 rounded-lg p-4 transition-all ${
-                      answers[questions[currentStep].id] === option.value 
-                        ? 'bg-sinner-red/10 border-sinner-red' 
-                        : 'hover:bg-zinc-800'
-                    }`}
-                  >
-                    <RadioGroupItem 
-                      value={option.value} 
-                      id={option.id} 
-                      className="border-zinc-600"
-                    />
-                    <Label 
-                      htmlFor={option.id} 
-                      className="flex items-center w-full cursor-pointer"
-                    >
-                      {option.icon && <span className="mr-3">{option.icon}</span>}
-                      <span className={`${
-                        answers[questions[currentStep].id] === option.value 
-                          ? 'font-medium' 
-                          : ''
-                      }`}>{option.label}</span>
-                    </Label>
-                  </div>
-                ))}
               </RadioGroup>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button 
+              onClick={handleNextQuestion} 
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isSubmitting}
+            >
+              {currentQuestion < quizQuestions.length - 1 ? (
+                <>
+                  Next
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  {isSubmitting ? 'Processing...' : 'Get Your Plan'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      ) : (
+        <Card className="w-full bg-gray-900 border-gray-700 shadow-lg text-white">
+          <CardHeader>
+            <div className="flex flex-col items-center text-center">
+              <CheckCircle className="h-16 w-16 text-green-500 mb-2" />
+              <CardTitle className="text-2xl text-white">Your Custom Plan Recommendation</CardTitle>
+              <CardDescription className="text-gray-300 mt-2">
+                Based on your responses, we've identified the best plan for your goals
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="py-4">
+              <h3 className="text-xl font-semibold mb-2 text-center text-white">
+                We Recommend:
+              </h3>
               
-              <div className="flex justify-between mt-6">
-                <Button 
-                  variant="outline" 
-                  onClick={handlePrevious}
-                  disabled={currentStep === 0}
-                  className="border-zinc-700"
-                >
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button 
-                  onClick={handleNext}
-                  disabled={!answers[questions[currentStep].id]}
-                  className="bg-sinner-red hover:bg-red-700"
-                >
-                  {currentStep === questions.length - 1 ? (
-                    <>Get Results<ChevronRight className="ml-2 h-4 w-4" /></>
-                  ) : (
-                    <>Next<ChevronRight className="ml-2 h-4 w-4" /></>
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-sinner-red/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="h-8 w-8 text-sinner-red" />
-                </div>
-                <h3 className="text-xl font-bold mb-1">Your Recommended Plans</h3>
-                <p className="text-gray-400 text-sm">
-                  Based on your goals and preferences, we've selected these plans for you. Save them to view purchase options.
+              <SubscriptionPlans 
+                initialSelectedPlan={recommendedPlan} 
+                quizResultId={quizResultId}
+              />
+              
+              <div className="mt-8">
+                <Separator className="my-4 bg-gray-700" />
+                <h4 className="text-lg font-medium mb-2 text-white">What's Next?</h4>
+                <p className="text-gray-300">
+                  Select your plan and subscribe to get immediate access to your personalized training program. 
+                  Our expert coaches will customize your plan based on your quiz answers.
                 </p>
               </div>
-              
-              <div className="space-y-4 mb-6">
-                {recommendedPlans.map((plan) => (
-                  <Card 
-                    key={plan.id} 
-                    className={`border ${plan.recommended ? 'border-sinner-red' : 'border-zinc-800'} bg-zinc-900`}
-                  >
-                    {plan.recommended && (
-                      <div className={`${plan.color || 'bg-sinner-red'} text-white text-xs uppercase font-bold py-1 px-3 text-center`}>
-                        Recommended
-                      </div>
-                    )}
-                    <CardHeader className="pb-2">
-                      <CardTitle>{plan.name}</CardTitle>
-                      <CardDescription className="text-gray-400">
-                        {plan.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pb-2">
-                      <div className="text-2xl font-bold mb-2">
-                        ${plan.price.toFixed(2)}
-                      </div>
-                      <ul className="space-y-1">
-                        {plan.features.map((feature, index) => (
-                          <li key={index} className="flex items-start">
-                            <CheckCircle className="h-4 w-4 text-sinner-red mr-2 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                    <CardFooter>
-                      <Button 
-                        onClick={() => handleSaveQuizResults(plan)}
-                        className={`w-full ${plan.recommended ? 'bg-sinner-red hover:bg-red-700' : 'bg-zinc-800 hover:bg-zinc-700'}`}
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        View Purchase Options
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-              
-              <div className="flex justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={resetQuiz}
-                  className="border-zinc-700"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Start Over
-                </Button>
-                <Button
-                  onClick={() => setIsDialogOpen(false)}
-                  className="bg-zinc-800 hover:bg-zinc-700"
-                >
-                  Close
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-export default CustomPlanQuiz;
+      {/* Login prompt dialog - shown when non-authenticated users try to access plans */}
+      <Dialog open={false}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Sign in to continue</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-300">
+              Please sign in or create an account to access your personalized training plan.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={() => navigate('/login', { state: { returnTo: '/custom-plan' } })}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sign In
+            </Button>
+            <Button 
+              onClick={() => navigate('/signup', { state: { returnTo: '/custom-plan' } })}
+              variant="outline"
+            >
+              Create Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

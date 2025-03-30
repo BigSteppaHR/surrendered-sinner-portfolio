@@ -82,6 +82,46 @@ serve(async (req) => {
               });
           }
 
+          // Process any addons purchased with the subscription
+          const addonsData = session.metadata?.addons;
+          if (addonsData) {
+            try {
+              const addons = JSON.parse(addonsData);
+              if (Array.isArray(addons) && addons.length > 0) {
+                // Insert addon purchases
+                const addonPurchases = addons.map(addon => ({
+                  user_id: userId,
+                  addon_id: addon.id,
+                  subscription_id: subscription.id,
+                  status: 'active',
+                  metadata: {
+                    checkout_session_id: session.id,
+                    price_paid: addon.price
+                  }
+                }));
+                
+                if (addonPurchases.length > 0) {
+                  await supabase
+                    .from('user_addon_purchases')
+                    .insert(addonPurchases);
+                }
+              }
+            } catch (error) {
+              console.error('Error processing addons metadata:', error);
+            }
+          }
+
+          // Update custom_plan_results if this was a quiz result purchase
+          if (session.metadata?.quiz_result_id) {
+            await supabase
+              .from('custom_plan_results')
+              .update({
+                is_purchased: true,
+                purchase_date: new Date().toISOString()
+              })
+              .eq('id', session.metadata.quiz_result_id);
+          }
+
           // Create user notification about successful subscription
           await supabase
             .from('user_notifications')

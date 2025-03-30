@@ -47,7 +47,7 @@ serve(async (req) => {
     
     switch (action) {
       case 'create_checkout_session': {
-        const { planId, planType, price, planName, addons } = data;
+        const { planId, planType, price, planName, addons, quizResultId } = data;
         
         if (!planId || !planType || !price || !planName) {
           throw new Error('Missing required parameters for checkout session');
@@ -112,6 +112,24 @@ serve(async (req) => {
             });
           });
         }
+
+        // Prepare metadata
+        const metadata = {
+          user_id: user.id,
+          plan_id: planId,
+          plan_type: planType,
+          has_addons: addons && addons.length > 0 ? 'true' : 'false'
+        };
+
+        // Add quiz result ID to metadata if available
+        if (quizResultId) {
+          metadata.quiz_result_id = quizResultId;
+        }
+
+        // Add addons data to metadata (stringified)
+        if (addons && addons.length > 0) {
+          metadata.addons = JSON.stringify(addons);
+        }
         
         // Create Stripe session
         const session = await stripe.checkout.sessions.create({
@@ -121,12 +139,7 @@ serve(async (req) => {
           mode: 'subscription',
           success_url: `${req.headers.get('origin')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${req.headers.get('origin')}/payment-cancelled`,
-          metadata: {
-            user_id: user.id,
-            plan_id: planId,
-            plan_type: planType,
-            has_addons: addons && addons.length > 0 ? 'true' : 'false'
-          },
+          metadata: metadata,
           subscription_data: {
             metadata: {
               user_id: user.id,
@@ -150,7 +163,8 @@ serve(async (req) => {
               plan_id: planId,
               plan_type: planType,
               checkout_session_id: session.id,
-              addons: addons || []
+              addons: addons || [],
+              quiz_result_id: quizResultId || null
             },
           });
         
@@ -262,6 +276,35 @@ serve(async (req) => {
         }
         
         return new Response(JSON.stringify({ addons: addons || [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+
+      case 'get_user_addons': {
+        // Get addons purchased by the user
+        const { data: userAddons, error: userAddonsError } = await supabase
+          .from('user_addon_purchases')
+          .select(`
+            *,
+            addon:addon_id(*)
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .order('purchase_date', { ascending: false });
+        
+        if (userAddonsError) {
+          throw userAddonsError;
+        }
+        
+        return new Response(JSON.stringify({ userAddons: userAddons || [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+      
+      case 'test-connection': {
+        return new Response(JSON.stringify({ success: true, message: 'Connection successful' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         });

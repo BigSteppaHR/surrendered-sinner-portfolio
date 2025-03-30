@@ -271,7 +271,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_purchased: boolean
           plan_features: Json | null
+          purchase_date: string | null
           quiz_answers: Json
           selected_plan_id: string | null
           selected_plan_name: string | null
@@ -282,7 +284,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_purchased?: boolean
           plan_features?: Json | null
+          purchase_date?: string | null
           quiz_answers: Json
           selected_plan_id?: string | null
           selected_plan_name?: string | null
@@ -293,7 +297,9 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_purchased?: boolean
           plan_features?: Json | null
+          purchase_date?: string | null
           quiz_answers?: Json
           selected_plan_id?: string | null
           selected_plan_name?: string | null
@@ -668,6 +674,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_addons: {
+        Row: {
+          addon_type: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          addon_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          addon_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscription_packages: {
         Row: {
           billing_interval: string | null
@@ -923,6 +965,63 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_addon_purchases: {
+        Row: {
+          addon_id: string
+          created_at: string
+          id: string
+          is_used: boolean
+          metadata: Json | null
+          purchase_date: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          used_date: string | null
+          user_id: string
+        }
+        Insert: {
+          addon_id: string
+          created_at?: string
+          id?: string
+          is_used?: boolean
+          metadata?: Json | null
+          purchase_date?: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          used_date?: string | null
+          user_id: string
+        }
+        Update: {
+          addon_id?: string
+          created_at?: string
+          id?: string
+          is_used?: boolean
+          metadata?: Json | null
+          purchase_date?: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          used_date?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_addon_purchases_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_addons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_addon_purchases_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
             referencedColumns: ["id"]
           },
         ]
