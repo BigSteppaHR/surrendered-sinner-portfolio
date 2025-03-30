@@ -15,15 +15,15 @@ initializeAssetProtection();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
-      <AuthProvider>
-        <StripeProvider>
-          <Router>
+      <Router>
+        <AuthProvider>
+          <StripeProvider>
             <Routes>
               <Route path="/*" element={<App />} />
             </Routes>
-          </Router>
-        </StripeProvider>
-      </AuthProvider>
+          </StripeProvider>
+        </AuthProvider>
+      </Router>
     </ThemeProvider>
   </React.StrictMode>,
 );
