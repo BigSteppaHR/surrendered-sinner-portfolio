@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from './ui/button';
@@ -79,7 +78,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
             body: { 
               action: 'createPaymentIntent',
               params: { 
-                amount: amount,
+                amount: Math.round(amount * 100), // Convert to cents for Stripe
                 currency: 'usd',
                 payment_id: paymentRecord.id,
                 description: description
@@ -142,7 +141,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     if (amount > 0 && (retryCount === 0 || retryCount <= maxRetries)) {
       createPaymentIntent();
     }
-  }, [amount, toast, user, description, retryCount]);
+  }, [amount, toast, user, description, retryCount, onError]);
 
   const retryPaymentSetup = async () => {
     setIsRetrying(true);
@@ -173,7 +172,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         body: { 
           action: 'createPaymentIntent',
           params: { 
-            amount: amount,
+            amount: Math.round(amount * 100), // Convert to cents
             currency: 'usd',
             payment_id: paymentRecord.id,
             description: description
@@ -212,8 +211,8 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
 
     if (!stripe || !elements || !clientSecret || !paymentId) {
@@ -229,58 +228,46 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
     setLoading(true);
 
-    try {
-      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
-        clientSecret,
-        {
-          payment_method: {
-            card: cardElement,
-            billing_details: { name, email }
-          }
-        }
-      );
-
-      if (confirmError) {
-        throw new Error(confirmError.message);
+    stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: { name, email }
+      }
+    })
+    .then(({error, paymentIntent}) => {
+      if (error) {
+        throw new Error(error.message || "Payment failed");
       }
 
-      if (paymentIntent.status === 'succeeded') {
+      if (paymentIntent?.status === 'succeeded') {
         // Update payment status in our database with amount info
-        try {
-          const amountInCents = Math.round(amount * 100);
-          
-          const { error: updateError } = await supabase.functions.invoke('stripe-helper', {
-            body: { 
-              action: 'updatePaymentStatus',
-              params: { 
-                payment_id: paymentId,
-                status: paymentIntent.status,
-                payment_intent_id: paymentIntent.id,
-                payment_method: 'card',
-                amount: amountInCents,
-                description: description
-              }
+        return supabase.functions.invoke('stripe-helper', {
+          body: { 
+            action: 'updatePaymentStatus',
+            params: { 
+              payment_id: paymentId,
+              status: paymentIntent.status,
+              payment_intent_id: paymentIntent.id,
+              payment_method: 'card',
+              amount: Math.round(amount * 100),
+              description: description
             }
+          }
+        }).then(() => {
+          toast({
+            title: "Payment Successful",
+            description: "Your payment has been processed successfully.",
           });
-
-          if (updateError) throw new Error(`Failed to update payment: ${updateError.message}`);
-        } catch (error: any) {
-          console.error('Error updating payment status:', error);
-          // Continue anyway since the payment succeeded, just log the error
-        }
-
-        toast({
-          title: "Payment Successful",
-          description: "Your payment has been processed successfully.",
+          
+          if (onSuccess) {
+            onSuccess(paymentId);
+          }
         });
-        
-        if (onSuccess) {
-          onSuccess(paymentId);
-        }
       } else {
-        throw new Error(`Payment status: ${paymentIntent.status}`);
+        throw new Error(`Payment status: ${paymentIntent?.status || 'unknown'}`);
       }
-    } catch (error: any) {
+    })
+    .catch(error => {
       console.error('Payment error:', error);
       setError(error.message || "Payment failed");
       
@@ -292,27 +279,26 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       
       // Update the payment status to failed
       if (paymentId) {
-        try {
-          await supabase.functions.invoke('stripe-helper', {
-            body: { 
-              action: 'updatePaymentStatus',
-              params: { 
-                payment_id: paymentId,
-                status: 'failed'
-              }
+        supabase.functions.invoke('stripe-helper', {
+          body: { 
+            action: 'updatePaymentStatus',
+            params: { 
+              payment_id: paymentId,
+              status: 'failed'
             }
-          });
-        } catch (updateError) {
+          }
+        }).catch(updateError => {
           console.error('Error updating payment status to failed:', updateError);
-        }
+        });
       }
       
       if (onError) {
         onError(error.message || "Payment failed");
       }
-    } finally {
+    })
+    .finally(() => {
       setLoading(false);
-    }
+    });
   };
 
   return (

@@ -65,9 +65,18 @@ serve(async (req) => {
           );
         }
 
+        // Ensure amount is a number 
+        const amount = Number(params.amount);
+        if (isNaN(amount) || amount <= 0) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid amount parameter: must be a positive number' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+
         // Create a PaymentIntent with the order amount and currency
         const paymentIntent = await stripe.paymentIntents.create({
-          amount: params.amount,
+          amount: amount,
           currency: params.currency,
           automatic_payment_methods: {
             enabled: true,
