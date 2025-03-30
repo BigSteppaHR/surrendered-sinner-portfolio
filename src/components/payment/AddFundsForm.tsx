@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,7 +76,6 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
           transaction_type: 'deposit',
           created_at: new Date().toISOString()
         })
-        .select();
         
       if (error) {
         console.error("Database error:", error);
