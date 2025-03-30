@@ -14,7 +14,7 @@ initializeAssetProtection();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
       <AuthProvider>
         <StripeProvider>
           <Router>
