@@ -10,15 +10,10 @@ import Navbar from '@/components/Navbar';
 import SEO from '@/components/SEO';
 import FloatingCTA from '@/components/FloatingCTA';
 import TrainingPackages from '@/components/TrainingPackages';
-import { Helmet } from 'react-helmet-async';
 
 const LandingPage = () => {
   return (
     <>
-      <Helmet>
-        <title>Fitness Training | Professional Training Services</title>
-        <meta name="description" content="Professional fitness training services to help you achieve your health and fitness goals." />
-      </Helmet>
       <SEO 
         title="Fitness Training | Professional Training Services"
         description="Professional fitness training services to help you achieve your health and fitness goals."

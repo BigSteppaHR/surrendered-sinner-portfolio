@@ -1,10 +1,7 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/hooks/useAuth'; // Import from hooks instead of components
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { StripeProvider } from '@/components/StripeProvider';
 
 // Pages
 import LandingPage from "@/pages/LandingPage";
@@ -24,6 +21,7 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentError from "@/pages/PaymentError";
 import PaymentProcess from "@/pages/PaymentProcess";
 import Events from "@/pages/Events";
+import ConfirmEmail from "@/pages/ConfirmEmail";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -48,6 +46,7 @@ function App() {
         <Route path="/signup" element={<AuthPage mode="signup" />} />
         <Route path="/forgot-password" element={<AuthPage mode="forgot-password" />} />
         <Route path="/reset-password" element={<AuthPage mode="reset-password" />} />
+        <Route path="/confirm-email" element={<ConfirmEmail />} />
         
         {/* Payment Routes */}
         <Route path="/payment-portal" element={<ProtectedRoute><PaymentPortal /></ProtectedRoute>} />
