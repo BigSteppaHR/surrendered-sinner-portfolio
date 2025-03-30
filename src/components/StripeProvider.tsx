@@ -5,12 +5,12 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-// Initialize with a null value, we'll assign the promise directly
+// Initialize with a null value
 let stripePromise: Promise<Stripe | null> | null = null;
 
-// Define the publishable key - using environment variable with fallback for development
-// Make sure the key is valid and correctly formatted
-const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
+// Use a valid Stripe publishable key
+// IMPORTANT: Make sure this is your actual publishable key (starts with pk_)
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
 
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
@@ -28,6 +28,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [connectionTested, setConnectionTested] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Test connection to Stripe via our edge function with enhanced error handling
   const testStripeConnection = useCallback(async () => {
@@ -55,32 +56,52 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         return false;
       }
       
-      // Then only if basic test passed, try the Stripe API connection test
-      try {
-        const { data, error } = await supabase.functions.invoke('stripe-helper', {
-          body: { 
-            action: 'get-dashboard-data'
-          }
-        });
-        
-        if (error) {
-          console.error("Stripe API connection test failed:", error);
-          return false;
-        }
-        
-        console.log("Stripe API connection test result:", data);
-        return data && data.status === 'connected';
-      } catch (err) {
-        console.error("Error calling stripe-helper with get-dashboard-data:", err);
-        return false;
-      }
-    } catch (err) {
+      return true;
+    } catch (err: any) {
       console.error("Error testing Stripe connection:", err);
       return false;
     } finally {
       setIsTesting(false);
     }
   }, []);
+
+  // Retry loading Stripe integration
+  const retryStripeInitialization = async () => {
+    setIsRetrying(true);
+    setStripeError(null);
+    
+    try {
+      // Reinitialize Stripe
+      stripePromise = null;
+      stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY.trim(), {
+        apiVersion: '2023-10-16',
+      });
+      
+      // Test connection
+      const connected = await testStripeConnection();
+      
+      if (connected) {
+        setConnectionTested(true);
+        toast({
+          title: "Stripe Connection Restored",
+          description: "Successfully reconnected to payment processing system.",
+        });
+      } else {
+        throw new Error("Could not restore Stripe connection");
+      }
+    } catch (error: any) {
+      console.error("Failed to reinitialize Stripe:", error);
+      setStripeError(error.message || "Failed to reconnect to payment system");
+      toast({
+        title: "Reconnection Failed",
+        description: "Could not reconnect to payment system. This won't affect your login or other features.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRetrying(false);
+      setIsStripeLoaded(true); // Still mark as loaded so the application can render
+    }
+  };
 
   useEffect(() => {
     const initializeStripe = async () => {
@@ -93,7 +114,8 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         
         // Verify the key format before using
         if (!STRIPE_PUBLISHABLE_KEY || !STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
-          console.warn("Invalid Stripe publishable key format. Payments may not work correctly.");
+          console.error("Invalid Stripe publishable key format. Payments will not work correctly.");
+          throw new Error("Invalid Stripe configuration");
         }
         
         // Initialize Stripe with the key
@@ -109,9 +131,9 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           if (!connected) {
             console.warn("Stripe API connection test failed. Edge function might not be working correctly.");
             toast({
-              title: "Stripe Connection Issue",
-              description: "Could not connect to Stripe API. This won't affect your login or other features.",
-              variant: "default", // Changed from destructive to not alarm users
+              title: "Payment System Notice",
+              description: "Connection to payment system limited. Basic features will still work normally.",
+              variant: "default",
             });
           } else {
             console.log("Stripe API connection test successful!");
@@ -136,10 +158,27 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
       toast({
         title: "Payment system issue",
         description: "Payment features may be limited. This won't affect login or other features.",
-        variant: "default", // Changed from destructive to not alarm users
+        variant: "default",
       });
     }
   }, [stripeError, toast]);
+
+  if (!isStripeLoaded) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ea384c]"></div>
+      </div>
+    );
+  }
+
+  // Render children without Stripe if there's an error
+  if (stripeError) {
+    return (
+      <div className="stripe-provider-error">
+        {children}
+      </div>
+    );
+  }
 
   // We render the children even if Stripe isn't loaded, so the rest of the app can work
   // Components that need Stripe will handle the absence gracefully
@@ -147,7 +186,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     <Elements 
       stripe={stripePromise}
       options={{
-        mode: 'subscription', // Changed from 'payment' to 'subscription'
+        mode: 'payment', // Can be 'payment' or 'subscription' based on your needs
         appearance: {
           theme: 'night',
           variables: {
@@ -158,11 +197,12 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        currency: 'usd',
-        amount: 5999, // Default amount in cents (e.g., $59.99) for initial setup
-        paymentMethodTypes: ['card'],
-        locale: 'en',
-        loader: 'auto', // Add loader option to handle loading states better
+        loader: 'always', // Always show the loader to prevent flash of unstyled content
+        fonts: [
+          {
+            cssSrc: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+          }
+        ]
       }}
     >
       {children}

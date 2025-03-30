@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowLeft, CheckCircle, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from '@/components/Logo';
 
-const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
 const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY.trim());
 
 const PaymentProcess = () => {
@@ -48,7 +48,6 @@ const PaymentProcess = () => {
           description: err.message || "The payment could not be processed due to missing information."
         });
         
-        // Wait a moment before redirecting to show the error
         setTimeout(() => {
           navigate('/payment-portal');
         }, 3000);
@@ -60,7 +59,6 @@ const PaymentProcess = () => {
     fetchPaymentDetails();
   }, [searchParams, navigate, toast]);
 
-  // Define appearance here to ensure it's correctly typed and passed to Elements
   const appearance = {
     theme: 'night' as const,
     variables: {
@@ -129,7 +127,7 @@ const PaymentProcess = () => {
                 <Elements stripe={stripePromise} options={{ 
                   clientSecret, 
                   appearance,
-                  loader: 'auto'
+                  loader: 'always'
                 }}>
                   <CheckoutForm 
                     clientSecret={clientSecret} 
@@ -181,7 +179,6 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
     setErrorMessage(null);
 
     try {
-      // Confirm the payment
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -192,7 +189,6 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
 
       if (error) {
         setErrorMessage(error.message || 'An error occurred with your payment.');
-        // Update payment status to failed
         await supabase.functions.invoke('stripe-helper', {
           body: {
             action: 'updatePaymentStatus',
@@ -212,7 +208,6 @@ const CheckoutForm = ({ clientSecret, paymentId, amount }: CheckoutFormProps) =>
         
         navigate('/payment-portal?status=error');
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded, update database
         const amountValue = parseFloat(amount);
         const amountInCents = Math.round(amountValue * 100);
         
