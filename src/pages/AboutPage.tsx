@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Dumbbell, Award, Sparkles, Star } from 'lucide-react';
+import { Dumbbell, Award, Sparkles, Star, Users } from 'lucide-react';
 import SEO from '@/components/SEO';
 
 const AboutPage = () => {
@@ -27,10 +27,9 @@ const AboutPage = () => {
             <div className="md:w-1/3">
               <div className="rounded-lg overflow-hidden border-2 border-[#ea384c]/30 shadow-[0_0_15px_rgba(234,56,76,0.2)]">
                 <img 
-                  src="/placeholder.svg" 
+                  src="/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png" 
                   alt="Brad - Fitness Coach" 
                   className="w-full h-auto"
-                  // Replace with actual image
                 />
               </div>
               
@@ -43,10 +42,9 @@ const AboutPage = () => {
                 <div className="flex flex-wrap gap-2">
                   <div className="flex flex-col items-center bg-zinc-900 p-3 rounded-lg border border-[#ea384c]/20">
                     <img 
-                      src="/placeholder.svg" 
+                      src="/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" 
                       alt="ISSA Logo" 
                       className="h-12 w-auto mb-2"
-                      // Replace with ISSA logo
                     />
                     <Badge variant="outline" className="bg-[#ea384c]/10 border-[#ea384c]/30 text-white">
                       Bodybuilding
@@ -55,10 +53,9 @@ const AboutPage = () => {
                   
                   <div className="flex flex-col items-center bg-zinc-900 p-3 rounded-lg border border-[#ea384c]/20">
                     <img 
-                      src="/placeholder.svg" 
+                      src="/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" 
                       alt="ISSA Logo" 
                       className="h-12 w-auto mb-2"
-                      // Replace with ISSA logo
                     />
                     <Badge variant="outline" className="bg-[#ea384c]/10 border-[#ea384c]/30 text-white">
                       Strength & Conditioning
@@ -67,10 +64,9 @@ const AboutPage = () => {
                   
                   <div className="flex flex-col items-center bg-zinc-900 p-3 rounded-lg border border-[#ea384c]/20">
                     <img 
-                      src="/placeholder.svg" 
+                      src="/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" 
                       alt="ISSA Logo" 
                       className="h-12 w-auto mb-2"
-                      // Replace with ISSA logo
                     />
                     <Badge variant="outline" className="bg-[#ea384c]/10 border-[#ea384c]/30 text-white">
                       Personal Training
@@ -79,10 +75,9 @@ const AboutPage = () => {
                   
                   <div className="flex flex-col items-center bg-zinc-900 p-3 rounded-lg border border-[#ea384c]/20">
                     <img 
-                      src="/placeholder.svg" 
+                      src="/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" 
                       alt="ISSA Logo" 
                       className="h-12 w-auto mb-2"
-                      // Replace with ISSA logo
                     />
                     <Badge variant="outline" className="bg-[#ea384c]/10 border-[#ea384c]/30 text-white">
                       Functional Training
@@ -102,7 +97,7 @@ const AboutPage = () => {
                 </p>
                 
                 <p className="text-lg leading-relaxed mt-4">
-                  As the founder of Alpha Nutrition Labs, Brad combines his passion for fitness with 
+                  As an <span className="text-[#ea384c] font-semibold">Alpha Nutrition</span> sponsored athlete, Brad combines his passion for fitness with 
                   cutting-edge nutritional science to deliver holistic training and nutrition programs 
                   tailored to individual needs and goals.
                 </p>
@@ -149,10 +144,13 @@ const AboutPage = () => {
               </div>
               
               <div className="mt-8">
-                <h3 className="text-xl font-semibold mb-4">Alpha Nutrition Labs</h3>
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-[#ea384c]" />
+                  Athletes Fueled by Alpha Nutrition
+                </h3>
                 <div className="p-4 bg-zinc-900 rounded-lg border border-[#ea384c]/20 flex items-center justify-between">
                   <div>
-                    <p className="text-lg">Check out Brad's premium nutrition supplements:</p>
+                    <p className="text-lg">Check out ALPHA'S premium nutrition supplements:</p>
                     <p className="text-sm text-gray-400 mt-1">Quality supplements designed for optimal performance and results</p>
                   </div>
                   <a 
@@ -165,6 +163,26 @@ const AboutPage = () => {
                   </a>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-12 bg-zinc-900/50 p-6 rounded-lg border border-[#ea384c]/20">
+            <h2 className="text-2xl font-bold mb-4 text-center">Elite Athletes Powered By <span className="text-[#ea384c]">Alpha Nutrition</span></h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="flex flex-col items-center">
+                  <div className="w-32 h-32 rounded-full bg-zinc-800 border-2 border-[#ea384c]/30 overflow-hidden mb-4">
+                    <img
+                      src="/placeholder.svg"
+                      alt={`Alpha Athlete ${item}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <h3 className="font-semibold text-lg">Athlete Name</h3>
+                  <p className="text-gray-400 text-center mt-1">Professional Bodybuilder</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

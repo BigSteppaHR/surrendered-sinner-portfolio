@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Dumbbell, Target, Award, HeartPulse } from 'lucide-react';
+import { Dumbbell, Target, Award, HeartPulse, Users } from 'lucide-react';
 import GlassCard from './GlassCard';
 import AnimatedText from './AnimatedText';
 
@@ -28,9 +29,9 @@ const About: React.FC = () => {
   ];
 
   const certifications = [
-    { name: "ISSA Certified Personal Trainer", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
-    { name: "ISSA Nutritionist", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
-    { name: "ISSA Strength & Conditioning Coach", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" }
+    { name: "ISSA Certified Personal Trainer", logo: "/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" },
+    { name: "ISSA Nutritionist", logo: "/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" },
+    { name: "ISSA Strength & Conditioning Coach", logo: "/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" }
   ];
 
   return (
@@ -49,7 +50,7 @@ const About: React.FC = () => {
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-sinner-red/20 rounded-lg"></div>
             <div className="relative overflow-hidden rounded-lg">
               <img 
-                src="https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80" 
+                src="/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png" 
                 alt="Coach training" 
                 className="w-full h-full object-cover"
               />
@@ -105,7 +106,9 @@ const About: React.FC = () => {
         </div>
 
         <div className="mt-16 mb-16">
-          <h3 className="text-2xl font-bold mb-6 text-center">Our <span className="text-sinner-red">Certifications</span></h3>
+          <h3 className="text-2xl font-bold mb-6 text-center">
+            <span className="text-sinner-red">Alpha Nutrition</span> Sponsored Athletes
+          </h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {certifications.map((cert, index) => (
               <GlassCard 
@@ -137,6 +140,24 @@ const About: React.FC = () => {
               </GlassCard>
             </div>
           ))}
+        </div>
+        
+        <div className="mt-12 text-center">
+          <h3 className="text-2xl font-bold mb-4 flex items-center justify-center gap-2">
+            <Users className="h-6 w-6 text-sinner-red" />
+            Athletes Fueled by Alpha Nutrition
+          </h3>
+          <div className="p-4 bg-zinc-900/50 rounded-lg border border-sinner-red/20 max-w-lg mx-auto">
+            <p className="text-lg">Check out ALPHA'S premium nutrition supplements:</p>
+            <a 
+              href="https://alphanutritionlabs.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="mt-3 px-6 py-2 bg-sinner-red text-white rounded-md hover:bg-opacity-90 transition-colors inline-block"
+            >
+              Visit Supplement Store
+            </a>
+          </div>
         </div>
       </div>
     </section>
