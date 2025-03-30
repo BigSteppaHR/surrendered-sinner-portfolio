@@ -1,22 +1,29 @@
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import './styles/animations.css' // Import our custom animations
-import { HelmetProvider } from 'react-helmet-async'
-import { initializeAssetProtection } from './utils/assetLoadingHandler'
-
-// Import Tailwind base styles
-import 'tailwindcss/tailwind.css'
+import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import App from './App';
+import './index.css';
+import { AuthProvider } from './contexts/AuthProvider';
+import { DarkModeProvider } from './contexts/DarkModeContext';
+import { StripeProvider } from './components/StripeProvider';
+import { initializeAssetProtection } from './utils/assetLoadingHandler';
 
 // Initialize asset protection
 initializeAssetProtection();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <HelmetProvider>
-      <App />
-    </HelmetProvider>
+    <DarkModeProvider>
+      <AuthProvider>
+        <StripeProvider>
+          <Router>
+            <Routes>
+              <Route path="/*" element={<App />} />
+            </Routes>
+          </Router>
+        </StripeProvider>
+      </AuthProvider>
+    </DarkModeProvider>
   </React.StrictMode>,
-)
+);
