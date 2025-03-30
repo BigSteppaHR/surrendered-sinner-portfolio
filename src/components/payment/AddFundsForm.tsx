@@ -77,6 +77,7 @@ const AddFundsForm: React.FC<AddFundsFormProps> = ({ onError }) => {
           transaction_type: 'deposit',
           created_at: new Date().toISOString()
         })
+        .select();
         
       if (error) {
         console.error("Database error:", error);

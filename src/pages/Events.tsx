@@ -1,17 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, Video, MapPin, Clock, ExternalLink, Info, User, Loader2 } from 'lucide-react';
+import { Calendar, Video, MapPin, Clock, ExternalLink, Info, User } from 'lucide-react';
 import SEO from '@/components/SEO';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 interface Event {
   id: string;
@@ -25,132 +21,81 @@ interface Event {
   price: number;
   spots: number;
   spotsRemaining: number;
-  registrationUrl?: string;
-  isFree?: boolean;
+  registrationUrl: string;
 }
+
+const upcomingEvents: Event[] = [
+  {
+    id: '1',
+    title: 'Advanced Bodybuilding Techniques',
+    description: 'Learn specialized bodybuilding techniques to push past plateaus and maximize hypertrophy. This in-person clinic will cover advanced training methods, intensity techniques, and programming strategies.',
+    date: 'June 15, 2023',
+    time: '10:00 AM - 1:00 PM',
+    location: 'Alpha Fitness Center, Los Angeles',
+    imageUrl: '/placeholder.svg',
+    isOnline: false,
+    price: 99,
+    spots: 15,
+    spotsRemaining: 8,
+    registrationUrl: '#'
+  },
+  {
+    id: '2',
+    title: 'Nutrition Planning Workshop',
+    description: 'Online zoom session covering the fundamentals of nutrition planning for muscle building and fat loss. Learn how to calculate macros, meal timing, and supplement strategies for optimal results.',
+    date: 'June 22, 2023',
+    time: '6:00 PM - 8:00 PM',
+    location: 'Zoom Virtual Meeting',
+    imageUrl: '/placeholder.svg',
+    isOnline: true,
+    price: 49,
+    spots: 30,
+    spotsRemaining: 15,
+    registrationUrl: '#'
+  },
+  {
+    id: '3',
+    title: 'Strength Programming Fundamentals',
+    description: 'Learn how to build effective strength training programs for yourself or your clients. This workshop covers periodization, exercise selection, and program design principles.',
+    date: 'July 5, 2023',
+    time: '11:00 AM - 2:00 PM',
+    location: 'Performance Lab, San Diego',
+    imageUrl: '/placeholder.svg',
+    isOnline: false,
+    price: 129,
+    spots: 12,
+    spotsRemaining: 4,
+    registrationUrl: '#'
+  },
+  {
+    id: '4',
+    title: 'Contest Prep Masterclass',
+    description: 'Online session for competitors and coaches looking to optimize their contest preparation strategies. Covers nutrition, training, posing, and peak week protocols.',
+    date: 'July 12, 2023',
+    time: '5:00 PM - 7:30 PM',
+    location: 'Zoom Virtual Meeting',
+    imageUrl: '/placeholder.svg',
+    isOnline: true,
+    price: 79,
+    spots: 25,
+    spotsRemaining: 18,
+    registrationUrl: '#'
+  }
+];
 
 const Events = () => {
   const [activeTab, setActiveTab] = useState('all');
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { isAuthenticated } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .order('date', { ascending: true });
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data && data.length > 0) {
-          // Transform database data to match the Event interface
-          const formattedEvents = data.map(event => ({
-            id: event.id,
-            title: event.title,
-            description: event.description || '',
-            date: new Date(event.date).toLocaleDateString('en-US', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            }),
-            time: event.time || '',
-            location: event.location || '',
-            imageUrl: event.image_url || '/placeholder.svg',
-            isOnline: event.is_online || false,
-            price: Number(event.price) || 0,
-            spots: event.spots || 0,
-            spotsRemaining: event.spots_remaining || 0,
-            registrationUrl: event.registration_url || '#',
-            isFree: Number(event.price) <= 0
-          }));
-          
-          setEvents(formattedEvents);
-        } else {
-          setEvents([]);
-        }
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load events. Please try again later.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchEvents();
-  }, [toast]);
-  
-  const handleRegister = async (event: Event) => {
-    if (!isAuthenticated) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please log in to register for events.',
-        variant: 'default',
-      });
-      navigate('/login', { state: { redirectAfterLogin: '/events' } });
-      return;
-    }
-    
-    if (event.spotsRemaining <= 0) {
-      toast({
-        title: 'Event Full',
-        description: 'Sorry, this event is already at full capacity.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    try {
-      if (event.isFree) {
-        // Handle free event registration directly
-        toast({
-          title: 'Registration Successful',
-          description: `You're now registered for ${event.title}!`,
-          variant: 'default',
-        });
-        // Here you would typically record the registration in the database
-      } else {
-        // For paid events, redirect to payment processor
-        navigate('/payment-process', { 
-          state: { 
-            type: 'event',
-            eventId: event.id,
-            amount: event.price.toFixed(2),
-            title: event.title
-          } 
-        });
-      }
-    } catch (error) {
-      console.error('Error registering for event:', error);
-      toast({
-        title: 'Registration Failed',
-        description: 'There was a problem registering for this event. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
   
   const filteredEvents = activeTab === 'all' 
-    ? events 
+    ? upcomingEvents 
     : activeTab === 'online' 
-      ? events.filter(event => event.isOnline) 
-      : events.filter(event => !event.isOnline);
+      ? upcomingEvents.filter(event => event.isOnline) 
+      : upcomingEvents.filter(event => !event.isOnline);
       
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <SEO 
-        title="Events & Clinics | Surrendered Sinner Fitness"
+        title="Events & Clinics | Alpha Nutrition & Fitness"
         description="Join our in-person clinics and online workshops to enhance your fitness knowledge and skills."
       />
       
@@ -195,84 +140,27 @@ const Events = () => {
             </div>
             
             <TabsContent value="all" className="mt-6">
-              {loading ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-10 w-10 animate-spin text-[#ea384c]" />
-                </div>
-              ) : filteredEvents.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredEvents.map(event => (
-                    <EventCard 
-                      key={event.id} 
-                      event={event} 
-                      onRegister={() => handleRegister(event)} 
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20 bg-zinc-900/50 rounded-lg border border-[#333]">
-                  <Calendar className="h-16 w-16 text-[#ea384c]/50 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">No Events Currently Scheduled</h3>
-                  <p className="text-gray-400 max-w-lg mx-auto">
-                    We're currently planning our next round of events. 
-                    Check back soon for upcoming workshops and training clinics!
-                  </p>
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredEvents.map(event => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
             </TabsContent>
             
             <TabsContent value="inperson" className="mt-6">
-              {loading ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-10 w-10 animate-spin text-[#ea384c]" />
-                </div>
-              ) : filteredEvents.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredEvents.map(event => (
-                    <EventCard 
-                      key={event.id} 
-                      event={event} 
-                      onRegister={() => handleRegister(event)} 
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20 bg-zinc-900/50 rounded-lg border border-[#333]">
-                  <MapPin className="h-16 w-16 text-[#ea384c]/50 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">No In-Person Events Currently Scheduled</h3>
-                  <p className="text-gray-400 max-w-lg mx-auto">
-                    We're currently planning our next in-person training clinics. 
-                    Check back soon for updates!
-                  </p>
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredEvents.map(event => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
             </TabsContent>
             
             <TabsContent value="online" className="mt-6">
-              {loading ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-10 w-10 animate-spin text-[#ea384c]" />
-                </div>
-              ) : filteredEvents.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredEvents.map(event => (
-                    <EventCard 
-                      key={event.id} 
-                      event={event} 
-                      onRegister={() => handleRegister(event)} 
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20 bg-zinc-900/50 rounded-lg border border-[#333]">
-                  <Video className="h-16 w-16 text-[#ea384c]/50 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">No Online Workshops Currently Scheduled</h3>
-                  <p className="text-gray-400 max-w-lg mx-auto">
-                    We're currently planning our next online workshops. 
-                    Check back soon for upcoming virtual training sessions!
-                  </p>
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredEvents.map(event => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
             </TabsContent>
           </Tabs>
           
@@ -291,7 +179,7 @@ const Events = () => {
               </div>
               
               <div className="flex-shrink-0">
-                <Button className="bg-[#ea384c] hover:bg-[#c8313f]" onClick={() => navigate('/contact')}>Contact Us</Button>
+                <Button className="bg-[#ea384c] hover:bg-[#c8313f]">Contact Us</Button>
               </div>
             </div>
           </div>
@@ -304,12 +192,7 @@ const Events = () => {
   );
 };
 
-interface EventCardProps {
-  event: Event;
-  onRegister: () => void;
-}
-
-const EventCard = ({ event, onRegister }: EventCardProps) => {
+const EventCard = ({ event }: { event: Event }) => {
   return (
     <Card className="bg-zinc-900 border-[#333] overflow-hidden">
       <div className="h-48 overflow-hidden relative">
@@ -362,15 +245,11 @@ const EventCard = ({ event, onRegister }: EventCardProps) => {
       </CardContent>
       
       <CardFooter className="flex justify-between items-center border-t border-[#333] pt-4">
-        <div className="text-lg font-bold">
-          {event.isFree ? 'Free' : `$${event.price.toFixed(2)}`}
-        </div>
-        <Button 
-          className="bg-[#ea384c] hover:bg-[#c8313f]"
-          onClick={onRegister}
-          disabled={event.spotsRemaining <= 0}
-        >
-          {event.spotsRemaining <= 0 ? 'Sold Out' : 'Register'}
+        <div className="text-lg font-bold">${event.price}</div>
+        <Button className="bg-[#ea384c] hover:bg-[#c8313f]" asChild>
+          <a href={event.registrationUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+            Register <ExternalLink className="h-4 w-4 ml-1" />
+          </a>
         </Button>
       </CardFooter>
     </Card>

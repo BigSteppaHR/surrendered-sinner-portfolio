@@ -27,10 +27,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: localStorage,
   },
   global: {
-    // Add default headers to all requests to prevent 406 errors
+    // Always include the apikey in requests, important for CORS
     headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
+      apikey: supabaseAnonKey
     }
   },
   // Improved retry and timeout settings
