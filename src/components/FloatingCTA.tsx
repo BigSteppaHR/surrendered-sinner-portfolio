@@ -56,12 +56,13 @@ const FloatingCTA: React.FC = () => {
           Take the first step today with a free consultation. Discover how we can help you achieve your fitness goals.
         </p>
         
-        <Link 
-          to="#contact" 
+        {/* Using an anchor tag with href for simple page scroll instead of Link for hash navigation */}
+        <a 
+          href="#contact" 
           className="w-full block text-center bg-sinner-red text-white font-semibold py-2 px-4 rounded-md hover:bg-sinner-red/90 transition-colors pulse-glow"
         >
           Book Free Consultation
-        </Link>
+        </a>
       </div>
     </div>
   );
