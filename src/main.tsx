@@ -1,10 +1,10 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import App from './App';
 import './index.css';
-import { AuthProvider } from './contexts/AuthProvider';
+import { AuthProvider } from './hooks/useAuth';
 import { DarkModeProvider } from './contexts/DarkModeContext';
 import { StripeProvider } from './components/StripeProvider';
 import { initializeAssetProtection } from './utils/assetLoadingHandler';
