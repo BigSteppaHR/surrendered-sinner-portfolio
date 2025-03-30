@@ -45,7 +45,7 @@ const FloatingCTA: React.FC = () => {
         <div className="flex items-center mb-3">
           <img 
             src="/lovable-uploads/00eac127-7491-42ac-a058-169d184c1e94.png" 
-            alt="Surrendered Sinner Fitness Logo" 
+            alt="Surrendered Sinner FIT Logo" 
             className="w-8 h-8 mr-2"
           />
           <h4 className="font-bold text-lg">Ready to Transform?</h4>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dumbbell, Target, Award, HeartPulse } from 'lucide-react';
 import GlassCard from './GlassCard';
@@ -28,9 +29,9 @@ const About: React.FC = () => {
   ];
 
   const certifications = [
-    { name: "ISSA Certified Personal Trainer", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
-    { name: "ISSA Nutritionist", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" },
-    { name: "ISSA Strength & Conditioning Coach", logo: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8Y2VydGlmaWNhdGlvbnxlbnwwfHx8fDE2NDg2NTYwMDg&ixlib=rb-4.0.3&q=80&w=100" }
+    { name: "ISSA Certified Personal Trainer", logo: "/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" },
+    { name: "ISSA Nutritionist", logo: "/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" },
+    { name: "ISSA Strength & Conditioning Coach", logo: "/lovable-uploads/dad61b9e-a273-48d8-8d79-5c7e30d99564.png" }
   ];
 
   return (
@@ -60,7 +61,7 @@ const About: React.FC = () => {
           <div>
             <h3 className="text-2xl font-bold mb-4">Our Philosophy</h3>
             <AnimatedText 
-              text="At Surrendered Sinner Fitness, we believe in pushing beyond perceived limits and breaking through mental barriers that hold you back." 
+              text="At Surrendered Sinner FIT, we believe in pushing beyond perceived limits and breaking through mental barriers that hold you back." 
               className="text-lg mb-4 text-white/80"
             />
             <p className="text-lg mb-4 text-white/80">
@@ -137,6 +138,24 @@ const About: React.FC = () => {
               </GlassCard>
             </div>
           ))}
+        </div>
+        
+        <div className="mt-16 text-center">
+          <h3 className="text-2xl font-bold mb-4">Athletes Fueled by <span className="text-sinner-red">ALPHA Nutrition</span></h3>
+          <p className="text-lg max-w-3xl mx-auto mb-8 text-white/80">
+            As an ALPHA sponsored athlete, we're proud to recommend their premium nutrition supplements designed to optimize performance and recovery.
+          </p>
+          <a 
+            href="https://www.alphasupps.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="btn-secondary inline-flex items-center"
+          >
+            Checkout ALPHA'S Premium Nutrition Supplements
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
         </div>
       </div>
     </section>

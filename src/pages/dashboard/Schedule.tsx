@@ -6,7 +6,6 @@ import { ArrowLeft, CalendarDays, CheckCircle, Clock, MapPin, Info, Calendar } f
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import DashboardNav from "@/components/dashboard/DashboardNav";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/safe-dialog";
 
 const Schedule = () => {
   const navigate = useNavigate();
@@ -15,6 +14,9 @@ const Schedule = () => {
   // Function to handle scheduling completion
   const handleScheduleSuccess = () => {
     setIsScheduled(true);
+    
+    // Here we would typically save the session information to the database
+    // This would be implemented with a Supabase call
   };
   
   return (

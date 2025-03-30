@@ -53,9 +53,9 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-1">
             <NavLink to="/" label="Home" />
-            <NavLink to="/plans" label="Plans" />
-            <NavLink to="/plans-catalog" label="Plan Catalog" />
+            <NavLink to="/plans" label="Training Plans" />
             <NavLink to="/schedule" label="Schedule" />
+            <NavLink to="/plans-catalog" label="Plan Catalog" />
           </nav>
           
           {/* Authentication */}
@@ -104,9 +104,9 @@ const Navbar = () => {
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col space-y-4">
               <MobileNavLink to="/" label="Home" />
-              <MobileNavLink to="/plans" label="Plans" />
-              <MobileNavLink to="/plans-catalog" label="Plan Catalog" />
+              <MobileNavLink to="/plans" label="Training Plans" />
               <MobileNavLink to="/schedule" label="Schedule" />
+              <MobileNavLink to="/plans-catalog" label="Plan Catalog" />
               {isAuthenticated ? (
                 <MobileNavLink to="/dashboard" label="Dashboard" />
               ) : (

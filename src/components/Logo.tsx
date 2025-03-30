@@ -17,10 +17,10 @@ const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '' }) => {
   return (
     <Link to="/" className={`flex items-center ${className}`}>
       <span className={`font-bold text-sinner-red ${size === 'small' ? 'text-xl' : size === 'medium' ? 'text-2xl' : 'text-3xl'}`}>
-        SINNER
+        SURRENDERED SINNER
       </span>
       <span className={`font-light text-white ml-1 ${size === 'small' ? 'text-xl' : size === 'medium' ? 'text-2xl' : 'text-3xl'}`}>
-        FITNESS
+        FIT
       </span>
     </Link>
   );

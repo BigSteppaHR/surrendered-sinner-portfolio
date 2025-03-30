@@ -13,7 +13,7 @@ import FloatingCTA from '@/components/FloatingCTA';
 import SEO from '@/components/SEO';
 import FeaturedProducts from '@/components/FeaturedProducts';
 import { Button } from '@/components/ui/button';
-import { Dumbbell, Target, ArrowRight, Zap, Sparkles } from 'lucide-react';
+import { Dumbbell, Target, ArrowRight, Zap, Sparkles, Instagram, Facebook, Twitter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,8 +52,8 @@ const Index = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <SEO 
-        title="Surrendered Sinner Fitness | Elite Coaching"
-        description="Transform your body and mind with elite coaching from Surrendered Sinner Fitness."
+        title="Surrendered Sinner FIT | Elite Coaching"
+        description="Transform your body and mind with elite coaching from Surrendered Sinner FIT."
         canonical={canonicalUrl}
       />
       
@@ -67,14 +67,14 @@ const Index = () => {
       
       {/* Top Quiz CTA */}
       <div className="w-full bg-black py-6 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between">
           <div className="flex items-center mb-4 md:mb-0">
             <Dumbbell className="h-6 w-6 text-sinner-red mr-2" />
             <h3 className="text-xl font-bold text-white">Find Your Perfect Training Plan</h3>
           </div>
           <Button 
             onClick={handleStartPlanQuiz}
-            className="bg-sinner-red hover:bg-red-700 text-white group relative overflow-hidden"
+            className="mt-4 md:mt-0 bg-sinner-red hover:bg-red-700 text-white group relative overflow-hidden"
           >
             <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-sinner-red via-red-600 to-sinner-red bg-[length:200%_100%] animate-shimmer"></span>
             <span className="relative flex items-center">
@@ -118,6 +118,26 @@ const Index = () => {
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </span>
           </Button>
+        </div>
+      </div>
+      
+      {/* Social Media Links */}
+      <div className="w-full bg-black py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center justify-center">
+            <h3 className="text-xl font-bold mb-4 text-white">Connect With Us</h3>
+            <div className="flex space-x-6">
+              <a href="https://www.instagram.com/surrenderedsinner/" target="_blank" rel="noopener noreferrer" className="hover:text-sinner-red transition-colors">
+                <Instagram size={28} />
+              </a>
+              <a href="https://www.facebook.com/surrenderedsinner/" target="_blank" rel="noopener noreferrer" className="hover:text-sinner-red transition-colors">
+                <Facebook size={28} />
+              </a>
+              <a href="https://twitter.com/surrenderedsinner/" target="_blank" rel="noopener noreferrer" className="hover:text-sinner-red transition-colors">
+                <Twitter size={28} />
+              </a>
+            </div>
+          </div>
         </div>
       </div>
       
