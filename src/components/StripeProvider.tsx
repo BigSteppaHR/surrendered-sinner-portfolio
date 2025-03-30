@@ -8,9 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 // Initialize with a null value
 let stripePromise: Promise<Stripe | null> | null = null;
 
-// Use a valid Stripe publishable key
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51OH3M1LflMyYK4LWP5j7QQrEXsYl1QY1A9EfyTHEBzP1V0U3XRRVcMQWobUVm1KLXBVPfk7XbX1AwBbNaDWk02yg00sGdp7hOH';
-
 // Helper for conditional logging
 const isDev = import.meta.env.DEV;
 const logDebug = (message: string, ...args: any[]) => {
@@ -28,6 +25,36 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const [connectionTested, setConnectionTested] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [publishableKey, setPublishableKey] = useState<string | null>(null);
+
+  // Get Stripe publishable key from edge function
+  const getStripePublishableKey = useCallback(async () => {
+    try {
+      console.log("Fetching Stripe publishable key...");
+      
+      const response = await supabase.functions.invoke('stripe-helper', {
+        body: { 
+          action: 'get-publishable-key'
+        }
+      });
+      
+      if (response.error) {
+        console.error("Failed to fetch Stripe publishable key:", response.error);
+        return null;
+      }
+      
+      if (!response.data || !response.data.publishableKey) {
+        console.error("No publishable key returned from edge function");
+        return null;
+      }
+      
+      console.log("Successfully fetched Stripe publishable key");
+      return response.data.publishableKey;
+    } catch (err) {
+      console.error("Error fetching Stripe publishable key:", err);
+      return null;
+    }
+  }, []);
 
   // Test connection to Stripe via our edge function with enhanced error handling
   const testStripeConnection = useCallback(async () => {
@@ -70,9 +97,18 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     setStripeError(null);
     
     try {
-      // Reinitialize Stripe
+      // Reinitialize Stripe with a fresh key
+      const key = await getStripePublishableKey();
+      
+      if (!key) {
+        throw new Error("Could not retrieve Stripe publishable key");
+      }
+      
+      setPublishableKey(key);
+      
+      // Reset Stripe promise
       stripePromise = null;
-      stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY.trim(), {
+      stripePromise = loadStripe(key.trim(), {
         apiVersion: '2023-10-16',
       });
       
@@ -111,14 +147,17 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           return;
         }
         
-        // Verify the key format before using
-        if (!STRIPE_PUBLISHABLE_KEY || !STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
-          console.error("Invalid Stripe publishable key format. Payments will not work correctly.");
-          throw new Error("Invalid Stripe configuration");
+        // Get the publishable key from the edge function
+        const key = await getStripePublishableKey();
+        
+        if (!key) {
+          throw new Error("Could not retrieve Stripe publishable key");
         }
         
-        // Initialize Stripe with the key
-        stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY.trim(), {
+        setPublishableKey(key);
+        
+        // Initialize Stripe with the key from edge function
+        stripePromise = loadStripe(key.trim(), {
           apiVersion: '2023-10-16',
         });
         
@@ -149,7 +188,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     };
 
     initializeStripe();
-  }, [toast, connectionTested, testStripeConnection]);
+  }, [toast, connectionTested, testStripeConnection, getStripePublishableKey]);
 
   // Show user-friendly error when Stripe fails to initialize but don't block the rest of the app
   useEffect(() => {
@@ -179,8 +218,6 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
     );
   }
 
-  // IMPORTANT: We don't set an amount in the default options, as it should only be set
-  // when creating an actual payment intent or setup intent
   return (
     <Elements 
       stripe={stripePromise}
@@ -196,7 +233,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
             fontFamily: 'Inter, system-ui, sans-serif',
           }
         },
-        loader: 'auto', // Changed from 'always' to 'auto' to be more flexible
+        loader: 'auto', // Use 'auto' to be more flexible
         fonts: [
           {
             cssSrc: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
