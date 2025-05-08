@@ -162,7 +162,7 @@ export default function SubscriptionPlans({ initialSelectedPlan = null, quizResu
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
         {subscriptionPlans.map((plan) => (
           <Card 
             key={plan.id}
@@ -175,8 +175,8 @@ export default function SubscriptionPlans({ initialSelectedPlan = null, quizResu
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 {plan.name}
-                {plan.id === "premium" && (
-                  <Badge className="bg-red-600">Best Value</Badge>
+                {plan.id === "advanced" && (
+                  <Badge className="bg-red-600">Popular</Badge>
                 )}
               </CardTitle>
               <CardDescription className="text-lg font-bold text-white">

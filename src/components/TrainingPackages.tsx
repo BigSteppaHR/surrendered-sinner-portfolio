@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowRight, BadgeCheck, Calendar, Dumbbell, Flame, Heart, LineChart, Clock, Users, Headphones } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Dumbbell, Flame, LineChart, Award, Target, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,55 +14,70 @@ const TrainingPackages = () => {
 
   const packages = [
     {
-      id: 'starter',
-      name: 'Starter Package',
-      description: 'Perfect for beginners looking to establish a fitness routine',
-      price: 149,
+      id: 'beginner',
+      name: 'Beginner Plan',
+      description: 'For those new to structured training and nutrition planning',
+      price: 150,
       features: [
-        'Personalized workout plan',
-        '1-month program duration',
-        'Weekly check-ins',
-        'Form technique guidance',
-        'Nutrition basics',
+        'Personalized training program',
+        'Basic nutrition guidance',
+        'Form correction advice',
+        'Monthly program updates',
+        'Email support'
       ],
       icon: <Dumbbell className="h-10 w-10 text-white" />,
       color: 'from-zinc-700 to-zinc-900',
       popular: false
     },
     {
-      id: 'transformation',
-      name: 'Transformation',
-      description: 'Comprehensive program for serious fitness transformation',
-      price: 299,
+      id: 'intermediate',
+      name: 'Intermediate Plan',
+      description: 'For experienced lifters seeking optimized programming',
+      price: 175,
       features: [
-        'Advanced personalized workout plan',
-        '3-month program duration',
-        'Bi-weekly coaching calls',
-        'Detailed nutrition plan',
-        'Progress tracking tools',
-        'Supplement recommendations',
-        '24/7 messaging support',
+        'Advanced periodized training',
+        'Detailed nutrition protocols',
+        'Recovery optimization',
+        'Bi-weekly check-ins',
+        'Priority email support',
+        'Supplement recommendations'
       ],
       icon: <Flame className="h-10 w-10 text-white" />,
+      color: 'from-zinc-800 to-zinc-900',
+      popular: true
+    },
+    {
+      id: 'advanced',
+      name: 'Advanced Enhancement Plan',
+      description: 'For athletes using performance enhancement requiring specialized protocols',
+      price: 299,
+      features: [
+        'PED-optimized training protocols',
+        'Cycle-specific nutrition planning',
+        'Health marker monitoring',
+        'Weekly check-ins and adjustments',
+        '24/7 messaging support',
+        'Advanced supplement protocols'
+      ],
+      icon: <LineChart className="h-10 w-10 text-white" />,
       color: 'from-sinner-red to-red-900',
       popular: true
     },
     {
-      id: 'elite',
-      name: 'Elite Performance',
-      description: 'Premium coaching for maximum results and accountability',
-      price: 499,
+      id: 'competition',
+      name: 'Competition Prep Plan',
+      description: 'Comprehensive preparation for bodybuilding competitions',
+      price: 399,
       features: [
-        'Fully customized workout program',
-        '6-month program duration',
-        'Weekly coaching sessions',
-        'Periodized training approach',
-        'Advanced nutrition protocols',
-        'Body composition analysis',
-        'Recovery optimization',
-        'Unlimited support access',
+        'Contest-specific training',
+        'Peak week protocols',
+        'Stage presentation guidance',
+        'Twice-weekly check-ins',
+        'Posing feedback',
+        'Custom carb cycling',
+        '24/7 priority coaching'
       ],
-      icon: <LineChart className="h-10 w-10 text-white" />,
+      icon: <Trophy className="h-10 w-10 text-white" />,
       color: 'from-zinc-800 to-black',
       popular: false
     }
@@ -70,25 +85,25 @@ const TrainingPackages = () => {
 
   const addons = [
     {
-      id: 'nutrition',
-      name: 'Nutrition Coaching',
-      description: 'Personalized nutrition plans and coaching',
-      price: 150,
-      icon: <Heart className="h-6 w-6 text-sinner-red" />
+      id: 'meal-revision',
+      name: 'Nutrition Plan Revision',
+      description: 'Get your nutrition plan revised based on progress',
+      price: 35,
+      icon: <Target className="h-6 w-6 text-sinner-red" />
     },
     {
-      id: 'sessions',
-      name: 'Training Sessions',
-      description: '5-pack of personal training sessions',
-      price: 299,
-      icon: <Users className="h-6 w-6 text-sinner-red" />
+      id: 'program-revision',
+      name: 'Training Program Revision',
+      description: 'Mid-month program adjustments as needed',
+      price: 40,
+      icon: <Dumbbell className="h-6 w-6 text-sinner-red" />
     },
     {
-      id: 'support',
-      name: 'Extended Support',
-      description: 'Additional 3 months of coach messaging support',
-      price: 149,
-      icon: <Headphones className="h-6 w-6 text-sinner-red" />
+      id: 'coaching-advice',
+      name: 'Emergency Coaching Call',
+      description: '30-minute impromptu coaching session',
+      price: 60,
+      icon: <Award className="h-6 w-6 text-sinner-red" />
     }
   ];
 
@@ -105,18 +120,18 @@ const TrainingPackages = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <Badge className="mb-2 bg-sinner-red/10 text-sinner-red border-sinner-red/20">
-            Training Plans
+            Specialized Training Plans
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Choose Your Path to Success
+            Choose A Plan Based On Your Level
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Our training packages are designed to meet you where you are and take you where you want to go.
-            Each plan includes personalized coaching and support.
+            Our specialized training plans are designed for every level, from beginners to advanced athletes and competition prep.
+            Each plan includes personalized coaching tailored to your specific needs.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
           {packages.map((pkg) => (
             <Card 
               key={pkg.id} 
@@ -139,7 +154,7 @@ const TrainingPackages = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-xl font-bold">{pkg.name}</CardTitle>
-                  <div className="text-2xl font-bold text-white">Starting at ${pkg.price}</div>
+                  <div className="text-2xl font-bold text-white">${pkg.price}</div>
                 </div>
                 <CardDescription className="text-gray-400">
                   {pkg.description}
@@ -161,16 +176,16 @@ const TrainingPackages = () => {
                 <Button 
                   onClick={() => handlePurchase(pkg.id)}
                   className={`w-full group relative overflow-hidden ${
-                    pkg.popular 
+                    pkg.id === 'advanced' || pkg.id === 'intermediate'
                       ? 'bg-sinner-red hover:bg-red-700' 
                       : 'bg-zinc-800 hover:bg-zinc-700 border border-zinc-700'
                   }`}
                 >
-                  {pkg.popular && (
+                  {(pkg.id === 'advanced' || pkg.id === 'intermediate') && (
                     <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-sinner-red via-red-600 to-sinner-red bg-[length:200%_100%] animate-shimmer opacity-70"></span>
                   )}
                   <span className="relative flex items-center justify-center">
-                    View Plans <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    Subscribe Now <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </Button>
               </CardFooter>
@@ -231,7 +246,7 @@ const TrainingPackages = () => {
               </h2>
               <p className="text-gray-400 max-w-2xl mx-auto">
                 Take our quick fitness assessment quiz to receive a personalized training plan recommendation
-                based on your goals, experience level, and preferences.
+                based on your goals, experience level, and specific needs.
               </p>
             </div>
             

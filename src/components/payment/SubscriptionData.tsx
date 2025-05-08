@@ -1,72 +1,117 @@
 
 import React from "react";
 
-// Define subscription plans data with increased prices
+// Define subscription plans data with revised structure
 export const subscriptionPlans = [
   {
-    id: "nutrition",
-    name: "Nutrition Plan",
+    id: "beginner",
+    name: "Beginner Plan",
     price: "$150/month",
     priceValue: 150,
-    description: "Custom nutrition guidance with macronutrient tracking",
+    description: "For those new to structured training and nutrition planning",
     features: [
-      "Personalized macro calculations",
-      "Weekly meal planning",
-      "Recipe suggestions",
-      "Food substitution options",
-      "Monthly plan updates"
-    ],
-    addons: [
-      {
-        id: "meal-revision",
-        name: "Meal Plan Revision",
-        price: 35,
-        description: "Additional revisions to your meal plan"
-      }
-    ]
-  },
-  {
-    id: "lifting",
-    name: "Lifting Program",
-    price: "$175/month",
-    priceValue: 175,
-    description: "Progressive resistance training for strength and muscle",
-    features: [
-      "Customized workout schedule",
-      "Periodized training approach",
-      "Video exercise demonstrations",
-      "Progressive overload tracking",
-      "Form correction guidance"
+      "Personalized training program",
+      "Basic nutrition guidance",
+      "Form correction advice",
+      "Monthly program updates",
+      "Email support"
     ],
     addons: [
       {
         id: "program-revision",
         name: "Program Revision",
         price: 40,
-        description: "Adjust your program as needed"
+        description: "Mid-month program adjustments"
+      },
+      {
+        id: "progress-analysis",
+        name: "Progress Analysis",
+        price: 45,
+        description: "Detailed feedback on your progress"
       }
     ]
   },
   {
-    id: "premium",
-    name: "Complete Coaching",
+    id: "intermediate",
+    name: "Intermediate Plan",
+    price: "$175/month",
+    priceValue: 175,
+    description: "For experienced lifters seeking optimized programming",
+    features: [
+      "Advanced periodized training",
+      "Detailed nutrition protocols",
+      "Recovery optimization",
+      "Bi-weekly check-ins",
+      "Priority email support",
+      "Supplement recommendations"
+    ],
+    addons: [
+      {
+        id: "meal-revision",
+        name: "Nutrition Plan Revision",
+        price: 35,
+        description: "Mid-month nutrition adjustments"
+      },
+      {
+        id: "program-revision",
+        name: "Program Revision",
+        price: 40,
+        description: "Mid-month program adjustments"
+      }
+    ]
+  },
+  {
+    id: "advanced",
+    name: "Advanced Enhancement Plan",
     price: "$299/month",
     priceValue: 299,
-    description: "Comprehensive fitness and nutrition coaching",
+    description: "For athletes using performance enhancement requiring specialized protocols",
     features: [
-      "Everything in Lifting & Nutrition plans",
-      "Weekly video check-ins",
+      "PED-optimized training protocols",
+      "Cycle-specific nutrition planning",
+      "Health marker monitoring guidance",
+      "Weekly check-ins and adjustments",
       "24/7 messaging support",
-      "Progress analysis",
-      "Supplement recommendations",
-      "Recovery optimization"
+      "Advanced supplement protocols",
+      "Recovery and ancillary recommendations"
     ],
     addons: [
       {
         id: "coaching-advice",
-        name: "Priority Coaching Session",
+        name: "Emergency Coaching Call",
         price: 60,
-        description: "30-minute impromptu coaching call"
+        description: "30-minute impromptu coaching session"
+      }
+    ]
+  },
+  {
+    id: "competition",
+    name: "Competition Prep Plan",
+    price: "$399/month",
+    priceValue: 399,
+    description: "Comprehensive preparation for bodybuilding competitions",
+    features: [
+      "Contest-specific training periodization",
+      "Peak week protocols",
+      "Stage presentation guidance",
+      "Twice-weekly check-ins with adjustments",
+      "Detailed posing feedback",
+      "Custom carb cycling and water manipulation",
+      "24/7 priority coaching access",
+      "Post-show recovery planning"
+    ],
+    addons: [
+      {
+        id: "posing-session",
+        name: "Extra Posing Session",
+        price: 75,
+        description: "Additional 45-minute posing practice and feedback"
+      },
+      {
+        id: "coaching-advice",
+        name: "Emergency Coaching Call",
+        price: 60,
+        description: "30-minute impromptu coaching session"
       }
     ]
   }
@@ -76,15 +121,15 @@ export const subscriptionPlans = [
 export const subscriptionAddons = [
   {
     id: "meal-revision",
-    name: "Meal Plan Revision",
+    name: "Nutrition Plan Revision",
     price: 35,
     description: "Get your nutrition plan revised based on your progress and preferences"
   },
   {
     id: "program-revision",
-    name: "Lifting Program Revision",
+    name: "Training Program Revision",
     price: 40,
-    description: "Update your lifting program to match your progress and goals"
+    description: "Update your training program to match your progress and goals"
   },
   {
     id: "coaching-advice",
@@ -97,5 +142,11 @@ export const subscriptionAddons = [
     name: "Progress Pictures Analysis",
     price: 45,
     description: "Detailed feedback and analysis on your progress pictures"
+  },
+  {
+    id: "posing-session",
+    name: "Posing Practice Session",
+    price: 75,
+    description: "45-minute posing practice and feedback for competitors"
   }
 ];
