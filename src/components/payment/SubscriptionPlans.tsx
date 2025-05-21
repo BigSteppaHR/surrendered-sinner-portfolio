@@ -151,10 +151,13 @@ export default function SubscriptionPlans({ initialSelectedPlan = null, quizResu
     const plan = subscriptionPlans.find(p => p.id === selectedPlan);
     if (plan && plan.addons) {
       // Return all addons but mark plan-specific ones as recommended
-      return subscriptionAddons.map(addon => ({
-        ...addon,
-        recommended: !!plan.addons.find(a => a.id === addon.id)
-      }));
+      return subscriptionAddons.map(addon => {
+        const planAddon = plan.addons.find(a => a.id === addon.id);
+        return {
+          ...addon,
+          recommended: !!planAddon
+        };
+      });
     }
     
     return subscriptionAddons;

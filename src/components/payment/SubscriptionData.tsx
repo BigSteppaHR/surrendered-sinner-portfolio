@@ -123,30 +123,35 @@ export const subscriptionAddons = [
     id: "meal-revision",
     name: "Nutrition Plan Revision",
     price: 35,
-    description: "Get your nutrition plan revised based on your progress and preferences"
+    description: "Get your nutrition plan revised based on your progress and preferences",
+    recommended: false
   },
   {
     id: "program-revision",
     name: "Training Program Revision",
     price: 40,
-    description: "Update your training program to match your progress and goals"
+    description: "Update your training program to match your progress and goals",
+    recommended: false
   },
   {
     id: "coaching-advice",
     name: "Impromptu Coaching Session",
     price: 60,
-    description: "30-minute coaching call for immediate guidance and support"
+    description: "30-minute coaching call for immediate guidance and support",
+    recommended: false
   },
   {
     id: "progress-analysis",
     name: "Progress Pictures Analysis",
     price: 45,
-    description: "Detailed feedback and analysis on your progress pictures"
+    description: "Detailed feedback and analysis on your progress pictures",
+    recommended: false
   },
   {
     id: "posing-session",
     name: "Posing Practice Session",
     price: 75,
-    description: "45-minute posing practice and feedback for competitors"
+    description: "45-minute posing practice and feedback for competitors",
+    recommended: false
   }
 ];
